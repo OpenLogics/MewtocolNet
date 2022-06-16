@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <PackageId>AppLogger</PackageId>
+    <Version>0.1.5</Version>
+    <Authors>Felix Weiss</Authors>
+    <Company>Womed</Company>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DocumentationFile>P:\QUELLEN\PRODUKTAKTE\DESIGN_V_V\Software SPS\Projekt FP-XH\MewtocolNet\Builds\MewtocolNet.xml</DocumentationFile>
+    <OutputPath>P:\QUELLEN\PRODUKTAKTE\DESIGN_V_V\Software SPS\Projekt FP-XH\MewtocolNet\Builds\</OutputPath>
+  </PropertyGroup>
+</Project>
