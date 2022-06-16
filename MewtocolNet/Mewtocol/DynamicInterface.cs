@@ -7,49 +7,129 @@ using System.Threading.Tasks;
 using MewtocolNet.Responses;
 
 namespace MewtocolNet {
+
+    /// <summary>
+    /// The PLC com interface class
+    /// </summary>
     public partial class MewtocolInterface {
 
-        public event Action<Register> RegisterChanged;
-
+        internal event Action PolledCycle;
         internal CancellationTokenSource cTokenAutoUpdater;
-        protected internal bool isWriting = false;
-       
-        
-        public bool ContinousReaderRunning { get; set; }
-        public List<Register> Registers { get; set; } = new List<Register>();
-        public List<Contact> Contacts { get; set; } = new List<Contact>();
+        internal bool isWriting;
+        internal bool ContinousReaderRunning;
+        internal bool usePoller = false;
+
+        #region Register Polling
 
         /// <summary>
-        /// Trys to connect to the PLC by the IP given in the constructor
+        /// Attaches a continous reader that reads back the Registers and Contacts
         /// </summary>
-        /// <param name="OnConnected">Gets called when a connection with a PLC was established</param>
-        /// <param name="OnFailed">Gets called when an error or timeout during connection occurs</param>
-        /// <returns></returns>
-        public async Task<MewtocolInterface> ConnectAsync (Action<PLCInfo> OnConnected = null, Action OnFailed = null) {
+        internal void AttachPoller () {
 
-            var plcinf = await GetPLCInfoAsync();
+            if (ContinousReaderRunning) return;
 
-            if(plcinf is not null) {
+            cTokenAutoUpdater = new CancellationTokenSource();
 
-                if(OnConnected != null) OnConnected(plcinf);
+            Console.WriteLine("Attaching cont reader");
 
-            } else {
+            Task.Factory.StartNew(async () => {
 
-                if(OnFailed != null) OnFailed();
+                var plcinf = await GetPLCInfoAsync();
+                if (plcinf == null) {
+                    Console.WriteLine("PLC is not reachable");
+                    throw new Exception("PLC is not reachable");
+                }
+                if (!plcinf.OperationMode.RunMode) {
+                    Console.WriteLine("PLC is not running");
+                    throw new Exception("PLC is not running");
+                }
 
-            }
+                ContinousReaderRunning = true;
 
-            return this;
+                while (true) {
+
+                    //dont update when currently writing a var
+                    if (isWriting) {
+                        continue;
+                    }
+
+                    await Task.Delay(pollingDelayMs);
+                    foreach (var registerPair in Registers) {
+
+                        var reg = registerPair.Value;
+
+                        if (reg is NRegister<short> shortReg) {
+                            var lastVal = shortReg.Value;
+                            var readout = (await ReadNumRegister(shortReg, stationNumber)).Register.Value;
+                            if (lastVal != readout) {
+                                shortReg.LastValue = readout;
+                                InvokeRegisterChanged(shortReg);
+                                shortReg.TriggerNotifyChange();
+                            }
+                        }
+                        if (reg is NRegister<ushort> ushortReg) {
+                            var lastVal = ushortReg.Value;
+                            var readout = (await ReadNumRegister(ushortReg, stationNumber)).Register.Value;
+                            if (lastVal != readout) {
+                                ushortReg.LastValue = readout;
+                                InvokeRegisterChanged(ushortReg);
+                                ushortReg.TriggerNotifyChange();
+                            }
+                        }
+                        if (reg is NRegister<int> intReg) {
+                            var lastVal = intReg.Value;
+                            var readout = (await ReadNumRegister(intReg, stationNumber)).Register.Value;
+                            if (lastVal != readout) {
+                                intReg.LastValue = readout;
+                                InvokeRegisterChanged(intReg);
+                                intReg.TriggerNotifyChange();
+                            }
+                        }
+                        if (reg is NRegister<uint> uintReg) {
+                            var lastVal = uintReg.Value;
+                            var readout = (await ReadNumRegister(uintReg, stationNumber)).Register.Value;
+                            if (lastVal != readout) {
+                                uintReg.LastValue = readout;
+                                InvokeRegisterChanged(uintReg);
+                                uintReg.TriggerNotifyChange();
+                            }
+                        }
+                        if (reg is NRegister<float> floatReg) {
+                            var lastVal = floatReg.Value;
+                            var readout = (await ReadNumRegister(floatReg, stationNumber)).Register.Value;
+                            if (lastVal != readout) {
+                                floatReg.LastValue = readout;
+                                InvokeRegisterChanged(floatReg);
+                                floatReg.TriggerNotifyChange();
+                            }
+                        } else if (reg is SRegister stringReg) {
+                            var lastVal = stringReg.Value;
+                            var readout = (await ReadStringRegister(stringReg, stationNumber)).Register.Value;
+                            if (lastVal != readout) {
+                                InvokeRegisterChanged(stringReg);
+                                stringReg.TriggerNotifyChange();
+                            }
+
+                        }
+
+                    }
+
+                    //invoke cycle polled event
+                     InvokePolledCycleDone();
+
+                }
+
+            },  cTokenAutoUpdater.Token);
 
         }
+
+        #endregion
 
         #region Register Adding
 
         /// <summary>
         /// Adds a PLC memory register to the watchlist <para/>
-        /// The registers can be read back by attaching <see cref="MewtocolInterfaceExtensions.AttachContinousReader(Task{MewtocolInterface}, int)"/>
-        /// <para/>
-        /// to the end of a <see cref="MewtocolInterface.ConnectAsync(Action{PLCInfo}, Action)"/> method
+        /// The registers can be read back by attaching <see cref="WithPoller"/>
         /// </summary>
         /// <typeparam name="T">
         /// The type of the register translated from C# to IEC 61131-3 types
@@ -68,17 +148,17 @@ namespace MewtocolNet {
             Type regType = typeof(T);
 
             if (regType == typeof(short)) {
-                Registers.Add(new NRegister<short>(_address));
+                Registers.Add(_address, new NRegister<short>(_address));
             } else if (regType == typeof(ushort)) {
-                Registers.Add(new NRegister<ushort>(_address));
+                Registers.Add(_address, new NRegister<ushort>(_address));
             } else if (regType == typeof(int)) {
-                Registers.Add(new NRegister<int>(_address));
+                Registers.Add(_address, new NRegister<int>(_address));
             } else if (regType == typeof(uint)) {
-                Registers.Add(new NRegister<uint>(_address));
+                Registers.Add(_address, new NRegister<uint>(_address));
             } else if (regType == typeof(float)) {
-                Registers.Add(new NRegister<float>(_address));
+                Registers.Add(_address, new NRegister<float>(_address));
             } else if (regType == typeof(string)) {
-                Registers.Add(new SRegister(_address, _length));
+                Registers.Add(_address, new SRegister(_address, _length));
             } else {
                 throw new NotSupportedException($"The type {regType} is not allowed for Registers \n" +
                                                 $"Allowed are: short, ushort, int, uint, float and string");
@@ -88,9 +168,7 @@ namespace MewtocolNet {
 
         /// <summary>
         /// Adds a PLC memory register to the watchlist <para/>
-        /// The registers can be read back by attaching <see cref="MewtocolInterfaceExtensions.AttachContinousReader(Task{MewtocolInterface}, int)"/>
-        /// <para/>
-        /// to the end of a <see cref="MewtocolInterface.ConnectAsync(Action{PLCInfo}, Action)"/> method
+        /// The registers can be read back by attaching <see cref="WithPoller"/>
         /// </summary>
         /// <typeparam name="T">
         /// The type of the register translated from C# to IEC 61131-3 types
@@ -110,17 +188,17 @@ namespace MewtocolNet {
             Type regType = typeof(T);
 
             if (regType == typeof(short)) {
-                Registers.Add(new NRegister<short>(_address, _name));
+                Registers.Add(_address, new NRegister<short>(_address, _name));
             } else if (regType == typeof(ushort)) {
-                Registers.Add(new NRegister<ushort>(_address, _name));
+                Registers.Add(_address, new NRegister<ushort>(_address, _name));
             } else if (regType == typeof(int)) {
-                Registers.Add(new NRegister<int>(_address, _name));
+                Registers.Add(_address,  new NRegister<int>(_address, _name));
             } else if (regType == typeof(uint)) {
-                Registers.Add(new NRegister<uint>(_address, _name));
+                Registers.Add(_address,  new NRegister<uint>(_address, _name));
             } else if (regType == typeof(float)) {
-                Registers.Add(new NRegister<float>(_address, _name));
+                Registers.Add(_address,  new NRegister<float>(_address, _name));
             } else if (regType == typeof(string)) {
-                Registers.Add(new SRegister(_address, _length, _name));
+                Registers.Add(_address,  new SRegister(_address, _length, _name));
             } else {
                 throw new NotSupportedException($"The type {regType} is not allowed for Registers \n" +
                                                 $"Allowed are: short, ushort, int, uint, float and string");
@@ -132,7 +210,13 @@ namespace MewtocolNet {
 
         internal void InvokeRegisterChanged (Register reg) {
 
-            RegisterChanged?.Invoke (reg);      
+            RegisterChanged?.Invoke(reg);      
+
+        }
+
+        internal void InvokePolledCycleDone () {
+
+            PolledCycle?.Invoke();    
 
         }
 

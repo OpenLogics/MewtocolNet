@@ -10,31 +10,139 @@ using MewtocolNet.Responses;
 
 namespace MewtocolNet {
     
+    /// <summary>
+    /// The PLC com interface class
+    /// </summary>
     public partial class MewtocolInterface {
+
+        /// <summary>
+        /// Gets triggered when the PLC connection was established
+        /// </summary>
+        public event Action<PLCInfo> Connected;
+
+        /// <summary>
+        /// Gets triggered when a registered data register changes its value
+        /// </summary>
+        public event Action<Register> RegisterChanged;
 
         /// <summary>
         /// Generic information about the connected PLC
         /// </summary>
         public PLCInfo PlcInfo {get;private set;}
+
+        /// <summary>
+        /// The registered data registers of the PLC
+        /// </summary>
+        public Dictionary<int, Register> Registers { get; set; } = new();
+
         private CancellationTokenSource tokenSource;
 
         private string ip {get;set;}
         private int port {get;set;}
-        public int ConnectionTimeout {get;set;} = 2000;
+        private int stationNumber {get;set;}        
+        private int pollingDelayMs {get;set;}
+
+        /// <summary>
+        /// The current IP of the PLC connection
+        /// </summary>
+        public string IpAddress => ip;
+        /// <summary>
+        /// The current port of the PLC connection
+        /// </summary>
+        public int Port => port;
+        /// <summary>
+        /// The station number of the PLC
+        /// </summary>
+        public int StationNumber => stationNumber;
+
 
         #region Initialization
+
         /// <summary>
         /// Builds a new Interfacer for a PLC
         /// </summary>
-        /// <param name="_ip"></param>
-        /// <param name="_port"></param>
-        public MewtocolInterface (string _ip, int _port = 9094) {
+        /// <param name="_ip">IP adress of the PLC</param>
+        /// <param name="_port">Port of the PLC</param>
+        /// <param name="_station">Station Number of the PLC</param>
+        public MewtocolInterface (string _ip, int _port = 9094, int _station = 1) {
+            
             ip = _ip;
             port = _port;
+            stationNumber = _station;   
+
+            Connected += MewtocolInterface_Connected;
+
+            void MewtocolInterface_Connected (PLCInfo obj) {
+
+                if (usePoller)
+                    AttachPoller();
+
+            }
+
         }
 
+        #endregion
+
+        #region Setup
+
+        /// <summary>
+        /// Trys to connect to the PLC by the IP given in the constructor
+        /// </summary>
+        /// <param name="OnConnected">
+        /// Gets called when a connection with a PLC was established
+        /// <para/>
+        /// If <see cref="WithPoller"/> is used it waits for the first data receive cycle to complete
+        /// </param>
+        /// <param name="OnFailed">Gets called when an error or timeout during connection occurs</param>
+        /// <returns></returns>
+        public async Task<MewtocolInterface> ConnectAsync (Action<PLCInfo> OnConnected = null, Action OnFailed = null) {
+
+            var plcinf = await GetPLCInfoAsync();
+
+            if (plcinf is not null) {
+
+                Connected?.Invoke(plcinf);
+
+                if (OnConnected != null) {
+
+                    if (!usePoller) {
+                        OnConnected(plcinf);
+                        return this;
+                    }
+
+                    PolledCycle += OnPollCycleDone;
+                    void OnPollCycleDone () {
+                        OnConnected(plcinf);
+                        PolledCycle -= OnPollCycleDone;
+                    }
+                }
+
+            } else {
+
+                if (OnFailed != null)
+                    OnFailed();
+
+            }
+
+            return this;
+
+        }
+
+        /// <summary>
+        /// Attaches a poller to the interface that continously 
+        /// polls the registered data registers and writes the values to them
+        /// </summary>
+        public MewtocolInterface WithPoller (int pollerDelayMs = 50) {
+
+            pollingDelayMs = pollerDelayMs;
+            usePoller = true;
+
+            return this;
+
+        }
 
         #endregion
+
 
         #region Low level command handling
 
