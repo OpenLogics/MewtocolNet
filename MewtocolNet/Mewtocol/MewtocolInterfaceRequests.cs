@@ -13,7 +13,7 @@ namespace MewtocolNet {
     
     public partial class MewtocolInterface {
 
-        #region High level command handling
+        #region PLC info getters
 
         /// <summary>
         /// Gets generic information about the PLC
@@ -49,90 +49,49 @@ namespace MewtocolNet {
             return null;
         }
 
-        /// <summary>
-        /// Reads bool values from the plc by the given <c>Contact</c> List
-        /// </summary>
-        /// <param name="_contactsToRead">A list of contacts</param>
-        /// <param name="_stationNumber">The PLCs station number</param>
-        /// <returns>List of IBoolContact with unique copys of the given contacts</returns>
-        public async Task<IEnumerable<IBoolContact>> ReadBoolContacts (List<Contact> _contactsToRead, int _stationNumber = 1) {
-            
-            //re order by contact pfx for faster querying 
-            _contactsToRead = _contactsToRead.OrderBy(x=>x.Prefix).ToList();
+        #endregion
 
-            //return list
-            List<IBoolContact> returnContacts = new List<IBoolContact>();
+        #region Bool register reading / writing
 
-            //grouped by 8 each
-            List<List<Contact>> nestedContacts = new List<List<Contact>>();
+        public async Task<BRegisterResult> ReadBoolRegister (BRegister _toRead, int _stationNumber = 1) {
 
-            //group into max 8 contacts list
-            List<Contact> tempGroup = new List<Contact>();
-            for (int i = 0; i < _contactsToRead.Count; i++) {
-                tempGroup.Add(_contactsToRead[i]);
-                //each 8 contacts make a new list
-                if(i % 7 == 0 && i != 0 && i != _contactsToRead.Count) {
-                    nestedContacts.Add(tempGroup);
-                    tempGroup = new List<Contact>();
-                }
-                //if end of list and contacts cannot be broke down to 8 each group
-                if(i == _contactsToRead.Count - 1 && _contactsToRead.Count % 8 != 0) {
-                    nestedContacts.Add(tempGroup);
-                    tempGroup = new List<Contact>();
-                }
-            }        
+            string requeststring = $"%{_stationNumber.ToString().PadLeft(2, '0')}#RCS{_toRead.BuildMewtocolIdent()}";
+            var result = await SendCommandAsync(requeststring);
 
-            //make task for each group
-            foreach (var group in nestedContacts) {
-                //regex for getting values
-                StringBuilder regexString = new StringBuilder(@"\%..\$RC");
-                //append start %01#RCP2
-                StringBuilder messageString = new StringBuilder();
-                messageString.Append($"%{_stationNumber.ToString().PadLeft(2, '0')}#RCP");
-                messageString.Append($"{group.Count}");
-                //append each contact of group Y0000 Y0001 etc
-                foreach (var cont in group) {
-                    messageString.Append(cont.BuildMewtocolIdent());
-                    regexString.Append(@"([0-9])");
-                }
-                regexString.Append(@"(..)");
-                //parse the result
-                var result = await SendCommandAsync(messageString.ToString());
-                Regex regCheck = new Regex(regexString.ToString(), RegexOptions.IgnoreCase);
-                if(result.Success && regCheck.IsMatch(result.Response)) {
-                    //parse result string
-                    Match regMatch = regCheck.Match(result.Response);
-                    // add to return list
-                    for (int i = 0; i < group.Count; i++) {
-                        Contact cont = group[i].ShallowCopy();
-                        Contact toadd = cont;
-                        if( regMatch.Groups[i + 1].Value == "1" ) {
-                            toadd.Value = true;
-                        } else if( regMatch.Groups[i + 1].Value == "0" ) {
-                            toadd.Value = false;
-                        }
-                        returnContacts.Add(toadd);
-                    }
-                }
+            if(!result.Success) {
+                return new BRegisterResult {
+                    Result = result,
+                    Register = _toRead
+                };
             }
-            return returnContacts;            
+
+            var resultBool = result.Response.ParseRCSingleBit();
+            if(resultBool != null) {
+                _toRead.LastValue = resultBool.Value;
+            } 
+
+            var finalRes = new BRegisterResult {
+                Result = result,
+                Register = _toRead
+            };
+
+            return finalRes;
+
         }
 
-        /// <summary>
-        /// Writes a boolen value to the given contact
-        /// </summary>
-        /// <param name="_contact">The contact to write</param>
-        /// <param name="_value">The boolean state to write</param>
-        /// <param name="_stationNumber">Station Number (optional)</param>
-        /// <returns>A result struct</returns>
-        public async Task<CommandResult> WriteContact (Contact _contact, bool _value, int _stationNumber = 1) {
-            string stationNum = _stationNumber.ToString().PadLeft(2, '0');
-            string dataArea = _contact.BuildMewtocolIdent();
-            string dataString = _value ? "1" : "0";
-            string requeststring = $"%{stationNum}#WCS{dataArea}{dataString}";
-            var res = await SendCommandAsync(requeststring);
-            return res;
+        public async Task<bool> WriteBoolRegister (BRegister _toWrite, bool value, int _stationNumber = 1) {
+
+            string requeststring = $"%{_stationNumber.ToString().PadLeft(2, '0')}#WCS{_toWrite.BuildMewtocolIdent()}{(value ? "1" : "0")}";
+
+            var result = await SendCommandAsync(requeststring);
+
+            return result.Success && result.Response.StartsWith($"%{ _stationNumber.ToString().PadLeft(2, '0')}#WC");
+
         }
+
+        #endregion
+
+        #region Number register reading / writing
 
         /// <summary>
         /// Reads the given numeric register from PLC
@@ -150,26 +109,39 @@ namespace MewtocolNet {
 
             if (numType == typeof(short)) {
 
-                var resultBytes = result.Response.ParseDTByteString(4);
+                var resultBytes = result.Response.ParseDTByteString(4).ReverseByteOrder();
                 var val = short.Parse(resultBytes, NumberStyles.HexNumber);
                 (_toRead as NRegister<short>).LastValue = val;
 
             } else if (numType == typeof(ushort)) {
-                var resultBytes = result.Response.ParseDTBytes(4);
-                var val = BitConverter.ToInt16(resultBytes);
-                _toRead.Value = (T)Convert.ChangeType(val, typeof(T));
+
+                var resultBytes = result.Response.ParseDTByteString(4).ReverseByteOrder();
+                var val = ushort.Parse(resultBytes, NumberStyles.HexNumber);
+                (_toRead as NRegister<ushort>).LastValue = val;
+
             } else if (numType == typeof(int)) {
-                var resultBytes = result.Response.ParseDTBytes(8);
-                var val = BitConverter.ToInt16(resultBytes);
-                _toRead.Value = (T)Convert.ChangeType(val, typeof(T));
+
+                var resultBytes = result.Response.ParseDTByteString(8).ReverseByteOrder();
+                var val = int.Parse(resultBytes, NumberStyles.HexNumber);
+                (_toRead as NRegister<int>).LastValue = val;
+
             } else if (numType == typeof(uint)) {
-                var resultBytes = result.Response.ParseDTBytes(8);
-                var val = BitConverter.ToInt16(resultBytes);
-                _toRead.Value = (T)Convert.ChangeType(val, typeof(T));
+
+                var resultBytes = result.Response.ParseDTByteString(8).ReverseByteOrder();
+                var val = uint.Parse(resultBytes, NumberStyles.HexNumber);
+                (_toRead as NRegister<uint>).LastValue = val;
+
             } else if (numType == typeof(float)) {
-                var resultBytes = result.Response.ParseDTBytes(8);
-                var val = BitConverter.ToSingle(resultBytes);
-                _toRead.Value = (T)Convert.ChangeType(val, typeof(T));
+
+                var resultBytes = result.Response.ParseDTByteString(8).ReverseByteOrder();
+                //convert to unsigned int first
+                var val = uint.Parse(resultBytes, NumberStyles.HexNumber);
+
+                byte[] floatVals = BitConverter.GetBytes(val);
+                float finalFloat = BitConverter.ToSingle(floatVals, 0);
+
+                (_toRead as NRegister<float>).LastValue = finalFloat;
+
             }
 
             var finalRes = new NRegisterResult<T> {
@@ -187,7 +159,7 @@ namespace MewtocolNet {
         /// <param name="_toWrite">The register to write</param>
         /// <param name="_stationNumber">Station number to access</param>
         /// <returns>A result with the given NumberRegister and a result struct</returns>
-        public async Task<NRegisterResult<T>> WriteNumRegister<T>(NRegister<T> _toWrite, T _value, int _stationNumber = 1) {
+        public async Task<bool> WriteNumRegister<T> (NRegister<T> _toWrite, T _value, int _stationNumber = 1) {
 
             byte[] toWriteVal;
             Type numType = typeof(T);
@@ -201,22 +173,38 @@ namespace MewtocolNet {
             } else if (numType == typeof(uint)) {
                 toWriteVal = BitConverter.GetBytes(Convert.ToUInt32(_value));
             } else if (numType == typeof(float)) {
-                toWriteVal = BitConverter.GetBytes(Convert.ToUInt32(_value));
+
+                var fl = _value as float?;
+                if (fl == null)
+                    throw new NullReferenceException("Float cannot be null");
+
+                toWriteVal = BitConverter.GetBytes(fl.Value);
+
             } else {
                 toWriteVal = null;
             }
 
             string requeststring = $"%{_stationNumber.ToString().PadLeft(2, '0')}#WD{_toWrite.BuildMewtocolIdent()}{toWriteVal.ToHexString()}";
+
             var result = await SendCommandAsync(requeststring);
 
-            return new NRegisterResult<T> {
-                Result = result,
-                Register = _toWrite
-            };
+            return result.Success && result.Response.StartsWith($"%{ _stationNumber.ToString().PadLeft(2, '0')}#WD");
+
         }
 
+        #endregion
+
+        #region String register reading / writing
 
         public async Task<SRegisterResult> ReadStringRegister (SRegister _toRead, int _stationNumber = 1) {
+
+            //string is build up like this
+            //04 00 04 00 53 50 33 35 13
+            //0, 1 = reserved size
+            //1, 2 = current size
+            //3,4,5,6 = ASCII encoded chars (SP35)
+            //7,8 = checksum
+
             string requeststring = $"%{_stationNumber.ToString().PadLeft(2, '0')}#RD{_toRead.BuildMewtocolIdent()}";
             var result = await SendCommandAsync(requeststring);
             if (result.Success)
@@ -227,7 +215,7 @@ namespace MewtocolNet {
             };
         }
 
-        public async Task<SRegisterResult> WriteStringRegister(SRegister _toWrite, string _value, int _stationNumber = 1) {
+        public async Task<bool> WriteStringRegister(SRegister _toWrite, string _value, int _stationNumber = 1) {
 
             if (_value == null) _value = "";
             if(_value.Length > _toWrite.ReservedSize) {
@@ -242,10 +230,7 @@ namespace MewtocolNet {
             Console.WriteLine($"reserved: {_toWrite.MemoryLength}, size: {_value.Length}");
 
             var result = await SendCommandAsync(requeststring);
-            return new SRegisterResult {
-                Result = result,
-                Register = _toWrite
-            };
+            return result.Success && result.Response.StartsWith($"%{ _stationNumber.ToString().PadLeft(2, '0')}#WD");
         }
 
         #endregion
