@@ -13,6 +13,7 @@ This software was written by WOLF Medizintechnik GmbH (@WOmed/dev).
 - [x] Read and write registers in real time
 - [X] Dynamic register type casting from properties
 - [ ] Change run / prog modes
+- [ ] Write byte blocks in a whole chain
 - [ ] Upload programs to the PLC
 - [ ] Download programs from the PLC
 - [ ] Reading / writing PLC system registers
