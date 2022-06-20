@@ -5,6 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace MewtocolNet { 
+
+    /// <summary>
+    /// The special register type
+    /// </summary>
     public enum RegisterType {
 
         /// <summary>
@@ -42,8 +46,16 @@ namespace MewtocolNet {
 
     }
 
+    /// <summary>
+    /// The special input / output channel address
+    /// </summary>
     public enum SpecialAddress {
 
+        #pragma warning disable CS1591
+
+        /// <summary>
+        /// No defined
+        /// </summary>
         None,
         A = -10,
         B = -11,
@@ -51,6 +63,8 @@ namespace MewtocolNet {
         D = -13,
         E = -14,
         F = -15,
+
+        #pragma warning restore
 
     }
 

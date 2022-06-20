@@ -3,10 +3,14 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
-using MewtocolNet.Responses;
+using MewtocolNet.Registers;
 using System.Collections;
 
 namespace MewtocolNet {
+
+    /// <summary>
+    /// Contains helper methods
+    /// </summary>
     public static class MewtocolHelpers {
 
         /// <summary>
@@ -20,7 +24,7 @@ namespace MewtocolNet {
 
         }
 
-        public static byte[] ToHexASCIIBytes (this string _str) {
+        internal static byte[] ToHexASCIIBytes (this string _str) {
             ASCIIEncoding ascii = new ASCIIEncoding();
             byte[] bytes = ascii.GetBytes(_str.ToUpper()); 
             return bytes;

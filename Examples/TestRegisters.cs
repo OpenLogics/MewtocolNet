@@ -10,7 +10,7 @@ namespace Examples {
         [Register(100, RegisterType.R)]
         public bool TestBool1 { get; private set; }
 
-        //corresponds to a R100 boolean register in the PLC
+        //corresponds to a XD input of the PLC
         [Register(RegisterType.X, SpecialAddress.D)]
         public bool TestBoolInputXD { get; private set; } 
 

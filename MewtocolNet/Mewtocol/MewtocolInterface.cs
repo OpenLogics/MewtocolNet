@@ -4,15 +4,12 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
-using MewtocolNet.Responses;
+using MewtocolNet.Registers;
 using MewtocolNet.RegisterAttributes;
 using MewtocolNet.Logging;
 using System.Collections;
-using System.Reflection;
-using MewtocolNet.Logging;
 using System.Diagnostics;
 
 namespace MewtocolNet {
@@ -372,6 +369,22 @@ namespace MewtocolNet {
         /// <param name="value">The value to write to the register</param>
         public void SetRegister (string registerName, object value) {
 
+            var foundRegister = GetAllRegisters().FirstOrDefault(x => x.Name == registerName);
+
+            if (foundRegister == null) {
+                throw new Exception($"Register with the name {registerName} was not found");
+            }
+
+            _ = SetRegisterAsync(registerName, value);
+
+        }
+
+        /// <summary>
+        /// Sets a register in the PLCs memory asynchronously, returns the result status from the PLC
+        /// </summary>
+        /// <param name="registerName">The name the register was given to or a property name from the RegisterCollection class</param>
+        /// <param name="value">The value to write to the register</param>
+        public async Task<bool> SetRegisterAsync (string registerName, object value) {
 
             var foundRegister = GetAllRegisters().FirstOrDefault(x => x.Name == registerName);
 
@@ -381,51 +394,53 @@ namespace MewtocolNet {
 
             if (foundRegister.GetType() == typeof(BRegister)) {
 
-                _ = WriteBoolRegister((BRegister)foundRegister, (bool)value, StationNumber);
+                return await WriteBoolRegister((BRegister)foundRegister, (bool)value, StationNumber);
 
             }
 
             if (foundRegister.GetType() == typeof(NRegister<short>)) {
 
-                _ = WriteNumRegister((NRegister<short>)foundRegister, (short)value, StationNumber);
-                
+                return await WriteNumRegister((NRegister<short>)foundRegister, (short)value, StationNumber);
+
             }
 
             if (foundRegister.GetType() == typeof(NRegister<ushort>)) {
 
-                _ = WriteNumRegister((NRegister<ushort>)foundRegister, (ushort)value, StationNumber);
+                return await WriteNumRegister((NRegister<ushort>)foundRegister, (ushort)value, StationNumber);
 
             }
 
             if (foundRegister.GetType() == typeof(NRegister<int>)) {
 
-                _ = WriteNumRegister((NRegister<int>)foundRegister, (int)value, StationNumber);
+                return await WriteNumRegister((NRegister<int>)foundRegister, (int)value, StationNumber);
 
             }
 
             if (foundRegister.GetType() == typeof(NRegister<uint>)) {
 
-                _ = WriteNumRegister((NRegister<uint>)foundRegister, (uint)value, StationNumber);
+                return await WriteNumRegister((NRegister<uint>)foundRegister, (uint)value, StationNumber);
 
             }
 
             if (foundRegister.GetType() == typeof(NRegister<float>)) {
 
-                _ = WriteNumRegister((NRegister<float>)foundRegister, (float)value, StationNumber);
+                return await WriteNumRegister((NRegister<float>)foundRegister, (float)value, StationNumber);
 
             }
 
             if (foundRegister.GetType() == typeof(NRegister<TimeSpan>)) {
 
-                _ = WriteNumRegister((NRegister<TimeSpan>)foundRegister, (TimeSpan)value, StationNumber);
+                return await WriteNumRegister((NRegister<TimeSpan>)foundRegister, (TimeSpan)value, StationNumber);
 
             }
 
             if (foundRegister.GetType() == typeof(SRegister)) {
 
-                _ = WriteStringRegister((SRegister)foundRegister, (string)value, StationNumber);
+                return await WriteStringRegister((SRegister)foundRegister, (string)value, StationNumber);
 
             }
+
+            return false;
 
         }
 

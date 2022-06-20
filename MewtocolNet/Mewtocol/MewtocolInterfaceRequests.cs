@@ -5,7 +5,7 @@ using System.Text;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using MewtocolNet.Responses;
+using MewtocolNet.Registers;
 using System.Linq;
 using System.Globalization;
 

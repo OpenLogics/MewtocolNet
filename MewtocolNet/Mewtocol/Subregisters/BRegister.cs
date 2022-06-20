@@ -2,7 +2,7 @@
 using System.Text;
 using MewtocolNet;
 
-namespace MewtocolNet.Responses {
+namespace MewtocolNet.Registers {
 
     /// <summary>
     /// Defines a register containing a boolean

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text;
 
-namespace MewtocolNet.Responses {
+namespace MewtocolNet.Registers {
     /// <summary>
     /// Defines a register containing a string
     /// </summary>

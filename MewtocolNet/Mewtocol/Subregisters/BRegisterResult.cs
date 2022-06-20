@@ -1,4 +1,4 @@
-﻿namespace MewtocolNet.Responses {
+﻿namespace MewtocolNet.Registers {
     public class BRegisterResult {
 
         public CommandResult Result { get; set; }

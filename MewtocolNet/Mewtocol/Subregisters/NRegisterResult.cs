@@ -1,4 +1,4 @@
-﻿namespace MewtocolNet.Responses {
+﻿namespace MewtocolNet.Registers {
     /// <summary>
     /// Result for a read/write operation
     /// </summary>

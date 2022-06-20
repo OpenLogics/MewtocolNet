@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace MewtocolNet.Responses {
+namespace MewtocolNet.Registers {
     /// <summary>
     /// Defines a register containing a number
     /// </summary>

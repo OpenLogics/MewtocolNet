@@ -34,8 +34,12 @@ namespace Examples {
                         Task.Factory.StartNew(async () => {
 
                             await Task.Delay(2000);
+
                             //inverts the boolean register
-                            interf.SetRegister(nameof(registers.TestBool1), !registers.TestBool1);
+                            await interf.SetRegisterAsync(nameof(registers.TestBool1), !registers.TestBool1);
+
+                            Console.WriteLine("Testregister was toggled");
+
                             //adds 10 each time the plc connects to the PLCs INT regíster
                             interf.SetRegister(nameof(registers.TestInt16), (short)(registers.TestInt16 + 10));
                             //adds 1 each time the plc connects to the PLCs DINT regíster

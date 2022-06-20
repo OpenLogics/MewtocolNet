@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using MewtocolNet.Logging;
-using MewtocolNet.Responses;
+using MewtocolNet.Registers;
 
 namespace MewtocolNet {
 
@@ -292,6 +292,34 @@ namespace MewtocolNet {
                                                 $"Allowed are: short, ushort, int, uint, float and string");
             }
 
+        }
+
+        #endregion
+
+        #region Register accessing
+
+        /// <summary>
+        /// Gets a register that was added by its name
+        /// </summary>
+        /// <returns></returns>
+        public Register GetRegister (string name) {
+
+            return Registers.FirstOrDefault(x => x.Value.Name == name).Value;
+
+        }
+
+        /// <summary>
+        /// Gets a register that was added by its name
+        /// </summary>
+        /// <typeparam name="T">The type of register</typeparam>
+        /// <returns>A casted register or the <code>default</code> value</returns>
+        public T GetRegister<T> (string name) where T : Register  {
+            try {
+                var reg = Registers.FirstOrDefault(x => x.Value.Name == name);
+                return reg.Value as T;
+            } catch (InvalidCastException) {
+                return default(T);
+            }
         }
 
         #endregion

@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MewtocolNet.Responses {
+namespace MewtocolNet.Registers {
 
     /// <summary>
     /// A class describing a register
