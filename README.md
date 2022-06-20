@@ -183,5 +183,5 @@ Sets the register waiting for the PLC to confirm it was set
 
 ```C#
 //inverts the boolean register
-interf.SetRegisterAsync(nameof(registers.TestBool1), !registers.TestBool1);
+await interf.SetRegisterAsync(nameof(registers.TestBool1), !registers.TestBool1);
 ```
