@@ -172,6 +172,8 @@ Reading the value of the manually added register
 string value = interf.GetRegister("ManualBoolRegister").GetValueString();
 //get the value by casting
 bool value2 = interf.GetRegister<BRegister>("ManualBoolRegister").Value;
+//for double casted ones like numbers
+var value2 = interf.GetRegister<NRegister<short>>("NumberRegister").Value;
 ```
 
 ### Asynchronous
