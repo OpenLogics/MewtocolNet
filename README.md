@@ -1,11 +1,31 @@
 # MewtocolNet
-A Mewtocol protocol library to interface with Panasonic PLCs over TCP/Serial.
+An easy to use Mewtocol protocol library to interface with Panasonic PLCs over TCP/Serial.
 
 ## Disclaimer 
 This library is not an official panasonic product nor does panasonic provide financial support or limitations in any form. 
 This software was written by WOLF Medizintechnik GmbH (@WOmed/dev).
 
+# Features
+
+> Features that are not checked still need implementation
+
+- [x] Read out stats from your PLC
+- [x] Read and write registers in real time
+- [X] Dynamic register type casting from properties
+- [ ] Change run / prog modes
+- [ ] Upload programs to the PLC
+- [ ] Download programs from the PLC
+- [ ] Reading / writing PLC system registers
+
 # Support
+
+## .NET Support
+
+This library was written in **netstandard2.0** and should by compatible with a lot of .NET environments.
+
+For a full list of supported .NET clrs see [this page](https://docs.microsoft.com/de-de/dotnet/standard/net-standard?tabs=net-standard-2-0#select-net-standard-version)
+
+## PLC Support
 
 > This library was only tested with a few PLCs, other types that support the Panasonic Mewtocol protocol might work. 
 > Use at your own risk, others might follow with community feedback
@@ -18,7 +38,7 @@ FPX-H C14|✔        |✔   |
 FPX-H C30|✔        |✔   |
 FP Sigma |✔        |❌  |
 
-Where is the RS232/Serial support
+Where is the RS232/Serial support?
 
 > Support for the serial protocol will be added soon, feel free to contribute
 
@@ -122,6 +142,8 @@ await interf.ConnectAsync(
 
 ## Writing data registers / contacts
 
+⚠ **Never set a register by setting the property, always use one of the provided methods**
+
 ### Synchronous
 
 Sets the register without feedback if it was set
@@ -138,6 +160,19 @@ interf.SetRegister(nameof(registers.TestString1), "Test");
 ```
 
 You can also set a register by calling its name directly (Must be either in an attached register collection or added to the list manually)
+
+Adding registers to a manual list
+```C#
+interf.AddRegister<bool>(105, _name: "ManualBoolRegister");
+```
+
+Reading the value of the manually added register
+```C#
+//get the value as a string
+string value = interf.GetRegister("ManualBoolRegister").GetValueString();
+//get the value by casting
+bool value2 = interf.GetRegister<BRegister>("ManualBoolRegister").Value;
+```
 
 ### Asynchronous
 
