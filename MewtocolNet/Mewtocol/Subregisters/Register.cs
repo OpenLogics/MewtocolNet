@@ -75,6 +75,9 @@ namespace MewtocolNet.Responses {
             if (this is NRegister<float> floatReg) {
                 return floatReg.Value.ToString();
             }
+            if (this is NRegister<TimeSpan> tsReg) {
+                return tsReg.Value.ToString();
+            }
             if (this is BRegister boolReg) {
                 return boolReg.Value.ToString();
             }
@@ -128,6 +131,9 @@ namespace MewtocolNet.Responses {
                 return "DDT";
             }
             if (this is NRegister<float> floatReg) {
+                return "DDT";
+            }
+            if (this is NRegister<TimeSpan> tsReg) {
                 return "DDT";
             }
             if (this is BRegister boolReg) {

@@ -40,9 +40,25 @@ namespace MewtocolNet.Responses {
         }
 
         public override string BuildMewtocolIdent() {
+
             StringBuilder asciistring = new StringBuilder("D");
+
             asciistring.Append(MemoryAdress.ToString().PadLeft(5, '0'));
             asciistring.Append((MemoryAdress + MemoryLength).ToString().PadLeft(5, '0'));
+
+            return asciistring.ToString();
+        }
+
+        internal string BuildCustomIdent (int overwriteWordLength) {
+
+            if (overwriteWordLength <= 0)
+                throw new Exception("overwriteWordLength cant be 0 or less");
+
+            StringBuilder asciistring = new StringBuilder("D");
+
+            asciistring.Append(MemoryAdress.ToString().PadLeft(5, '0'));
+            asciistring.Append((MemoryAdress + overwriteWordLength - 1).ToString().PadLeft(5, '0'));
+
             return asciistring.ToString();
         }
 

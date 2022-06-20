@@ -45,12 +45,17 @@ namespace MewtocolNet {
         }
 
         internal static string ParseDTByteString (this string _onString, int _blockSize = 4) {
+
+            if (_onString == null)
+                return null;
+
             var res = new Regex(@"\%([0-9]{2})\$RD(.{" + _blockSize + "})").Match(_onString);
             if (res.Success) {
                 string val = res.Groups[2].Value;
                 return val;
             }
             return null;
+
         }
 
         internal static bool? ParseRCSingleBit (this string _onString, int _blockSize = 4) {
@@ -73,6 +78,8 @@ namespace MewtocolNet {
 
         internal static string ReverseByteOrder (this string _onString) {
 
+            if(_onString == null) return null;
+
             //split into 2 chars
             var stringBytes = _onString.SplitInParts(2).ToList();
 
@@ -93,17 +100,38 @@ namespace MewtocolNet {
         }
 
         internal static string BuildDTString (this string _inString, short _stringReservedSize) {
+
             StringBuilder sb = new StringBuilder();
-            //06000600
-            short stringSize = (short)_inString.Length;
-            var sizeBytes = BitConverter.GetBytes(stringSize).ToHexString();
+
+            //clamp string lenght
+            if (_inString.Length > _stringReservedSize) {
+                _inString = _inString.Substring(0, _stringReservedSize);
+            }
+
+            //actual string content
+            var hexstring = _inString.GetAsciiHexFromString();
+
+            var sizeBytes = BitConverter.GetBytes((short)(hexstring.Length / 2)).ToHexString();
+
+            if (hexstring.Length >= 2) {
+
+                var remainderBytes = (hexstring.Length / 2) % 2;
+
+                if (remainderBytes != 0) {
+                    hexstring += "20";
+                }
+
+            }
+
             var reservedSizeBytes = BitConverter.GetBytes(_stringReservedSize).ToHexString();
+
             //reserved string count bytes
             sb.Append(reservedSizeBytes);
             //string count actual bytes
             sb.Append(sizeBytes);
-            //actual string content
-            sb.Append(_inString.GetAsciiHexFromString());
+            
+
+            sb.Append(hexstring);
 
             return sb.ToString();
         }

@@ -21,6 +21,13 @@ namespace MewtocolNet {
 
         #region Register Polling
 
+        internal void KillPoller () {
+
+            ContinousReaderRunning = false;
+            cTokenAutoUpdater.Cancel();
+
+        }
+
         /// <summary>
         /// Attaches a continous reader that reads back the Registers and Contacts
         /// </summary>
@@ -32,123 +39,134 @@ namespace MewtocolNet {
 
             Logger.Log("Poller is attaching", LogLevel.Info, this);
 
-            Task.Factory.StartNew(async () => {
+            try {
 
-                var plcinf = await GetPLCInfoAsync();
-                if (plcinf == null) {
-                    Logger.Log("PLC not reachable, stopping logger", LogLevel.Info, this);
-                    return;
-                }
+                Task.Factory.StartNew(async () => {
 
-                PolledCycle += MewtocolInterface_PolledCycle;
-                void MewtocolInterface_PolledCycle () {
-
-                    StringBuilder stringBuilder = new StringBuilder();
-                    foreach (var reg in GetAllRegisters()) {
-                        string address = $"{reg.GetRegisterString()}{reg.GetStartingMemoryArea()}".PadRight(8, (char)32);   
-                        stringBuilder.AppendLine($"{address}{(reg.Name != null ? $" ({reg.Name})" : "")}: {reg.GetValueString()}");
+                    var plcinf = await GetPLCInfoAsync();
+                    if (plcinf == null) {
+                        Logger.Log("PLC not reachable, stopping logger", LogLevel.Info, this);
+                        return;
                     }
 
-                    Logger.Log($"Registers loaded are: \n" +
-                               $"--------------------\n" +
-                               $"{stringBuilder.ToString()}" +
-                               $"--------------------", 
-                               LogLevel.Verbose, this);
+                    PolledCycle += MewtocolInterface_PolledCycle;
+                    void MewtocolInterface_PolledCycle () {
 
-                    Logger.Log("Logger did its first cycle successfully", LogLevel.Info, this);
-                    
-                    PolledCycle -= MewtocolInterface_PolledCycle;
-                }
+                        StringBuilder stringBuilder = new StringBuilder();
+                        foreach (var reg in GetAllRegisters()) {
+                            string address = $"{reg.GetRegisterString()}{reg.GetStartingMemoryArea()}".PadRight(8, (char)32);
+                            stringBuilder.AppendLine($"{address}{(reg.Name != null ? $" ({reg.Name})" : "")}: {reg.GetValueString()}");
+                        }
 
-                ContinousReaderRunning = true;
+                        Logger.Log($"Registers loaded are: \n" +
+                                   $"--------------------\n" +
+                                   $"{stringBuilder.ToString()}" +
+                                   $"--------------------",
+                                   LogLevel.Verbose, this);
 
-                while (true) {
+                        Logger.Log("Logger did its first cycle successfully", LogLevel.Info, this);
 
-                    //do priority tasks first
-                    if(PriorityTasks.Count > 0) {
+                        PolledCycle -= MewtocolInterface_PolledCycle;
+                    }
 
-                        await PriorityTasks.FirstOrDefault(x => !x.IsCompleted);
+                    ContinousReaderRunning = true;
+
+                    while (ContinousReaderRunning) {
+
+                        //do priority tasks first
+                        if (PriorityTasks.Count > 0) {
+
+                            await PriorityTasks.FirstOrDefault(x => !x.IsCompleted);
+
+                        }
+
+                        foreach (var registerPair in Registers) {
+
+                            var reg = registerPair.Value;
+
+                            if (reg is NRegister<short> shortReg) {
+                                var lastVal = shortReg.Value;
+                                var readout = (await ReadNumRegister(shortReg, stationNumber)).Register.Value;
+                                if (lastVal != readout) {
+                                    shortReg.LastValue = readout;
+                                    InvokeRegisterChanged(shortReg);
+                                    shortReg.TriggerNotifyChange();
+                                }
+                            }
+                            if (reg is NRegister<ushort> ushortReg) {
+                                var lastVal = ushortReg.Value;
+                                var readout = (await ReadNumRegister(ushortReg, stationNumber)).Register.Value;
+                                if (lastVal != readout) {
+                                    ushortReg.LastValue = readout;
+                                    InvokeRegisterChanged(ushortReg);
+                                    ushortReg.TriggerNotifyChange();
+                                }
+                            }
+                            if (reg is NRegister<int> intReg) {
+                                var lastVal = intReg.Value;
+                                var readout = (await ReadNumRegister(intReg, stationNumber)).Register.Value;
+                                if (lastVal != readout) {
+                                    intReg.LastValue = readout;
+                                    InvokeRegisterChanged(intReg);
+                                    intReg.TriggerNotifyChange();
+                                }
+                            }
+                            if (reg is NRegister<uint> uintReg) {
+                                var lastVal = uintReg.Value;
+                                var readout = (await ReadNumRegister(uintReg, stationNumber)).Register.Value;
+                                if (lastVal != readout) {
+                                    uintReg.LastValue = readout;
+                                    InvokeRegisterChanged(uintReg);
+                                    uintReg.TriggerNotifyChange();
+                                }
+                            }
+                            if (reg is NRegister<float> floatReg) {
+                                var lastVal = floatReg.Value;
+                                var readout = (await ReadNumRegister(floatReg, stationNumber)).Register.Value;
+                                if (lastVal != readout) {
+                                    floatReg.LastValue = readout;
+                                    InvokeRegisterChanged(floatReg);
+                                    floatReg.TriggerNotifyChange();
+                                }
+                            }
+                            if (reg is NRegister<TimeSpan> tsReg) {
+                                var lastVal = tsReg.Value;
+                                var readout = (await ReadNumRegister(tsReg, stationNumber)).Register.Value;
+                                if (lastVal != readout) {
+                                    tsReg.LastValue = readout;
+                                    InvokeRegisterChanged(tsReg);
+                                    tsReg.TriggerNotifyChange();
+                                }
+                            }
+                            if (reg is BRegister boolReg) {
+                                var lastVal = boolReg.Value;
+                                var readout = (await ReadBoolRegister(boolReg, stationNumber)).Register.Value;
+                                if (lastVal != readout) {
+                                    boolReg.LastValue = readout;
+                                    InvokeRegisterChanged(boolReg);
+                                    boolReg.TriggerNotifyChange();
+                                }
+                            }
+                            if (reg is SRegister stringReg) {
+                                var lastVal = stringReg.Value;
+                                var readout = (await ReadStringRegister(stringReg, stationNumber)).Register.Value;
+                                if (lastVal != readout) {
+                                    InvokeRegisterChanged(stringReg);
+                                    stringReg.TriggerNotifyChange();
+                                }
+
+                            }
+
+                        }
+
+                        //invoke cycle polled event
+                        InvokePolledCycleDone();
 
                     }
 
-                    //await Task.Delay(pollingDelayMs);
+                }, cTokenAutoUpdater.Token);
 
-                    foreach (var registerPair in Registers) {
-
-                        var reg = registerPair.Value;
-
-                        if (reg is NRegister<short> shortReg) {
-                            var lastVal = shortReg.Value;
-                            var readout = (await ReadNumRegister(shortReg, stationNumber)).Register.Value;
-                            if (lastVal != readout) {
-                                shortReg.LastValue = readout;
-                                InvokeRegisterChanged(shortReg);
-                                shortReg.TriggerNotifyChange();
-                            }
-                        }
-                        if (reg is NRegister<ushort> ushortReg) {
-                            var lastVal = ushortReg.Value;
-                            var readout = (await ReadNumRegister(ushortReg, stationNumber)).Register.Value;
-                            if (lastVal != readout) {
-                                ushortReg.LastValue = readout;
-                                InvokeRegisterChanged(ushortReg);
-                                ushortReg.TriggerNotifyChange();
-                            }
-                        }
-                        if (reg is NRegister<int> intReg) {
-                            var lastVal = intReg.Value;
-                            var readout = (await ReadNumRegister(intReg, stationNumber)).Register.Value;
-                            if (lastVal != readout) {
-                                intReg.LastValue = readout;
-                                InvokeRegisterChanged(intReg);
-                                intReg.TriggerNotifyChange();
-                            }
-                        }
-                        if (reg is NRegister<uint> uintReg) {
-                            var lastVal = uintReg.Value;
-                            var readout = (await ReadNumRegister(uintReg, stationNumber)).Register.Value;
-                            if (lastVal != readout) {
-                                uintReg.LastValue = readout;
-                                InvokeRegisterChanged(uintReg);
-                                uintReg.TriggerNotifyChange();
-                            }
-                        }
-                        if (reg is NRegister<float> floatReg) {
-                            var lastVal = floatReg.Value;
-                            var readout = (await ReadNumRegister(floatReg, stationNumber)).Register.Value;
-                            if (lastVal != readout) {
-                                floatReg.LastValue = readout;
-                                InvokeRegisterChanged(floatReg);
-                                floatReg.TriggerNotifyChange();
-                            }
-                        }
-                        if (reg is BRegister boolReg) {
-                            var lastVal = boolReg.Value;
-                            var readout = (await ReadBoolRegister(boolReg, stationNumber)).Register.Value;
-                            if (lastVal != readout) {
-                                boolReg.LastValue = readout;
-                                InvokeRegisterChanged(boolReg);
-                                boolReg.TriggerNotifyChange();
-                            }
-                        }
-                        if (reg is SRegister stringReg) {
-                            var lastVal = stringReg.Value;
-                            var readout = (await ReadStringRegister(stringReg, stationNumber)).Register.Value;
-                            if (lastVal != readout) {
-                                InvokeRegisterChanged(stringReg);
-                                stringReg.TriggerNotifyChange();
-                            }
-
-                        }
-
-                    }
-
-                    //invoke cycle polled event
-                    InvokePolledCycleDone();
-
-                }
-
-            },  cTokenAutoUpdater.Token);
+            } catch (TaskCanceledException) { }  
 
         }
 
@@ -265,6 +283,8 @@ namespace MewtocolNet {
                 Registers.Add(_address,  new NRegister<float>(_address, _name));
             } else if (regType == typeof(string)) {
                 Registers.Add(_address,  new SRegister(_address, _length, _name));
+            } else if (regType == typeof(TimeSpan)) {
+                Registers.Add(_address, new NRegister<TimeSpan>(_address, _name));
             } else if (regType == typeof(bool)) {
                 Registers.Add(_address, new BRegister(_address, RegisterType.R, _name));
             } else {

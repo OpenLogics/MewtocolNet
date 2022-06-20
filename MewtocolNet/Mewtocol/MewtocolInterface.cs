@@ -33,18 +33,23 @@ namespace MewtocolNet {
         public event Action<Register> RegisterChanged;
 
         /// <summary>
+        /// The current connection state of the interface
+        /// </summary>
+        public bool IsConnected { get; private set; }       
+
+        /// <summary>
         /// Generic information about the connected PLC
         /// </summary>
-        public PLCInfo PlcInfo {get;private set;}
+        public PLCInfo PlcInfo { get; private set; }
 
         /// <summary>
         /// The registered data registers of the PLC
         /// </summary>
         public Dictionary<int, Register> Registers { get; set; } = new Dictionary<int, Register>();
 
-        private string ip {get;set;}
-        private int port {get;set;}
-        private int stationNumber {get;set;}        
+        private string ip;
+        private int port;
+        private int stationNumber;     
 
         /// <summary>
         /// The current IP of the PLC connection
@@ -81,6 +86,8 @@ namespace MewtocolNet {
 
                 if (usePoller)
                     AttachPoller();
+
+                IsConnected = true;
 
             }
 
@@ -238,6 +245,10 @@ namespace MewtocolNet {
                                 AddRegister<int>(cAttribute.MemoryArea, _name: propName, _isBitwise: true);
                             }
 
+                        }
+
+                        if (prop.PropertyType == typeof(TimeSpan)) {
+                            AddRegister<TimeSpan>(cAttribute.MemoryArea, _name: propName);
                         }
 
                     }
@@ -404,6 +415,12 @@ namespace MewtocolNet {
 
             }
 
+            if (foundRegister.GetType() == typeof(NRegister<TimeSpan>)) {
+
+                _ = WriteNumRegister((NRegister<TimeSpan>)foundRegister, (TimeSpan)value, StationNumber);
+
+            }
+
             if (foundRegister.GetType() == typeof(SRegister)) {
 
                 _ = WriteStringRegister((SRegister)foundRegister, (string)value, StationNumber);
@@ -417,7 +434,7 @@ namespace MewtocolNet {
         #region Low level command handling
 
         /// <summary>
-        /// Sends a command to the PLC and awaits results
+        /// Calculates checksum and sends a command to the PLC then awaits results
         /// </summary>
         /// <param name="_msg">MEWTOCOL Formatted request string ex: %01#RT</param>
         /// <param name="_close">Auto close of frame [true]%01#RT01\r [false]%01#RT</param>
@@ -490,35 +507,42 @@ namespace MewtocolNet {
             using (TcpClient client = new TcpClient() { ReceiveBufferSize = 64, NoDelay = true, ExclusiveAddressUse = true }) {
 
                 try {
+
                     await client.ConnectAsync(ip, port);
-                } catch(SocketException) {
+
+                    using (NetworkStream stream = client.GetStream()) {
+                        var message = _blockString.ToHexASCIIBytes();
+                        var messageAscii = BitConverter.ToString(message).Replace("-", " ");
+                        //send request
+                        using (var sendStream = new MemoryStream(message)) {
+                            await sendStream.CopyToAsync(stream);
+                            Logger.Log($"OUT MSG: {_blockString}", LogLevel.Critical, this);
+                            //log message sent
+                            ASCIIEncoding enc = new ASCIIEncoding();
+                            string characters = enc.GetString(message);
+                        }
+                        //await result
+                        StringBuilder response = new StringBuilder();
+                        byte[] responseBuffer = new byte[256];
+                        do {
+                            int bytes = stream.Read(responseBuffer, 0, responseBuffer.Length);
+                            response.Append(Encoding.UTF8.GetString(responseBuffer, 0, bytes));
+                        }
+                        while (stream.DataAvailable);
+                        sw.Stop();
+                        Logger.Log($"IN MSG ({(int)sw.Elapsed.TotalMilliseconds}ms): {_blockString}", LogLevel.Critical, this);
+                        return response.ToString();
+                    }
+
+                } catch(Exception) {
+
+                    IsConnected = false;
+                    KillPoller();
+                    Logger.Log("The PLC connection was closed", LogLevel.Error, this);
                     return null;
+
                 }
                 
-                using (NetworkStream stream = client.GetStream()) {
-                    var message = _blockString.ToHexASCIIBytes();
-                    var messageAscii = BitConverter.ToString(message).Replace("-", " ");
-                    //send request
-                    using (var sendStream = new MemoryStream(message)) {
-                        await sendStream.CopyToAsync(stream);
-                        Logger.Log($"OUT MSG: {_blockString}", LogLevel.Critical, this);
-                        //log message sent
-                        ASCIIEncoding enc = new ASCIIEncoding();
-                        string characters = enc.GetString(message);
-                    }
-                    //await result
-                    StringBuilder response = new StringBuilder();
-                    byte[] responseBuffer = new byte[256];
-                    do {
-                        int bytes = stream.Read(responseBuffer, 0, responseBuffer.Length);
-                        response.Append(Encoding.UTF8.GetString(responseBuffer, 0, bytes));
-                    }
-                    while (stream.DataAvailable);
-                    sw.Stop();
-                    Logger.Log($"IN MSG ({(int)sw.Elapsed.TotalMilliseconds}ms): {_blockString}", LogLevel.Critical, this);
-                    return response.ToString();
-                }
-
             }
 
         }

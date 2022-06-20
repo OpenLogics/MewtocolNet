@@ -53,6 +53,11 @@ namespace MewtocolNet {
 
         #region Bool register reading / writing
 
+        /// <summary>
+        /// Reads the given boolean register from the PLC
+        /// </summary>
+        /// <param name="_toRead">The register to read</param>
+        /// <param name="_stationNumber">Station number to access</param>
         public async Task<BRegisterResult> ReadBoolRegister (BRegister _toRead, int _stationNumber = 1) {
 
             string requeststring = $"%{_stationNumber.ToString().PadLeft(2, '0')}#RCS{_toRead.BuildMewtocolIdent()}";
@@ -79,6 +84,12 @@ namespace MewtocolNet {
 
         }
 
+        /// <summary>
+        /// Writes to the given bool register on the PLC
+        /// </summary>
+        /// <param name="_toWrite">The register to write to</param>
+        /// <param name="_stationNumber">Station number to access</param>
+        /// <returns>The success state of the write operation</returns>
         public async Task<bool> WriteBoolRegister (BRegister _toWrite, bool value, int _stationNumber = 1) {
 
             string requeststring = $"%{_stationNumber.ToString().PadLeft(2, '0')}#WCS{_toWrite.BuildMewtocolIdent()}{(value ? "1" : "0")}";
@@ -94,7 +105,7 @@ namespace MewtocolNet {
         #region Number register reading / writing
 
         /// <summary>
-        /// Reads the given numeric register from PLC
+        /// Reads the given numeric register from the PLC
         /// </summary>
         /// <typeparam name="T">Type of number (short, ushort, int, uint, float)</typeparam>
         /// <param name="_toRead">The register to read</param>
@@ -107,6 +118,13 @@ namespace MewtocolNet {
             string requeststring = $"%{_stationNumber.ToString().PadLeft(2, '0')}#RD{_toRead.BuildMewtocolIdent()}";
             var result = await SendCommandAsync(requeststring);
 
+            if(!result.Success || string.IsNullOrEmpty(result.Response)) {
+                return new NRegisterResult<T> {
+                    Result = result,
+                    Register = _toRead
+                };
+            }
+                
             if (numType == typeof(short)) {
 
                 var resultBytes = result.Response.ParseDTByteString(4).ReverseByteOrder();
@@ -142,6 +160,17 @@ namespace MewtocolNet {
 
                 (_toRead as NRegister<float>).LastValue = finalFloat;
 
+            } else if (numType == typeof(TimeSpan)) {
+
+                var resultBytes = result.Response.ParseDTByteString(8).ReverseByteOrder();
+                //convert to unsigned int first
+                var vallong = long.Parse(resultBytes, NumberStyles.HexNumber);
+                var valMillis = vallong * 10;
+                var ts = TimeSpan.FromMilliseconds(valMillis);
+
+                //minmax writable / readable value is 10ms
+                (_toRead as NRegister<TimeSpan>).LastValue = ts;
+
             }
 
             var finalRes = new NRegisterResult<T> {
@@ -153,12 +182,12 @@ namespace MewtocolNet {
         }
 
         /// <summary>
-        /// Reads the given numeric register from PLC
+        /// Reads the given numeric register from the PLC
         /// </summary>
         /// <typeparam name="T">Type of number (short, ushort, int, uint, float)</typeparam>
         /// <param name="_toWrite">The register to write</param>
         /// <param name="_stationNumber">Station number to access</param>
-        /// <returns>A result with the given NumberRegister and a result struct</returns>
+        /// <returns>The success state of the write operation</returns>
         public async Task<bool> WriteNumRegister<T> (NRegister<T> _toWrite, T _value, int _stationNumber = 1) {
 
             byte[] toWriteVal;
@@ -180,6 +209,15 @@ namespace MewtocolNet {
 
                 toWriteVal = BitConverter.GetBytes(fl.Value);
 
+            } else if (numType == typeof(TimeSpan)) {
+
+                var fl = _value as TimeSpan?;
+                if (fl == null)
+                    throw new NullReferenceException("Timespan cannot be null");
+
+                var tLong = (uint)(fl.Value.TotalMilliseconds / 10);
+                toWriteVal = BitConverter.GetBytes(tLong);
+
             } else {
                 toWriteVal = null;
             }
@@ -196,14 +234,20 @@ namespace MewtocolNet {
 
         #region String register reading / writing
 
-        public async Task<SRegisterResult> ReadStringRegister (SRegister _toRead, int _stationNumber = 1) {
+        //string is build up like this
+        //04 00 04 00 53 50 33 35 13
+        //0, 1 = reserved size
+        //1, 2 = current size
+        //3,4,5,6 = ASCII encoded chars (SP35)
+        //7,8 = checksum
 
-            //string is build up like this
-            //04 00 04 00 53 50 33 35 13
-            //0, 1 = reserved size
-            //1, 2 = current size
-            //3,4,5,6 = ASCII encoded chars (SP35)
-            //7,8 = checksum
+        /// <summary>
+        /// Reads back the value of a string register
+        /// </summary>
+        /// <param name="_toRead">The register to read</param>
+        /// <param name="_stationNumber">The station number of the PLC</param>
+        /// <returns></returns>
+        public async Task<SRegisterResult> ReadStringRegister (SRegister _toRead, int _stationNumber = 1) {
 
             string requeststring = $"%{_stationNumber.ToString().PadLeft(2, '0')}#RD{_toRead.BuildMewtocolIdent()}";
             var result = await SendCommandAsync(requeststring);
@@ -215,6 +259,13 @@ namespace MewtocolNet {
             };
         }
 
+        /// <summary>
+        /// Writes a string to a string register
+        /// </summary>
+        /// <param name="_toWrite">The register to write</param>
+        /// <param name="_value">The value to write, if the strings length is longer than the cap size it gets trimmed to the max char length</param>
+        /// <param name="_stationNumber">The station number of the PLC</param>
+        /// <returns>The success state of the write operation</returns>
         public async Task<bool> WriteStringRegister(SRegister _toWrite, string _value, int _stationNumber = 1) {
 
             if (_value == null) _value = "";
@@ -223,13 +274,14 @@ namespace MewtocolNet {
             }
 
             string stationNum = _stationNumber.ToString().PadLeft(2, '0');
-            string dataArea = _toWrite.BuildMewtocolIdent();
             string dataString = _value.BuildDTString(_toWrite.ReservedSize);
+            string dataArea = _toWrite.BuildCustomIdent(dataString.Length / 4);
+            
             string requeststring = $"%{stationNum}#WD{dataArea}{dataString}";
 
-            Console.WriteLine($"reserved: {_toWrite.MemoryLength}, size: {_value.Length}");
-
             var result = await SendCommandAsync(requeststring);
+
+
             return result.Success && result.Response.StartsWith($"%{ _stationNumber.ToString().PadLeft(2, '0')}#WD");
         }
 

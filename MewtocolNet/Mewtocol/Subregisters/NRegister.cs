@@ -42,6 +42,8 @@ namespace MewtocolNet.Responses {
                 MemoryLength = 1;
             } else if (numType == typeof(float)) {
                 MemoryLength = 1;
+            } else if (numType == typeof(TimeSpan)) {
+                MemoryLength = 1;
             } else {
                 throw new NotSupportedException($"The type {numType} is not allowed for Number Registers");
             }
