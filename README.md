@@ -66,7 +66,7 @@ Logger.OnNewLogMessage((date, msg) => {
 });
 
 //setting up a new PLC interface
-MewtocolInterface interf = new MewtocolInterface("10.237.191.3");
+MewtocolInterface interf = new MewtocolInterface("192.168.115.5");
 
 await interf.ConnectAsync();
 ```
@@ -124,7 +124,7 @@ Logger.OnNewLogMessage((date, msg) => {
 });
 
 //setting up a new PLC interface and register collection
-MewtocolInterface interf = new MewtocolInterface("192.168.115.3");
+MewtocolInterface interf = new MewtocolInterface("192.168.115.5");
 TestRegisters registers = new TestRegisters();
 
 //attaching the register collection and an automatic poller
