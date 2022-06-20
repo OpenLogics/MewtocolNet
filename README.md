@@ -1,6 +1,10 @@
 # MewtocolNet
 A Mewtocol protocol library to interface with Panasonic PLCs over TCP/Serial.
 
+## Disclaimer 
+This library is not an official panasonic product nor does panasonic provide financial support or limitations in any form. 
+This software was written by WOLF Medizintechnik GmbH (@WOmed/dev).
+
 # Support
 
 > This library was only tested with a few PLCs, other types that support the Panasonic Mewtocol protocol might work. 
@@ -18,8 +22,16 @@ Where is the RS232/Serial support
 
 > Support for the serial protocol will be added soon, feel free to contribute
 
+# Protocol description
+
+Panasonic has published a [protocol definition](https://mediap.industry.panasonic.eu/assets/custom-upload/Factory%20&%20Automation/PLC/Manuals/mn_all_plcs_mewtocol_user_pidsx_en.pdf) on their site.
+Refer to this site if you want to see the general functionality or add / report missing features.
+
+> This library is at the time not feature complete, but all essential features are provided
 
 # Usage
+
+See [More examples](/Examples) here
 
 ## Connecting to a PLC 
 
