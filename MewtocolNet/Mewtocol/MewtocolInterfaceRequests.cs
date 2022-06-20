@@ -38,8 +38,8 @@ namespace MewtocolNet {
                 string error = m.Groups[8].Value;
 
                 PLCInfo retInfo = new PLCInfo {
-                    CpuInformation = PLCInfo.CpuInfo.BuildFromHexString(cpu, version, capacity),
-                    OperationMode = PLCInfo.PLCMode.BuildFromHex(operation),
+                    CpuInformation = CpuInfo.BuildFromHexString(cpu, version, capacity),
+                    OperationMode = PLCMode.BuildFromHex(operation),
                     ErrorCode = error,
                     StationNumber = int.Parse(station ?? "0"),
                 };
