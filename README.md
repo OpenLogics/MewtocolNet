@@ -1,3 +1,10 @@
+[![.NET Windows](https://github.com/WOmed/MewtocolNet/actions/workflows/dotnet-windows.yml/badge.svg)](https://github.com/WOmed/MewtocolNet/actions/workflows/dotnet-windows.yml)
+![Nuget](https://img.shields.io/nuget/v/MewtocolNet)
+![Lines of code](https://img.shields.io/tokei/lines/github/WOmed/MewtocolNet)
+![Nuget](https://img.shields.io/nuget/dt/MewtocolNet)
+![GitHub](https://img.shields.io/github/license/WOmed/MewtocolNet)
+![Status](https://img.shields.io/badge/Status-In%20dev-orange)
+
 # MewtocolNet
 An easy to use Mewtocol protocol library to interface with Panasonic PLCs over TCP/Serial.
 
@@ -43,6 +50,18 @@ Where is the RS232/Serial support?
 
 > Support for the serial protocol will be added soon, feel free to contribute
 
+# Installing
+
+Install this package by using [Nuget](https://www.nuget.org/packages/MewtocolNet/) or reference 
+```XML
+<PackageReference Include="MewtocolNet" Version="0.2.5" />
+```
+in your dependencies.
+Alternatively use the dotnet CLI and run 
+```Shell
+dotnet add package MewtocolNet
+```
+
 # Protocol description
 
 Panasonic has published a [protocol definition](https://mediap.industry.panasonic.eu/assets/custom-upload/Factory%20&%20Automation/PLC/Manuals/mn_all_plcs_mewtocol_user_pidsx_en.pdf) on their site.
@@ -66,27 +85,14 @@ Logger.OnNewLogMessage((date, msg) => {
 });
 
 //setting up a new PLC interface
-MewtocolInterface interf = new MewtocolInterface("10.237.191.3");
+MewtocolInterface plc = new MewtocolInterface("192.168.115.5");
 
-await interf.ConnectAsync();
+await plc.ConnectAsync();
 ```
 
-You can also use the callbacks of the `ConnectAsync()` method to do something after the initial connection establishment.
-
-```C#
-await interf.ConnectAsync(
-    //PLC connected
-    (plc) => {
-        if(plcinf.OperationMode.RunMode)
-            Console.WriteLine("PLC is in RUN");
-    },
-    //Connection failed
-    () => {
-        Console.WriteLine("PLC failed to connect");
-    }
-);
-```
 ## Reading data registers / contacts
+
+[Detailed instructions](https://github.com/WOmed/MewtocolNet/wiki/Attribute-handled-reading)
 
 - Create a new class that inherits from `RegisterCollectionBase`
 
@@ -117,20 +123,14 @@ public class TestRegisters : RegisterCollectionBase {
 - attach an automatic poller by chaining `.WithPoller()` after the register attachment
 
 ```C#
-//attaching a logger
-Logger.LogLevel = LogLevel.Verbose;
-Logger.OnNewLogMessage((date, msg) => {
-    Console.WriteLine($"{date.ToString("HH:mm:ss")} {msg}");
-});
-
 //setting up a new PLC interface and register collection
-MewtocolInterface interf = new MewtocolInterface("192.168.115.3");
+MewtocolInterface plc = new MewtocolInterface("192.168.115.5");
 TestRegisters registers = new TestRegisters();
 
 //attaching the register collection and an automatic poller
-interf.WithRegisterCollection(registers).WithPoller();
+plc.WithRegisterCollection(registers).WithPoller();
 
-await interf.ConnectAsync(
+await plc.ConnectAsync(
     (plcinf) => {
         //reading a value from the register collection
         Console.WriteLine($"Time Value is: {registers.TestTime}");
@@ -151,37 +151,28 @@ Sets the register without feedback if it was set
 
 ```C#
 //inverts the boolean register
-interf.SetRegister(nameof(registers.TestBool1), !registers.TestBool1);
+plc.SetRegister(nameof(registers.TestBool1), !registers.TestBool1);
 
 //set the current second to the PLCs TIME register
-interf.SetRegister(nameof(registers.TestTime), TimeSpan.FromSeconds(DateTime.Now.Second));
+plc.SetRegister(nameof(registers.TestTime), TimeSpan.FromSeconds(DateTime.Now.Second));
 
  //writes 'Test' to the PLCs string register
-interf.SetRegister(nameof(registers.TestString1), "Test");
+plc.SetRegister(nameof(registers.TestString1), "Test");
 ```
 
 You can also set a register by calling its name directly (Must be either in an attached register collection or added to the list manually)
 
 Adding registers to a manual list
 ```C#
-interf.AddRegister<bool>(105, _name: "ManualBoolRegister");
+plc.AddRegister<bool>(105, _name: "ManualBoolRegister");
 ```
 
 Reading the value of the manually added register
 ```C#
 //get the value as a string
-string value = interf.GetRegister("ManualBoolRegister").GetValueString();
+string value = plc.GetRegister("ManualBoolRegister").GetValueString();
 //get the value by casting
-bool value2 = interf.GetRegister<BRegister>("ManualBoolRegister").Value;
+bool value2 = plc.GetRegister<BRegister>("ManualBoolRegister").Value;
 //for double casted ones like numbers
-var value2 = interf.GetRegister<NRegister<short>>("NumberRegister").Value;
-```
-
-### Asynchronous
-
-Sets the register waiting for the PLC to confirm it was set
-
-```C#
-//inverts the boolean register
-interf.SetRegisterAsync(nameof(registers.TestBool1), !registers.TestBool1);
+var value2 = plc.GetRegister<NRegister<short>>("NumberRegister").Value;
 ```
