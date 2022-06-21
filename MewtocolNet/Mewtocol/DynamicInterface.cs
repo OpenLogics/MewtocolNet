@@ -71,12 +71,19 @@ namespace MewtocolNet {
 
                     ContinousReaderRunning = true;
 
+                    int getPLCinfoCycleCount = 0;
+
                     while (ContinousReaderRunning) {
 
                         //do priority tasks first
                         if (PriorityTasks.Count > 0) {
 
                             await PriorityTasks.FirstOrDefault(x => !x.IsCompleted);
+
+                        } else if (getPLCinfoCycleCount > 25) {
+
+                            await GetPLCInfoAsync();
+                            getPLCinfoCycleCount = 0;
 
                         }
 
@@ -158,6 +165,8 @@ namespace MewtocolNet {
                             }
 
                         }
+
+                        getPLCinfoCycleCount++;
 
                         //invoke cycle polled event
                         InvokePolledCycleDone();

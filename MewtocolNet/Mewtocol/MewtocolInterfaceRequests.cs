@@ -44,6 +44,8 @@ namespace MewtocolNet {
                     ErrorCode = error,
                     StationNumber = int.Parse(station ?? "0"),
                 };
+
+                PlcInfo = retInfo;
                 return retInfo;
 
             } 
