@@ -33,6 +33,9 @@ namespace Examples {
                         //writing a value to the registers
                         Task.Factory.StartNew(async () => {
 
+                            //set plc to run mode if not already
+                            await interf.SetOperationMode(OPMode.Run);
+
                             await Task.Delay(2000);
 
                             //inverts the boolean register

@@ -115,6 +115,8 @@ namespace MewtocolNet {
         /// <returns></returns>
         public async Task<MewtocolInterface> ConnectAsync (Action<PLCInfo> OnConnected = null, Action OnFailed = null) {
 
+            Logger.Log("Connecting to PLC...", LogLevel.Info, this);
+
             var plcinf = await GetPLCInfoAsync();
 
             if (plcinf != null) {
@@ -394,49 +396,49 @@ namespace MewtocolNet {
 
             if (foundRegister.GetType() == typeof(BRegister)) {
 
-                return await WriteBoolRegister((BRegister)foundRegister, (bool)value, StationNumber);
+                return await WriteBoolRegister((BRegister)foundRegister, (bool)value);
 
             }
 
             if (foundRegister.GetType() == typeof(NRegister<short>)) {
 
-                return await WriteNumRegister((NRegister<short>)foundRegister, (short)value, StationNumber);
+                return await WriteNumRegister((NRegister<short>)foundRegister, (short)value);
 
             }
 
             if (foundRegister.GetType() == typeof(NRegister<ushort>)) {
 
-                return await WriteNumRegister((NRegister<ushort>)foundRegister, (ushort)value, StationNumber);
+                return await WriteNumRegister((NRegister<ushort>)foundRegister, (ushort)value);
 
             }
 
             if (foundRegister.GetType() == typeof(NRegister<int>)) {
 
-                return await WriteNumRegister((NRegister<int>)foundRegister, (int)value, StationNumber);
+                return await WriteNumRegister((NRegister<int>)foundRegister, (int)value);
 
             }
 
             if (foundRegister.GetType() == typeof(NRegister<uint>)) {
 
-                return await WriteNumRegister((NRegister<uint>)foundRegister, (uint)value, StationNumber);
+                return await WriteNumRegister((NRegister<uint>)foundRegister, (uint)value);
 
             }
 
             if (foundRegister.GetType() == typeof(NRegister<float>)) {
 
-                return await WriteNumRegister((NRegister<float>)foundRegister, (float)value, StationNumber);
+                return await WriteNumRegister((NRegister<float>)foundRegister, (float)value);
 
             }
 
             if (foundRegister.GetType() == typeof(NRegister<TimeSpan>)) {
 
-                return await WriteNumRegister((NRegister<TimeSpan>)foundRegister, (TimeSpan)value, StationNumber);
+                return await WriteNumRegister((NRegister<TimeSpan>)foundRegister, (TimeSpan)value);
 
             }
 
             if (foundRegister.GetType() == typeof(SRegister)) {
 
-                return await WriteStringRegister((SRegister)foundRegister, (string)value, StationNumber);
+                return await WriteStringRegister((SRegister)foundRegister, (string)value);
 
             }
 

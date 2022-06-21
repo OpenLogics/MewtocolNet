@@ -1,11 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <PackageId>AppLogger</PackageId>
+    <PackageId>MewtocolNet</PackageId>
     <Version>0.2.5</Version>
     <Authors>Felix Weiss</Authors>
     <Company>Womed</Company>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Description>A Mewtocol protocol library to interface with Panasonic PLCs over TCP/Serial.</Description>
+    <Copyright>Copyright (c) 2022 WOLF Medizintechnik GmbH</Copyright>
+    <PackageProjectUrl>https://github.com/WOmed/MewtocolNet</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/WOmed/MewtocolNet</RepositoryUrl>
+    <PackageTags>plc;panasonic;mewtocol;automation;</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <UserSecretsId>2ccdcc9b-94a3-4e76-8827-453ab889ea33</UserSecretsId>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DocumentationFile>C:\Users\Felix Weiß\source\repos\WOmed\MewtocolNet\Builds\MewtocolNet.xml</DocumentationFile>

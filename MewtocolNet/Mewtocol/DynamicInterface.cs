@@ -24,7 +24,7 @@ namespace MewtocolNet {
         internal void KillPoller () {
 
             ContinousReaderRunning = false;
-            cTokenAutoUpdater.Cancel();
+            cTokenAutoUpdater?.Cancel();
 
         }
 
@@ -86,7 +86,7 @@ namespace MewtocolNet {
 
                             if (reg is NRegister<short> shortReg) {
                                 var lastVal = shortReg.Value;
-                                var readout = (await ReadNumRegister(shortReg, stationNumber)).Register.Value;
+                                var readout = (await ReadNumRegister(shortReg)).Register.Value;
                                 if (lastVal != readout) {
                                     shortReg.LastValue = readout;
                                     InvokeRegisterChanged(shortReg);
@@ -95,7 +95,7 @@ namespace MewtocolNet {
                             }
                             if (reg is NRegister<ushort> ushortReg) {
                                 var lastVal = ushortReg.Value;
-                                var readout = (await ReadNumRegister(ushortReg, stationNumber)).Register.Value;
+                                var readout = (await ReadNumRegister(ushortReg)).Register.Value;
                                 if (lastVal != readout) {
                                     ushortReg.LastValue = readout;
                                     InvokeRegisterChanged(ushortReg);
@@ -104,7 +104,7 @@ namespace MewtocolNet {
                             }
                             if (reg is NRegister<int> intReg) {
                                 var lastVal = intReg.Value;
-                                var readout = (await ReadNumRegister(intReg, stationNumber)).Register.Value;
+                                var readout = (await ReadNumRegister(intReg)).Register.Value;
                                 if (lastVal != readout) {
                                     intReg.LastValue = readout;
                                     InvokeRegisterChanged(intReg);
@@ -113,7 +113,7 @@ namespace MewtocolNet {
                             }
                             if (reg is NRegister<uint> uintReg) {
                                 var lastVal = uintReg.Value;
-                                var readout = (await ReadNumRegister(uintReg, stationNumber)).Register.Value;
+                                var readout = (await ReadNumRegister(uintReg)).Register.Value;
                                 if (lastVal != readout) {
                                     uintReg.LastValue = readout;
                                     InvokeRegisterChanged(uintReg);
@@ -122,7 +122,7 @@ namespace MewtocolNet {
                             }
                             if (reg is NRegister<float> floatReg) {
                                 var lastVal = floatReg.Value;
-                                var readout = (await ReadNumRegister(floatReg, stationNumber)).Register.Value;
+                                var readout = (await ReadNumRegister(floatReg)).Register.Value;
                                 if (lastVal != readout) {
                                     floatReg.LastValue = readout;
                                     InvokeRegisterChanged(floatReg);
@@ -131,7 +131,7 @@ namespace MewtocolNet {
                             }
                             if (reg is NRegister<TimeSpan> tsReg) {
                                 var lastVal = tsReg.Value;
-                                var readout = (await ReadNumRegister(tsReg, stationNumber)).Register.Value;
+                                var readout = (await ReadNumRegister(tsReg)).Register.Value;
                                 if (lastVal != readout) {
                                     tsReg.LastValue = readout;
                                     InvokeRegisterChanged(tsReg);
@@ -140,7 +140,7 @@ namespace MewtocolNet {
                             }
                             if (reg is BRegister boolReg) {
                                 var lastVal = boolReg.Value;
-                                var readout = (await ReadBoolRegister(boolReg, stationNumber)).Register.Value;
+                                var readout = (await ReadBoolRegister(boolReg)).Register.Value;
                                 if (lastVal != readout) {
                                     boolReg.LastValue = readout;
                                     InvokeRegisterChanged(boolReg);
@@ -149,7 +149,7 @@ namespace MewtocolNet {
                             }
                             if (reg is SRegister stringReg) {
                                 var lastVal = stringReg.Value;
-                                var readout = (await ReadStringRegister(stringReg, stationNumber)).Register.Value;
+                                var readout = (await ReadStringRegister(stringReg)).Register.Value;
                                 if (lastVal != readout) {
                                     InvokeRegisterChanged(stringReg);
                                     stringReg.TriggerNotifyChange();

@@ -159,17 +159,40 @@ namespace MewtocolNet {
 
         internal static byte[] HexStringToByteArray(this string hex) {
             return Enumerable.Range(0, hex.Length)
-                            .Where(x => x % 2 == 0)
-                            .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
-                            .ToArray();
+                             .Where(x => x % 2 == 0)
+                             .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
+                             .ToArray();
         }
 
         internal static string ToHexString (this byte[] arr) {
             StringBuilder sb = new StringBuilder();
-            foreach (var b in arr) {
+            for (int i = 0; i < arr.Length; i++) {
+                byte b = arr[i];
                 sb.Append(b.ToString("X2"));
             }
             return sb.ToString();
+        }
+
+        internal static byte[] BigToMixedEndian (this byte[] arr) {
+
+            List<byte> oldBL = new List<byte>(arr);
+
+            List<byte> tempL = new List<byte>();
+
+            //make the input list even
+            if(arr.Length % 2 != 0)
+                oldBL.Add((byte)0);
+
+            for (int i = 0; i < oldBL.Count; i+=2) {
+                byte firstByte = oldBL[i];
+                byte lastByte = oldBL[i + 1];
+                tempL.Add(lastByte);
+                tempL.Add(firstByte);
+
+            }
+
+            return tempL.ToArray();
+
         }
 
     }
