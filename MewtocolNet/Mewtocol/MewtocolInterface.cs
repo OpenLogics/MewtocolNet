@@ -356,6 +356,14 @@ namespace MewtocolNet {
 
             };
 
+            if (collection != null)
+                collection.OnInterfaceLinked(this);
+
+            Connected += (i) => {
+                if(collection != null) 
+                    collection.OnInterfaceLinkedAndOnline(this);
+            };
+
             return this;
 
         }

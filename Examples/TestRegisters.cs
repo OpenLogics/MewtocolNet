@@ -45,8 +45,7 @@ namespace Examples {
         //corresponds to a DT7012 - DT7013 as a 32bit time value that gets parsed as a timespan (TIME)
         //the smallest value to communicate to the PLC is 10ms
         [Register(7012)]
-        public TimeSpan TestTime { get; private set; }  
-
+        public TimeSpan TestTime { get; private set; }
 
     }
 }
