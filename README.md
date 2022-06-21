@@ -1,3 +1,4 @@
+[![.NET Windows](https://github.com/WOmed/MewtocolNet/actions/workflows/dotnet-windows.yml/badge.svg)](https://github.com/WOmed/MewtocolNet/actions/workflows/dotnet-windows.yml)
 ![Nuget](https://img.shields.io/nuget/v/MewtocolNet)
 ![Lines of code](https://img.shields.io/tokei/lines/github/WOmed/MewtocolNet)
 ![Nuget](https://img.shields.io/nuget/dt/MewtocolNet)
