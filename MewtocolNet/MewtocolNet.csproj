@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>MewtocolNet</PackageId>
-    <Version>0.2.5</Version>
+    <Version>0.3.0</Version>
     <Authors>Felix Weiss</Authors>
     <Company>Womed</Company>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
