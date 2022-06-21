@@ -92,7 +92,7 @@ await plc.ConnectAsync();
 
 ## Reading data registers / contacts
 
-[Detailed instructions](/wiki/Attribute-handled-reading)
+[Detailed instructions](https://github.com/WOmed/MewtocolNet/wiki/Attribute-handled-reading)
 
 - Create a new class that inherits from `RegisterCollectionBase`
 
