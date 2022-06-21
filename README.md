@@ -18,11 +18,10 @@ This software was written by WOLF Medizintechnik GmbH (@WOmed/dev).
 
 - [x] Read out stats from your PLC
 - [x] Read and write registers in real time
-- [X] Dynamic register type casting from properties
-- [ ] Change run / prog modes
-- [ ] Write byte blocks in a whole chain
-- [ ] Upload programs to the PLC
-- [ ] Download programs from the PLC
+- [x] Dynamic register type casting from properties
+- [x] Change run / prog modes
+- [x] Write / read byte blocks in a whole chain
+- [ ] Upload / Download programs to the PLC
 - [ ] Reading / writing PLC system registers
 
 # Support
@@ -54,7 +53,7 @@ Where is the RS232/Serial support?
 
 Install this package by using [Nuget](https://www.nuget.org/packages/MewtocolNet/) or reference 
 ```XML
-<PackageReference Include="MewtocolNet" Version="0.2.5" />
+<PackageReference Include="MewtocolNet" Version="0.3.0" />
 ```
 in your dependencies.
 Alternatively use the dotnet CLI and run 
