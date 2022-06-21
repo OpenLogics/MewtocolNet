@@ -1,3 +1,9 @@
+![Nuget](https://img.shields.io/nuget/v/MewtocolNet)
+![Lines of code](https://img.shields.io/tokei/lines/github/WOmed/MewtocolNet)
+![Nuget](https://img.shields.io/nuget/dt/MewtocolNet)
+![GitHub](https://img.shields.io/github/license/WOmed/MewtocolNet)
+![Status](https://img.shields.io/badge/Status-In%20dev-orange)
+
 # MewtocolNet
 An easy to use Mewtocol protocol library to interface with Panasonic PLCs over TCP/Serial.
 
@@ -42,6 +48,18 @@ FP Sigma |✔        |❌  |
 Where is the RS232/Serial support?
 
 > Support for the serial protocol will be added soon, feel free to contribute
+
+# Installing
+
+Install this package by using [Nuget](https://www.nuget.org/packages/MewtocolNet/) or reference 
+```XML
+<PackageReference Include="MewtocolNet" Version="0.2.5" />
+```
+in your dependencies.
+Alternatively use the dotnet CLI and run 
+```Shell
+dotnet add package MewtocolNet
+```
 
 # Protocol description
 
