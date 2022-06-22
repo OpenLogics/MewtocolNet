@@ -8,11 +8,8 @@ namespace MewtocolNet.Registers {
     public class SRegister : Register {
 
         private string lastVal = "";
-        public string Value {
 
-            get => lastVal;
-            
-        }
+        public string Value => lastVal;
 
         public short ReservedSize { get; set; }
 
@@ -22,8 +19,8 @@ namespace MewtocolNet.Registers {
         public SRegister(int _adress, int _reservedStringSize, string _name = null) {
 
             if (_adress > 99999) throw new NotSupportedException("Memory adresses cant be greater than 99999");
-            Name = _name;
-            MemoryAdress = _adress;
+            name = _name;
+            memoryAdress = _adress;
             ReservedSize = (short)_reservedStringSize;
 
             //calc mem length
@@ -32,7 +29,7 @@ namespace MewtocolNet.Registers {
                 wordsize++;
             }
 
-            MemoryLength = (int)Math.Round(wordsize + 1);
+            memoryLength = (int)Math.Round(wordsize + 1);
         }
 
         public override string ToString() {
@@ -62,7 +59,7 @@ namespace MewtocolNet.Registers {
             return asciistring.ToString();
         }
 
-        public void SetValueFromPLC (string val) {
+        internal void SetValueFromPLC (string val) {
             lastVal = val;
             TriggerChangedEvnt(this);
             TriggerNotifyChange();

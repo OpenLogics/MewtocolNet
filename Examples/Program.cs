@@ -30,9 +30,9 @@ namespace Examples {
                         //reading a value from the register collection
                         Console.WriteLine($"BitValue is: {registers.BitValue}");
 
-                        interf.GetRegister(nameof(registers.TestInt16)).PropertyChanged += (s, e) => {
+                        interf.GetRegister(nameof(registers.TestBool1)).PropertyChanged += (s, e) => {
                             Console.ForegroundColor = ConsoleColor.Green;
-                            Console.WriteLine(interf.GetRegister(nameof(registers.TestInt16)).StringValue);
+                            Console.WriteLine(interf.GetRegister(nameof(registers.TestBool1)).StringValue);
                             Console.ResetColor();
                         };
 
@@ -43,9 +43,6 @@ namespace Examples {
                             await interf.SetOperationMode(OPMode.Run);
 
                             await Task.Delay(2000);
-
-                            //inverts the boolean register
-                            await interf.SetRegisterAsync(nameof(registers.TestBool1), !registers.TestBool1);
 
                             Console.WriteLine("Testregister was toggled");
 

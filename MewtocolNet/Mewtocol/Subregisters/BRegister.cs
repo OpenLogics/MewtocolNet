@@ -9,8 +9,8 @@ namespace MewtocolNet.Registers {
     /// </summary>
     public class BRegister : Register {
 
-        internal RegisterType RegType { get; set; }     
-        internal SpecialAddress SpecialAddress { get; set; }        
+        internal RegisterType RegType { get; private set; }     
+        internal SpecialAddress SpecialAddress { get; private set; }        
 
         public bool NeedValue;
         public bool LastValue;
@@ -18,13 +18,7 @@ namespace MewtocolNet.Registers {
         /// <summary>
         /// The value of the register
         /// </summary>
-        public bool Value {
-            get => LastValue;
-            set {
-                NeedValue = value;
-                TriggerChangedEvnt(this);
-            }
-        }
+        public bool Value => LastValue;
 
         /// <summary>
         /// Defines a register containing a number
@@ -35,8 +29,8 @@ namespace MewtocolNet.Registers {
         public BRegister (int _address, RegisterType _type = RegisterType.R, string _name = null) {
 
             if (_address > 99999) throw new NotSupportedException("Memory adresses cant be greater than 99999");
-            MemoryAdress = _address;
-            Name = _name;
+            memoryAdress = _address;
+            name = _name;
 
             RegType = _type;
 
@@ -54,7 +48,7 @@ namespace MewtocolNet.Registers {
                 throw new NotSupportedException("Special adress cant be none");
 
             SpecialAddress = _address;
-            Name = _name;
+            name = _name;
 
             RegType = _type;
 
@@ -74,6 +68,11 @@ namespace MewtocolNet.Registers {
 
         }
 
+        internal void SetValueFromPLC (bool val) {
+            LastValue = val;
+            TriggerChangedEvnt(this);
+            TriggerNotifyChange();
+        }
         public override string ToString() {
             return $"Adress: {MemoryAdress} Val: {Value}";
         }

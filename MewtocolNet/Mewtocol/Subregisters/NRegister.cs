@@ -13,13 +13,7 @@ namespace MewtocolNet.Registers {
         /// <summary>
         /// The value of the register
         /// </summary>
-        public T Value {
-            get => LastValue;
-            set {
-                NeedValue = value;
-                TriggerChangedEvnt(this);
-            }
-        }
+        public T Value => LastValue;
 
         /// <summary>
         /// Defines a register containing a number
@@ -29,21 +23,21 @@ namespace MewtocolNet.Registers {
         public NRegister(int _adress, string _name = null, bool isBitwise = false) {
 
             if (_adress > 99999) throw new NotSupportedException("Memory adresses cant be greater than 99999");
-            MemoryAdress = _adress;
-            Name = _name;
+            memoryAdress = _adress;
+            name = _name;
             Type numType = typeof(T);
             if (numType == typeof(short)) {
-                MemoryLength = 0;
+                memoryLength = 0;
             } else if (numType == typeof(ushort)) {
-                MemoryLength = 0;
+                memoryLength = 0;
             } else if (numType == typeof(int)) {
-                MemoryLength = 1;
+                memoryLength = 1;
             } else if (numType == typeof(uint)) {
-                MemoryLength = 1;
+                memoryLength = 1;
             } else if (numType == typeof(float)) {
-                MemoryLength = 1;
+                memoryLength = 1;
             } else if (numType == typeof(TimeSpan)) {
-                MemoryLength = 1;
+                memoryLength = 1;
             } else {
                 throw new NotSupportedException($"The type {numType} is not allowed for Number Registers");
             }
@@ -52,9 +46,16 @@ namespace MewtocolNet.Registers {
 
         }
 
+        internal void SetValueFromPLC (object val) {
+            LastValue = (T)val;
+            TriggerChangedEvnt(this);
+            TriggerNotifyChange();
+        }
+
         public override string ToString() {
             return $"Adress: {MemoryAdress} Val: {Value}";
         }
+
     }
 
 

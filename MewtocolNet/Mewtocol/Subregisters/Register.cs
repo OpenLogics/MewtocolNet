@@ -17,20 +17,34 @@ namespace MewtocolNet.Registers {
         /// Gets called whenever the value was changed
         /// </summary>
         public event Action<object> ValueChanged;
+        /// <summary>
+        /// Triggers when a property on the register changes
+        /// </summary>
         public event PropertyChangedEventHandler PropertyChanged;
 
+        internal Type collectionType;
+        /// <summary>
+        /// The type of collection the register is in or null of added manually
+        /// </summary>
+        public Type CollectionType => collectionType;
+
+        internal string name;
         /// <summary>
         /// The register name or null of not defined
         /// </summary>
-        public string Name { get; set; }
+        public string Name => name;
+
+        internal int memoryAdress;
         /// <summary>
         /// The registers memory adress if not a special register
         /// </summary>
-        public int MemoryAdress { get; set; }
+        public int MemoryAdress => memoryAdress;
+
+        internal int memoryLength;
         /// <summary>
         /// The rgisters memory length
         /// </summary>
-        public int MemoryLength { get; set; }
+        public int MemoryLength => memoryLength;
 
         /// <summary>
         /// The value of the register auto converted to a string
@@ -41,6 +55,16 @@ namespace MewtocolNet.Registers {
         /// The name the register would have in the PLC
         /// </summary>
         public string RegisterPLCName => GetRegisterPLCName();
+
+        /// <summary>
+        /// The combined name with the holding register class type infront
+        /// </summary>
+        public string CombinedName => GetCombinedName();
+
+        /// <summary>
+        /// The name of the class that contains this register or empty if it was added manually
+        /// </summary>
+        public string ContainerName => GetContainerName();
 
         internal bool isUsedBitwise { get; set; }    
 
@@ -174,7 +198,19 @@ namespace MewtocolNet.Registers {
 
         }
 
-        public string GetRegisterPLCName () {
+        internal string GetCombinedName () {
+
+            return $"{(CollectionType != null ? $"{CollectionType.Name}." : "")}{Name ?? "Unnamed"}";
+
+        }
+
+        internal string GetContainerName () {
+
+            return $"{(CollectionType != null ? $"{CollectionType.Name}" : "")}";
+
+        }
+
+        internal string GetRegisterPLCName () {
 
             return $"{GetRegisterString()}{MemoryAdress}";
 

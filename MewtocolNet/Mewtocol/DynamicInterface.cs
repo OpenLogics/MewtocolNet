@@ -95,63 +95,49 @@ namespace MewtocolNet {
                                 var lastVal = shortReg.Value;
                                 var readout = (await ReadNumRegister(shortReg)).Register.Value;
                                 if (lastVal != readout) {
-                                    shortReg.LastValue = readout;
                                     InvokeRegisterChanged(shortReg);
-                                    shortReg.TriggerNotifyChange();
                                 }
                             }
                             if (reg is NRegister<ushort> ushortReg) {
                                 var lastVal = ushortReg.Value;
                                 var readout = (await ReadNumRegister(ushortReg)).Register.Value;
                                 if (lastVal != readout) {
-                                    ushortReg.LastValue = readout;
                                     InvokeRegisterChanged(ushortReg);
-                                    ushortReg.TriggerNotifyChange();
                                 }
                             }
                             if (reg is NRegister<int> intReg) {
                                 var lastVal = intReg.Value;
                                 var readout = (await ReadNumRegister(intReg)).Register.Value;
                                 if (lastVal != readout) {
-                                    intReg.LastValue = readout;
                                     InvokeRegisterChanged(intReg);
-                                    intReg.TriggerNotifyChange();
                                 }
                             }
                             if (reg is NRegister<uint> uintReg) {
                                 var lastVal = uintReg.Value;
                                 var readout = (await ReadNumRegister(uintReg)).Register.Value;
                                 if (lastVal != readout) {
-                                    uintReg.LastValue = readout;
                                     InvokeRegisterChanged(uintReg);
-                                    uintReg.TriggerNotifyChange();
                                 }
                             }
                             if (reg is NRegister<float> floatReg) {
                                 var lastVal = floatReg.Value;
                                 var readout = (await ReadNumRegister(floatReg)).Register.Value;
                                 if (lastVal != readout) {
-                                    floatReg.LastValue = readout;
                                     InvokeRegisterChanged(floatReg);
-                                    floatReg.TriggerNotifyChange();
                                 }
                             }
                             if (reg is NRegister<TimeSpan> tsReg) {
                                 var lastVal = tsReg.Value;
                                 var readout = (await ReadNumRegister(tsReg)).Register.Value;
                                 if (lastVal != readout) {
-                                    tsReg.LastValue = readout;
                                     InvokeRegisterChanged(tsReg);
-                                    tsReg.TriggerNotifyChange();
                                 }
                             }
                             if (reg is BRegister boolReg) {
                                 var lastVal = boolReg.Value;
                                 var readout = (await ReadBoolRegister(boolReg)).Register.Value;
                                 if (lastVal != readout) {
-                                    boolReg.LastValue = readout;
                                     InvokeRegisterChanged(boolReg);
-                                    boolReg.TriggerNotifyChange();
                                 }
                             }
                             if (reg is SRegister stringReg) {
@@ -159,7 +145,6 @@ namespace MewtocolNet {
                                 var readout = (await ReadStringRegister(stringReg)).Register.Value;
                                 if (lastVal != readout) {
                                     InvokeRegisterChanged(stringReg);
-                                    stringReg.TriggerNotifyChange();
                                 }
 
                             }
@@ -200,30 +185,60 @@ namespace MewtocolNet {
         /// <param name="_name">A naming definition for QOL, doesn't effect PLC and is optional</param>
         public void AddRegister (int _address, RegisterType _type, string _name = null) {
 
+            Register toAdd = null;
+
             //as number registers
             if (_type == RegisterType.DT_short) {
-                Registers.Add(_address, new NRegister<short>(_address, _name));
-                return;
+                toAdd = new NRegister<short>(_address, _name);
             }
             if (_type == RegisterType.DT_ushort) {
-                Registers.Add(_address, new NRegister<ushort>(_address, _name));
-                return;
+                toAdd = new NRegister<ushort>(_address, _name);
             }
             if (_type == RegisterType.DDT_int) {
-                Registers.Add(_address, new NRegister<int>(_address, _name));
-                return;
+                toAdd = new NRegister<int>(_address, _name);
             }
             if (_type == RegisterType.DDT_uint) {
-                Registers.Add(_address, new NRegister<uint>(_address, _name));
-                return;
+                toAdd = new NRegister<uint>(_address, _name);
             }
             if (_type == RegisterType.DDT_float) {
-                Registers.Add(_address, new NRegister<float>(_address, _name));
-                return;
+                toAdd = new NRegister<float>(_address, _name);
             }
 
-            //as bool registers
-            Registers.Add(_address, new BRegister(_address, _type, _name));
+            if(toAdd == null) {
+                toAdd = new BRegister(_address, _type, _name);
+            }
+
+            Registers.Add(_address, toAdd);
+
+        }
+
+        internal void AddRegister (Type _colType, int _address, RegisterType _type, string _name = null) {
+
+            Register toAdd = null;
+
+            //as number registers
+            if (_type == RegisterType.DT_short) {
+                toAdd = new NRegister<short>(_address, _name);
+            }
+            if (_type == RegisterType.DT_ushort) {
+                toAdd = new NRegister<ushort>(_address, _name);
+            }
+            if (_type == RegisterType.DDT_int) {
+                toAdd = new NRegister<int>(_address, _name);
+            }
+            if (_type == RegisterType.DDT_uint) {
+                toAdd = new NRegister<uint>(_address, _name);
+            }
+            if (_type == RegisterType.DDT_float) {
+                toAdd = new NRegister<float>(_address, _name);
+            }
+
+            if (toAdd == null) {
+                toAdd = new BRegister(_address, _type, _name);
+            }
+
+            toAdd.collectionType = _colType;
+            Registers.Add(_address, toAdd);
 
         }
 
@@ -248,6 +263,17 @@ namespace MewtocolNet {
 
         }
 
+        internal void AddRegister (Type _colType, SpecialAddress _spAddress, RegisterType _type, string _name = null) {
+
+            var reg = new BRegister(_spAddress, _type, _name);
+
+            reg.collectionType = _colType;
+
+            //as bool registers
+            Registers.Add((int)_spAddress, reg);
+
+        }
+
         /// <summary>
         /// Adds a PLC memory register to the watchlist <para/>
         /// The registers can be read back by attaching <see cref="WithPoller"/>
@@ -265,7 +291,7 @@ namespace MewtocolNet {
         /// <param name="_name">A naming definition for QOL, doesn't effect PLC and is optional</param>
         /// <param name="_address">The address of the register in the PLCs memory</param>
         /// <param name="_length">The length of the string (Can be ignored for other types)</param>
-        public void AddRegister<T>(int _address, int _length = 1, string _name = null, bool _isBitwise = false) {
+        public void AddRegister<T>(int _address, int _length = 1, string _name = null) {
 
             Type regType = typeof(T);
 
@@ -274,18 +300,16 @@ namespace MewtocolNet {
             }
 
             if (Registers.Any(x => x.Key == _address)) {
-
                 throw new NotSupportedException($"Cannot add a register multiple times, " +
                     $"make sure that all register attributes or AddRegister assignments have different adresses.");
-
             }
 
             if (regType == typeof(short)) {
-                Registers.Add(_address, new NRegister<short>(_address, _name, _isBitwise));
+                Registers.Add(_address, new NRegister<short>(_address, _name));
             } else if (regType == typeof(ushort)) {
                 Registers.Add(_address, new NRegister<ushort>(_address, _name));
             } else if (regType == typeof(int)) {
-                Registers.Add(_address,  new NRegister<int>(_address, _name, _isBitwise));
+                Registers.Add(_address,  new NRegister<int>(_address, _name));
             } else if (regType == typeof(uint)) {
                 Registers.Add(_address,  new NRegister<uint>(_address, _name));
             } else if (regType == typeof(float)) {
@@ -299,6 +323,56 @@ namespace MewtocolNet {
             } else {
                 throw new NotSupportedException($"The type {regType} is not allowed for Registers \n" +
                                                 $"Allowed are: short, ushort, int, uint, float and string");
+            }
+
+        }
+
+        internal void AddRegister<T> (Type _colType, int _address, int _length = 1, string _name = null, bool _isBitwise = false) {
+
+            Type regType = typeof(T);
+
+            if (regType != typeof(string) && _length != 1) {
+                throw new NotSupportedException($"_lenght parameter only allowed for register of type string");
+            }
+
+            if (Registers.Any(x => x.Key == _address) && !_isBitwise) {
+                throw new NotSupportedException($"Cannot add a register multiple times, " +
+                    $"make sure that all register attributes or AddRegister assignments have different adresses.");
+            }
+
+            if (Registers.Any(x => x.Key == _address) && _isBitwise) {
+                return;
+            }
+
+            Register reg = null;
+
+            if (regType == typeof(short)) {
+                reg = new NRegister<short>(_address, _name, _isBitwise);
+            } else if (regType == typeof(ushort)) {
+                reg = new NRegister<ushort>(_address, _name);
+            } else if (regType == typeof(int)) {
+                reg = new NRegister<int>(_address, _name, _isBitwise);
+            } else if (regType == typeof(uint)) {
+                reg = new NRegister<uint>(_address, _name);
+            } else if (regType == typeof(float)) {
+                reg = new NRegister<float>(_address, _name);
+            } else if (regType == typeof(string)) {
+                reg = new SRegister(_address, _length, _name);
+            } else if (regType == typeof(TimeSpan)) {
+                reg = new NRegister<TimeSpan>(_address, _name);
+            } else if (regType == typeof(bool)) {
+                reg = new BRegister(_address, RegisterType.R, _name);
+            }
+
+
+            if (reg == null) {
+                throw new NotSupportedException($"The type {regType} is not allowed for Registers \n" +
+                                                $"Allowed are: short, ushort, int, uint, float and string");
+            } else {
+
+                reg.collectionType = _colType;
+
+                Registers.Add(_address, reg);
             }
 
         }

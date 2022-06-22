@@ -7,7 +7,7 @@ namespace Examples {
     public class TestRegisters : RegisterCollectionBase {
 
         //corresponds to a R100 boolean register in the PLC
-        [Register(100, RegisterType.R)]
+        [Register(1000, RegisterType.R)]
         public bool TestBool1 { get; private set; }
 
         //corresponds to a XD input of the PLC
@@ -41,6 +41,9 @@ namespace Examples {
         //corresponds to a DT1204 as a 16bit word/int takes the bit at index 9 and writes it back as a boolean
         [Register(1204, 9, BitCount.B16)]
         public bool BitValue { get; private set; }
+
+        [Register(1204, 5, BitCount.B16)]
+        public bool FillTest { get; private set; }
 
         //corresponds to a DT7012 - DT7013 as a 32bit time value that gets parsed as a timespan (TIME)
         //the smallest value to communicate to the PLC is 10ms

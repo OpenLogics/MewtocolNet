@@ -92,7 +92,7 @@ namespace MewtocolNet {
         /// </summary>
         public int CycleTimeMs {
             get { return cycleTimeMs; }
-            set {
+            private set {
                 cycleTimeMs = value;
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CycleTimeMs)));
             }
@@ -234,43 +234,43 @@ namespace MewtocolNet {
 
                         if (prop.PropertyType == typeof(bool) && cAttribute.AssignedBitIndex == -1) {
                             if (cAttribute.SpecialAddress == SpecialAddress.None) {
-                                AddRegister(cAttribute.MemoryArea, cAttribute.RegisterType, _name: propName);
+                                AddRegister(collection.GetType(), cAttribute.MemoryArea, cAttribute.RegisterType, _name: propName);
                             } else {
-                                AddRegister(cAttribute.SpecialAddress, cAttribute.RegisterType, _name: propName);
+                                AddRegister(collection.GetType(), cAttribute.SpecialAddress, cAttribute.RegisterType, _name: propName);
                             }
                         }
 
                         if (prop.PropertyType == typeof(short)) {
-                            AddRegister<short>(cAttribute.MemoryArea, _name: propName);
+                            AddRegister<short>(collection.GetType(), cAttribute.MemoryArea, _name: propName);
                         }
 
                         if (prop.PropertyType == typeof(ushort)) {
-                            AddRegister<ushort>(cAttribute.MemoryArea, _name: propName);
+                            AddRegister<ushort>(collection.GetType(), cAttribute.MemoryArea, _name: propName);
                         }
 
                         if (prop.PropertyType == typeof(int)) {
-                            AddRegister<int>(cAttribute.MemoryArea, _name: propName);
+                            AddRegister<int>(collection.GetType(), cAttribute.MemoryArea, _name: propName);
                         }
 
                         if (prop.PropertyType == typeof(uint)) {
-                            AddRegister<uint>(cAttribute.MemoryArea, _name: propName);
+                            AddRegister<uint>(collection.GetType(), cAttribute.MemoryArea, _name: propName);
                         }
 
                         if (prop.PropertyType == typeof(float)) {
-                            AddRegister<float>(cAttribute.MemoryArea, _name: propName);
+                            AddRegister<float>(collection.GetType(), cAttribute.MemoryArea, _name: propName);
                         }
 
                         if (prop.PropertyType == typeof(string)) {
-                            AddRegister<string>(cAttribute.MemoryArea, cAttribute.StringLength, _name: propName);
+                            AddRegister<string>(collection.GetType(), cAttribute.MemoryArea, cAttribute.StringLength, _name: propName);
                         }
 
                         //read number as bit array
                         if (prop.PropertyType == typeof(BitArray)) {
 
                             if (cAttribute.BitCount == BitCount.B16) {
-                                AddRegister<short>(cAttribute.MemoryArea, _name: propName, _isBitwise: true);
+                                AddRegister<short>(collection.GetType(), cAttribute.MemoryArea, _name: propName, _isBitwise: true);
                             } else {
-                                AddRegister<int>(cAttribute.MemoryArea, _name: propName, _isBitwise: true);
+                                AddRegister<int>(collection.GetType(), cAttribute.MemoryArea, _name: propName, _isBitwise: true);
                             }
 
                         }
@@ -279,15 +279,22 @@ namespace MewtocolNet {
                         if (prop.PropertyType == typeof(bool) && cAttribute.AssignedBitIndex != -1) {
 
                             if (cAttribute.BitCount == BitCount.B16) {
-                                AddRegister<short>(cAttribute.MemoryArea, _name: propName, _isBitwise: true);
+                                AddRegister<short>(collection.GetType(), cAttribute.MemoryArea, _name: propName, _isBitwise: true);
                             } else {
-                                AddRegister<int>(cAttribute.MemoryArea, _name: propName, _isBitwise: true);
+                                AddRegister<int>(collection.GetType(), cAttribute.MemoryArea, _name: propName, _isBitwise: true);
                             }
+
+                            //attach for bools to be read when bitregister
+                            //RegisterChanged += (reg) => {
+                            //    if (reg.Name == propName) {
+                            //        prop.SetValue()
+                            //    }
+                            //};
 
                         }
 
                         if (prop.PropertyType == typeof(TimeSpan)) {
-                            AddRegister<TimeSpan>(cAttribute.MemoryArea, _name: propName);
+                            AddRegister<TimeSpan>(collection.GetType(), cAttribute.MemoryArea, _name: propName);
                         }
 
                     }
@@ -297,6 +304,40 @@ namespace MewtocolNet {
             }
 
             RegisterChanged += (reg) => {
+
+                //if the register is also used bitwise assign the boolean bit value to the according prop
+                if(reg.isUsedBitwise) {
+
+                    for (int i = 0; i < props.Length; i++) {
+
+                        var prop = props[i];
+                        var bitWiseFound = prop.GetCustomAttributes(true)
+                        .FirstOrDefault(y => y.GetType() == typeof(RegisterAttribute) && ((RegisterAttribute)y).MemoryArea == reg.MemoryAdress);
+
+                        if(bitWiseFound != null && reg is NRegister<short> reg16) {
+                            var casted = (RegisterAttribute)bitWiseFound;
+                            var bitIndex = casted.AssignedBitIndex;
+
+                            var bytes = BitConverter.GetBytes(reg16.Value);
+                            BitArray bitAr = new BitArray(bytes);
+                            prop.SetValue(collection, bitAr[bitIndex]);
+                            collection.TriggerPropertyChanged(prop.Name);
+
+                        } else if (bitWiseFound != null && reg is NRegister<int> reg32) {
+                            var casted = (RegisterAttribute)bitWiseFound;
+                            var bitIndex = casted.AssignedBitIndex;
+
+                            var bytes = BitConverter.GetBytes(reg32.Value);
+                            BitArray bitAr = new BitArray(bytes);
+                            prop.SetValue(collection, bitAr[bitIndex]);
+                            collection.TriggerPropertyChanged(prop.Name);
+
+                        }
+
+                    }
+
+                }
+
 
                 var foundToUpdate = props.FirstOrDefault(x => x.Name == reg.Name);
 
@@ -349,27 +390,7 @@ namespace MewtocolNet {
                     }
 
 
-                    if (foundToUpdate.PropertyType == typeof(bool) && registerAttr.AssignedBitIndex >= 0) {
-
-                        //setting back bit registers to individual properties
-                        if (reg is NRegister<short> shortReg) {
-
-                            var bytes = BitConverter.GetBytes(shortReg.Value);
-                            BitArray bitAr = new BitArray(bytes);
-                            foundToUpdate.SetValue(collection, bitAr[registerAttr.AssignedBitIndex]);
-
-                        }
-
-                        if (reg is NRegister<int> intReg) {
-
-                            var bytes = BitConverter.GetBytes(intReg.Value);
-                            BitArray bitAr = new BitArray(bytes);
-                            foundToUpdate.SetValue(collection, bitAr[registerAttr.AssignedBitIndex]);
-
-                        }
-
-
-                    } else if (foundToUpdate.PropertyType == typeof(BitArray)) {
+                    if (foundToUpdate.PropertyType == typeof(BitArray)) {
 
                         //setting back bit registers
                         if (reg is NRegister<short> shortReg) {
@@ -595,6 +616,10 @@ namespace MewtocolNet {
                         }
                         while (stream.DataAvailable);
                         sw.Stop();
+                        var curCycle = (int)sw.ElapsedMilliseconds;
+                        if (Math.Abs(CycleTimeMs - curCycle) > 2) {
+                            CycleTimeMs = curCycle;
+                        }
                         Logger.Log($"IN MSG ({(int)sw.Elapsed.TotalMilliseconds}ms): {_blockString}", LogLevel.Critical, this);
                         return response.ToString();
                     }
@@ -602,6 +627,7 @@ namespace MewtocolNet {
                 } catch (Exception) {
 
                     if (IsConnected) {
+                        CycleTimeMs = 0;
                         IsConnected = false;
                         Disconnected?.Invoke();
                     }

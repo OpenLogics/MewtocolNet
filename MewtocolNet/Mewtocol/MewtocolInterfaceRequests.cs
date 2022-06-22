@@ -160,7 +160,7 @@ namespace MewtocolNet {
 
             var resultBool = result.Response.ParseRCSingleBit();
             if(resultBool != null) {
-                _toRead.LastValue = resultBool.Value;
+                _toRead.SetValueFromPLC(resultBool.Value);
             } 
 
             var finalRes = new BRegisterResult {
@@ -216,25 +216,25 @@ namespace MewtocolNet {
 
                 var resultBytes = result.Response.ParseDTByteString(4).ReverseByteOrder();
                 var val = short.Parse(resultBytes, NumberStyles.HexNumber);
-                (_toRead as NRegister<short>).LastValue = val;
+                _toRead.SetValueFromPLC(val);
 
             } else if (numType == typeof(ushort)) {
 
                 var resultBytes = result.Response.ParseDTByteString(4).ReverseByteOrder();
                 var val = ushort.Parse(resultBytes, NumberStyles.HexNumber);
-                (_toRead as NRegister<ushort>).LastValue = val;
+                _toRead.SetValueFromPLC(val);
 
             } else if (numType == typeof(int)) {
 
                 var resultBytes = result.Response.ParseDTByteString(8).ReverseByteOrder();
                 var val = int.Parse(resultBytes, NumberStyles.HexNumber);
-                (_toRead as NRegister<int>).LastValue = val;
+                _toRead.SetValueFromPLC(val);
 
             } else if (numType == typeof(uint)) {
 
                 var resultBytes = result.Response.ParseDTByteString(8).ReverseByteOrder();
                 var val = uint.Parse(resultBytes, NumberStyles.HexNumber);
-                (_toRead as NRegister<uint>).LastValue = val;
+                _toRead.SetValueFromPLC(val);
 
             } else if (numType == typeof(float)) {
 
@@ -245,7 +245,7 @@ namespace MewtocolNet {
                 byte[] floatVals = BitConverter.GetBytes(val);
                 float finalFloat = BitConverter.ToSingle(floatVals, 0);
 
-                (_toRead as NRegister<float>).LastValue = finalFloat;
+                _toRead.SetValueFromPLC(finalFloat);
 
             } else if (numType == typeof(TimeSpan)) {
 
@@ -256,7 +256,7 @@ namespace MewtocolNet {
                 var ts = TimeSpan.FromMilliseconds(valMillis);
 
                 //minmax writable / readable value is 10ms
-                (_toRead as NRegister<TimeSpan>).LastValue = ts;
+                _toRead.SetValueFromPLC(ts);
 
             }
 
