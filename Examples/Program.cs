@@ -30,6 +30,12 @@ namespace Examples {
                         //reading a value from the register collection
                         Console.WriteLine($"BitValue is: {registers.BitValue}");
 
+                        interf.GetRegister(nameof(registers.TestInt16)).PropertyChanged += (s, e) => {
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine(interf.GetRegister(nameof(registers.TestInt16)).StringValue);
+                            Console.ResetColor();
+                        };
+
                         //writing a value to the registers
                         Task.Factory.StartNew(async () => {
 

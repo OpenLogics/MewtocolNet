@@ -19,10 +19,36 @@ namespace MewtocolNet.Registers {
         public event Action<object> ValueChanged;
         public event PropertyChangedEventHandler PropertyChanged;
 
+        /// <summary>
+        /// The register name or null of not defined
+        /// </summary>
         public string Name { get; set; }
+        /// <summary>
+        /// The registers memory adress if not a special register
+        /// </summary>
         public int MemoryAdress { get; set; }
+        /// <summary>
+        /// The rgisters memory length
+        /// </summary>
         public int MemoryLength { get; set; }
+
+        /// <summary>
+        /// The value of the register auto converted to a string
+        /// </summary>
+        public string StringValue => GetValueString();
+
+        /// <summary>
+        /// The name the register would have in the PLC
+        /// </summary>
+        public string RegisterPLCName => GetRegisterPLCName();
+
         internal bool isUsedBitwise { get; set; }    
+
+        internal Register () {
+            ValueChanged += (obj) => {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(StringValue)));
+            };
+        }
 
         public virtual string BuildMewtocolIdent() {
 
