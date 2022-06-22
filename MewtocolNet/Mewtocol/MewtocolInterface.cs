@@ -11,13 +11,14 @@ using MewtocolNet.RegisterAttributes;
 using MewtocolNet.Logging;
 using System.Collections;
 using System.Diagnostics;
+using System.ComponentModel;
 
 namespace MewtocolNet {
-    
+
     /// <summary>
     /// The PLC com interface class
     /// </summary>
-    public partial class MewtocolInterface {
+    public partial class MewtocolInterface : INotifyPropertyChanged {
 
         /// <summary>
         /// Gets triggered when the PLC connection was established
@@ -25,19 +26,43 @@ namespace MewtocolNet {
         public event Action<PLCInfo> Connected;
 
         /// <summary>
+        /// Gets triggered when the PLC connection was closed or lost
+        /// </summary>
+        public event Action Disconnected;
+
+        /// <summary>
         /// Gets triggered when a registered data register changes its value
         /// </summary>
         public event Action<Register> RegisterChanged;
 
         /// <summary>
+        /// Gets triggered when a property of the interface changes
+        /// </summary>
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        private bool isConnected;
+        /// <summary>
         /// The current connection state of the interface
         /// </summary>
-        public bool IsConnected { get; private set; }       
+        public bool IsConnected {
+            get => isConnected;
+            private set {
+                isConnected = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsConnected)));
+            }
+        }
 
+        private PLCInfo plcInfo;
         /// <summary>
         /// Generic information about the connected PLC
         /// </summary>
-        public PLCInfo PlcInfo { get; private set; }
+        public PLCInfo PlcInfo { 
+            get => plcInfo; 
+            private set {
+                plcInfo = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PlcInfo)));
+            }
+        }
 
         /// <summary>
         /// The registered data registers of the PLC
@@ -46,7 +71,7 @@ namespace MewtocolNet {
 
         private string ip;
         private int port;
-        private int stationNumber;     
+        private int stationNumber;
 
         /// <summary>
         /// The current IP of the PLC connection
@@ -61,7 +86,20 @@ namespace MewtocolNet {
         /// </summary>
         public int StationNumber => stationNumber;
 
-        internal List<Task> PriorityTasks { get; set; } = new List<Task>(); 
+        private int cycleTimeMs;
+        /// <summary>
+        /// The duration of the last message cycle
+        /// </summary>
+        public int CycleTimeMs {
+            get { return cycleTimeMs; }
+            set {
+                cycleTimeMs = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CycleTimeMs)));
+            }
+        }
+
+
+        internal List<Task> PriorityTasks { get; set; } = new List<Task>();
 
         #region Initialization
 
@@ -72,10 +110,10 @@ namespace MewtocolNet {
         /// <param name="_port">Port of the PLC</param>
         /// <param name="_station">Station Number of the PLC</param>
         public MewtocolInterface (string _ip, int _port = 9094, int _station = 1) {
-            
+
             ip = _ip;
             port = _port;
-            stationNumber = _station;   
+            stationNumber = _station;
 
             Connected += MewtocolInterface_Connected;
 
@@ -90,7 +128,8 @@ namespace MewtocolNet {
 
             RegisterChanged += (o) => {
 
-                string address = $"{o.GetRegisterString()}{o.MemoryAdress}".PadRight(5, (char)32); ;
+                string address = $"{o.GetRegisterString()}{o.MemoryAdress}".PadRight(5, (char)32);
+                ;
 
                 Logger.Log($"{address} " +
                            $"{(o.Name != null ? $"({o.Name}) " : "")}" +
@@ -144,6 +183,7 @@ namespace MewtocolNet {
 
                 if (OnFailed != null) {
                     OnFailed();
+                    Disconnected?.Invoke();
                     Logger.Log("Initial connection failed", LogLevel.Info, this);
                 }
 
@@ -190,7 +230,7 @@ namespace MewtocolNet {
                 string propName = prop.Name;
                 foreach (var attr in attributes) {
 
-                    if(attr is RegisterAttribute cAttribute) {
+                    if (attr is RegisterAttribute cAttribute) {
 
                         if (prop.PropertyType == typeof(bool) && cAttribute.AssignedBitIndex == -1) {
                             if (cAttribute.SpecialAddress == SpecialAddress.None) {
@@ -227,7 +267,7 @@ namespace MewtocolNet {
                         //read number as bit array
                         if (prop.PropertyType == typeof(BitArray)) {
 
-                            if(cAttribute.BitCount == BitCount.B16) {
+                            if (cAttribute.BitCount == BitCount.B16) {
                                 AddRegister<short>(cAttribute.MemoryArea, _name: propName, _isBitwise: true);
                             } else {
                                 AddRegister<int>(cAttribute.MemoryArea, _name: propName, _isBitwise: true);
@@ -259,7 +299,7 @@ namespace MewtocolNet {
             RegisterChanged += (reg) => {
 
                 var foundToUpdate = props.FirstOrDefault(x => x.Name == reg.Name);
-               
+
                 if (foundToUpdate != null) {
 
                     var foundAttributes = foundToUpdate.GetCustomAttributes(true);
@@ -329,7 +369,7 @@ namespace MewtocolNet {
                         }
 
 
-                    } else if(foundToUpdate.PropertyType == typeof(BitArray)) {
+                    } else if (foundToUpdate.PropertyType == typeof(BitArray)) {
 
                         //setting back bit registers
                         if (reg is NRegister<short> shortReg) {
@@ -360,7 +400,7 @@ namespace MewtocolNet {
                 collection.OnInterfaceLinked(this);
 
             Connected += (i) => {
-                if(collection != null) 
+                if (collection != null)
                     collection.OnInterfaceLinkedAndOnline(this);
             };
 
@@ -473,7 +513,7 @@ namespace MewtocolNet {
 
             string response = null;
 
-            if(ContinousReaderRunning) {
+            if (ContinousReaderRunning) {
 
                 //if the poller is active then add all messages to a qeueue
 
@@ -481,7 +521,7 @@ namespace MewtocolNet {
                 PriorityTasks.Add(awaittask);
                 awaittask.Wait();
 
-                PriorityTasks.Remove(awaittask);    
+                PriorityTasks.Remove(awaittask);
                 response = awaittask.Result;
 
             } else {
@@ -492,7 +532,7 @@ namespace MewtocolNet {
 
             }
 
-            if(response == null) {
+            if (response == null) {
                 return new CommandResult {
                     Success = false,
                     Error = "0000",
@@ -527,7 +567,7 @@ namespace MewtocolNet {
 
         private async Task<string> SendSingleBlock (string _blockString) {
 
-            Stopwatch sw = Stopwatch.StartNew();    
+            Stopwatch sw = Stopwatch.StartNew();
 
             using (TcpClient client = new TcpClient() { ReceiveBufferSize = 64, NoDelay = true, ExclusiveAddressUse = true }) {
 
@@ -559,15 +599,19 @@ namespace MewtocolNet {
                         return response.ToString();
                     }
 
-                } catch(Exception) {
+                } catch (Exception) {
 
-                    IsConnected = false;
+                    if (IsConnected) {
+                        IsConnected = false;
+                        Disconnected?.Invoke();
+                    }
+
                     KillPoller();
                     Logger.Log("The PLC connection was closed", LogLevel.Error, this);
                     return null;
 
                 }
-                
+
             }
 
         }
