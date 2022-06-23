@@ -212,6 +212,10 @@ namespace MewtocolNet.Registers {
 
         internal string GetRegisterPLCName () {
 
+            if (this is BRegister bReg && bReg.SpecialAddress != SpecialAddress.None) {
+                return $"{GetRegisterString()}{bReg.SpecialAddress}";
+            }
+
             return $"{GetRegisterString()}{MemoryAdress}";
 
         }

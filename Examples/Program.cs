@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using MewtocolNet;
 using MewtocolNet.Logging;
+using MewtocolNet.Registers;
 
 namespace Examples {
 

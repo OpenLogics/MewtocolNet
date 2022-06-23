@@ -183,7 +183,7 @@ namespace MewtocolNet {
 
             var result = await SendCommandAsync(requeststring);
 
-            return result.Success && result.Response.StartsWith($"%{ GetStationNumber()}#WC");
+            return result.Success && result.Response.StartsWith($"%{ GetStationNumber()}$WC");
 
         }
 
@@ -313,7 +313,7 @@ namespace MewtocolNet {
 
             var result = await SendCommandAsync(requeststring);
 
-            return result.Success && result.Response.StartsWith($"%{ GetStationNumber()}#WD");
+            return result.Success && result.Response.StartsWith($"%{ GetStationNumber()}$WD");
 
         }
 
@@ -369,7 +369,7 @@ namespace MewtocolNet {
             var result = await SendCommandAsync(requeststring);
 
 
-            return result.Success && result.Response.StartsWith($"%{ GetStationNumber()}#WD");
+            return result.Success && result.Response.StartsWith($"%{ GetStationNumber()}$WD");
         }
 
         #endregion

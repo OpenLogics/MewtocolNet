@@ -278,18 +278,13 @@ namespace MewtocolNet {
                         //read number as bit array by invdividual properties
                         if (prop.PropertyType == typeof(bool) && cAttribute.AssignedBitIndex != -1) {
 
-                            if (cAttribute.BitCount == BitCount.B16) {
-                                AddRegister<short>(collection.GetType(), cAttribute.MemoryArea, _name: propName, _isBitwise: true);
-                            } else {
-                                AddRegister<int>(collection.GetType(), cAttribute.MemoryArea, _name: propName, _isBitwise: true);
-                            }
+                            //var bitwiseCount = Registers.Count(x => x.Value.isUsedBitwise);
 
-                            //attach for bools to be read when bitregister
-                            //RegisterChanged += (reg) => {
-                            //    if (reg.Name == propName) {
-                            //        prop.SetValue()
-                            //    }
-                            //};
+                            if (cAttribute.BitCount == BitCount.B16) {
+                                AddRegister<short>(collection.GetType(), cAttribute.MemoryArea, _name: $"Auto_Bitwise_DT{cAttribute.MemoryArea}", _isBitwise: true);
+                            } else {
+                                AddRegister<int>(collection.GetType(), cAttribute.MemoryArea, _name: $"Auto_Bitwise_DDT{cAttribute.MemoryArea}", _isBitwise: true);
+                            }
 
                         }
 
