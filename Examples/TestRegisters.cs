@@ -50,5 +50,21 @@ namespace Examples {
         [Register(7012)]
         public TimeSpan TestTime { get; private set; }
 
+        public enum CurrentState {
+            Undefined = 0,
+            State1 = 1,
+            State2 = 2,
+            //State3 = 3,
+            State4 = 4,
+            State5 = 5,
+            StateBetween = 100,
+            State6 = 6,
+            State7 = 7,
+        }
+
+        [Register(50)]
+        public CurrentState TestEnum { get; private set; }
+
+
     }
 }

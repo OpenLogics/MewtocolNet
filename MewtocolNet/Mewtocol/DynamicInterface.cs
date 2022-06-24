@@ -327,7 +327,7 @@ namespace MewtocolNet {
 
         }
 
-        internal void AddRegister<T> (Type _colType, int _address, int _length = 1, string _name = null, bool _isBitwise = false) {
+        internal void AddRegister<T> (Type _colType, int _address, int _length = 1, string _name = null, bool _isBitwise = false, Type _enumType = null) {
 
             Type regType = typeof(T);
 
@@ -351,7 +351,7 @@ namespace MewtocolNet {
             } else if (regType == typeof(ushort)) {
                 reg = new NRegister<ushort>(_address, _name);
             } else if (regType == typeof(int)) {
-                reg = new NRegister<int>(_address, _name, _isBitwise);
+                reg = new NRegister<int>(_address, _name, _isBitwise, _enumType);
             } else if (regType == typeof(uint)) {
                 reg = new NRegister<uint>(_address, _name);
             } else if (regType == typeof(float)) {

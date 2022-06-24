@@ -67,6 +67,7 @@ namespace MewtocolNet.Registers {
         public string ContainerName => GetContainerName();
 
         internal bool isUsedBitwise { get; set; }    
+        internal Type enumType { get; set; }
 
         internal Register () {
             ValueChanged += (obj) => {
@@ -110,6 +111,18 @@ namespace MewtocolNet.Registers {
         /// <returns></returns>
         public string GetValueString () {
 
+            if (enumType != null && this is NRegister<int> intEnumReg) {
+                var dict = new Dictionary<int, string>();
+                foreach (var name in Enum.GetNames(enumType)) {
+                    dict.Add((int)Enum.Parse(enumType, name), name);
+                }
+
+                if(dict.ContainsKey(intEnumReg.Value)) {
+                    return $"{intEnumReg.Value} ({dict[intEnumReg.Value]})";
+                } else {
+                    return $"{intEnumReg.Value} (Missing Enum)";
+                }   
+            }
             if (this is NRegister<short> shortReg) {
                 return $"{shortReg.Value}{(isUsedBitwise ? $" [{shortReg.GetBitwise().ToBitString()}]" : "")}";
             }
@@ -133,7 +146,6 @@ namespace MewtocolNet.Registers {
             }
             if (this is SRegister stringReg) {
                 return stringReg.Value.ToString();
-
             }
 
             return "Type of the register is not supported.";

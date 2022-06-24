@@ -264,6 +264,10 @@ namespace MewtocolNet {
                             AddRegister<string>(collection.GetType(), cAttribute.MemoryArea, cAttribute.StringLength, _name: propName);
                         }
 
+                        if (prop.PropertyType.IsEnum) {
+                            AddRegister<int>(collection.GetType(), cAttribute.MemoryArea, _name: propName, _enumType: prop.PropertyType);
+                        }
+
                         //read number as bit array
                         if (prop.PropertyType == typeof(BitArray)) {
 
@@ -374,6 +378,10 @@ namespace MewtocolNet {
 
                         if (foundToUpdate.PropertyType == typeof(float)) {
                             foundToUpdate.SetValue(collection, ((NRegister<float>)reg).Value);
+                        }
+
+                        if (foundToUpdate.PropertyType.IsEnum) {
+                            foundToUpdate.SetValue(collection, ((NRegister<int>)reg).Value);
                         }
 
                         //setting back strings
