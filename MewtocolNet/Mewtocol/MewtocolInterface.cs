@@ -101,6 +101,8 @@ namespace MewtocolNet {
 
         internal List<Task> PriorityTasks { get; set; } = new List<Task>();
 
+        internal int SendExceptionsInRow = 0;
+
         #region Initialization
 
         /// <summary>
@@ -600,43 +602,57 @@ namespace MewtocolNet {
                     await client.ConnectAsync(ip, port);
 
                     using (NetworkStream stream = client.GetStream()) {
+
                         var message = _blockString.ToHexASCIIBytes();
                         var messageAscii = BitConverter.ToString(message).Replace("-", " ");
+
                         //send request
-                        using (var sendStream = new MemoryStream(message)) {
-                            await sendStream.CopyToAsync(stream);
-                            Logger.Log($"OUT MSG: {_blockString}", LogLevel.Critical, this);
-                            //log message sent
-                            ASCIIEncoding enc = new ASCIIEncoding();
-                            string characters = enc.GetString(message);
+                        try {
+                            using (var sendStream = new MemoryStream(message)) {
+                                await sendStream.CopyToAsync(stream);
+                                Logger.Log($"OUT MSG: {_blockString}", LogLevel.Critical, this);
+                                //log message sent
+                                ASCIIEncoding enc = new ASCIIEncoding();
+                                string characters = enc.GetString(message);
+                            }
+                        } catch (IOException) {
+                            return null;
                         }
+
                         //await result
                         StringBuilder response = new StringBuilder();
-                        byte[] responseBuffer = new byte[256];
-                        do {
-                            int bytes = stream.Read(responseBuffer, 0, responseBuffer.Length);
-                            response.Append(Encoding.UTF8.GetString(responseBuffer, 0, bytes));
+                        try {
+                            
+                            byte[] responseBuffer = new byte[256];
+                            do {
+                                int bytes = stream.Read(responseBuffer, 0, responseBuffer.Length);
+                                response.Append(Encoding.UTF8.GetString(responseBuffer, 0, bytes));
+                            }
+                            while (stream.DataAvailable);
+                        } catch (IOException) {
+                            return null;
                         }
-                        while (stream.DataAvailable);
+                       
                         sw.Stop();
                         var curCycle = (int)sw.ElapsedMilliseconds;
                         if (Math.Abs(CycleTimeMs - curCycle) > 2) {
                             CycleTimeMs = curCycle;
                         }
                         Logger.Log($"IN MSG ({(int)sw.Elapsed.TotalMilliseconds}ms): {_blockString}", LogLevel.Critical, this);
+                        SendExceptionsInRow = 0;
                         return response.ToString();
                     }
 
-                } catch (Exception) {
+                } catch (SocketException) {
 
                     if (IsConnected) {
                         CycleTimeMs = 0;
                         IsConnected = false;
                         Disconnected?.Invoke();
+                        KillPoller();
+                        Logger.Log("The PLC connection was closed", LogLevel.Error, this);
                     }
 
-                    KillPoller();
-                    Logger.Log("The PLC connection was closed", LogLevel.Error, this);
                     return null;
 
                 }
