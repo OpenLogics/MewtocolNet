@@ -386,6 +386,10 @@ namespace MewtocolNet {
                             foundToUpdate.SetValue(collection, ((NRegister<int>)reg).Value);
                         }
 
+                        if (foundToUpdate.PropertyType == typeof(TimeSpan)) {
+                            foundToUpdate.SetValue(collection, ((NRegister<TimeSpan>)reg).Value);
+                        }
+
                         //setting back strings
 
                         if (foundToUpdate.PropertyType == typeof(string)) {
@@ -545,7 +549,7 @@ namespace MewtocolNet {
 
                 var awaittask = SendSingleBlock(_msg);
                 PriorityTasks.Add(awaittask);
-                awaittask.Wait();
+                await awaittask;
 
                 PriorityTasks.Remove(awaittask);
                 response = awaittask.Result;
@@ -616,13 +620,13 @@ namespace MewtocolNet {
                                 string characters = enc.GetString(message);
                             }
                         } catch (IOException) {
+                            Logger.Log($"Critical IO exception on send", LogLevel.Critical, this);
                             return null;
                         }
 
                         //await result
                         StringBuilder response = new StringBuilder();
                         try {
-                            
                             byte[] responseBuffer = new byte[256];
                             do {
                                 int bytes = stream.Read(responseBuffer, 0, responseBuffer.Length);
@@ -630,6 +634,7 @@ namespace MewtocolNet {
                             }
                             while (stream.DataAvailable);
                         } catch (IOException) {
+                            Logger.Log($"Critical IO exception on receive", LogLevel.Critical, this);
                             return null;
                         }
                        
@@ -638,19 +643,21 @@ namespace MewtocolNet {
                         if (Math.Abs(CycleTimeMs - curCycle) > 2) {
                             CycleTimeMs = curCycle;
                         }
-                        Logger.Log($"IN MSG ({(int)sw.Elapsed.TotalMilliseconds}ms): {_blockString}", LogLevel.Critical, this);
-                        SendExceptionsInRow = 0;
+
+                        Logger.Log($"IN MSG ({(int)sw.Elapsed.TotalMilliseconds}ms): {response}", LogLevel.Critical, this);
                         return response.ToString();
                     }
 
                 } catch (SocketException) {
 
                     if (IsConnected) {
+
+                        Logger.Log("The PLC connection was closed", LogLevel.Error, this);
                         CycleTimeMs = 0;
                         IsConnected = false;
                         Disconnected?.Invoke();
                         KillPoller();
-                        Logger.Log("The PLC connection was closed", LogLevel.Error, this);
+                        
                     }
 
                     return null;

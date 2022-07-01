@@ -76,9 +76,11 @@ namespace MewtocolNet {
                     while (ContinousReaderRunning) {
 
                         //do priority tasks first
-                        if (PriorityTasks.Count > 0) {
+                        if (PriorityTasks != null && PriorityTasks.Count > 0) {
 
-                            await PriorityTasks.FirstOrDefault(x => !x.IsCompleted);
+                            try {
+                                await PriorityTasks?.FirstOrDefault(x => !x.IsCompleted);
+                            } catch (NullReferenceException) { }
 
                         } else if (getPLCinfoCycleCount > 25) {
 
