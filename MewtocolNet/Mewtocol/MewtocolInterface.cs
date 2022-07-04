@@ -196,6 +196,20 @@ namespace MewtocolNet {
         }
 
         /// <summary>
+        /// Closes all permanent polling 
+        /// </summary>
+        public void Disconnect () {
+
+            if (!IsConnected)
+                return;
+
+            OnMajorSocketException();
+
+            PriorityTasks.Clear();
+
+        }
+
+        /// <summary>
         /// Attaches a poller to the interface that continously 
         /// polls the registered data registers and writes the values to them
         /// </summary>
@@ -532,7 +546,6 @@ namespace MewtocolNet {
         /// Calculates checksum and sends a command to the PLC then awaits results
         /// </summary>
         /// <param name="_msg">MEWTOCOL Formatted request string ex: %01#RT</param>
-        /// <param name="_close">Auto close of frame [true]%01#RT01\r [false]%01#RT</param>
         /// <returns>Returns the result</returns>
         public async Task<CommandResult> SendCommandAsync (string _msg) {
 
@@ -622,6 +635,9 @@ namespace MewtocolNet {
                         } catch (IOException) {
                             Logger.Log($"Critical IO exception on send", LogLevel.Critical, this);
                             return null;
+                        } catch (SocketException) {
+                            OnMajorSocketException();
+                            return null;
                         }
 
                         //await result
@@ -636,8 +652,11 @@ namespace MewtocolNet {
                         } catch (IOException) {
                             Logger.Log($"Critical IO exception on receive", LogLevel.Critical, this);
                             return null;
+                        } catch (SocketException) {
+                            OnMajorSocketException();
+                            return null;
                         }
-                       
+
                         sw.Stop();
                         var curCycle = (int)sw.ElapsedMilliseconds;
                         if (Math.Abs(CycleTimeMs - curCycle) > 2) {
@@ -650,16 +669,7 @@ namespace MewtocolNet {
 
                 } catch (SocketException) {
 
-                    if (IsConnected) {
-
-                        Logger.Log("The PLC connection was closed", LogLevel.Error, this);
-                        CycleTimeMs = 0;
-                        IsConnected = false;
-                        Disconnected?.Invoke();
-                        KillPoller();
-                        
-                    }
-
+                    OnMajorSocketException();
                     return null;
 
                 }
@@ -668,6 +678,19 @@ namespace MewtocolNet {
 
         }
 
+        private void OnMajorSocketException () {
+
+            if (IsConnected) {
+
+                Logger.Log("The PLC connection was closed", LogLevel.Error, this);
+                CycleTimeMs = 0;
+                IsConnected = false;
+                Disconnected?.Invoke();
+                KillPoller();
+
+            }
+
+        }
 
         #endregion
 
