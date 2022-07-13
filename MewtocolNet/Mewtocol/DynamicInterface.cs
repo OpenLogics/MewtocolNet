@@ -89,9 +89,7 @@ namespace MewtocolNet {
 
                         }
 
-                        foreach (var registerPair in Registers) {
-
-                            var reg = registerPair.Value;
+                        foreach (var reg in Registers) {
 
                             if (reg is NRegister<short> shortReg) {
                                 var lastVal = shortReg.Value;
@@ -210,7 +208,7 @@ namespace MewtocolNet {
                 toAdd = new BRegister(_address, _type, _name);
             }
 
-            Registers.Add(_address, toAdd);
+            Registers.Add(toAdd);
 
         }
 
@@ -240,7 +238,7 @@ namespace MewtocolNet {
             }
 
             toAdd.collectionType = _colType;
-            Registers.Add(_address, toAdd);
+            Registers.Add(toAdd);
 
         }
 
@@ -261,7 +259,7 @@ namespace MewtocolNet {
         public void AddRegister (SpecialAddress _spAddress, RegisterType _type, string _name = null) {
 
             //as bool registers
-            Registers.Add((int)_spAddress, new BRegister(_spAddress, _type, _name));
+            Registers.Add(new BRegister(_spAddress, _type, _name));
 
         }
 
@@ -272,7 +270,7 @@ namespace MewtocolNet {
             reg.collectionType = _colType;
 
             //as bool registers
-            Registers.Add((int)_spAddress, reg);
+            Registers.Add(reg);
 
         }
 
@@ -301,30 +299,33 @@ namespace MewtocolNet {
                 throw new NotSupportedException($"_lenght parameter only allowed for register of type string");
             }
 
-            if (Registers.Any(x => x.Key == _address)) {
-                throw new NotSupportedException($"Cannot add a register multiple times, " +
-                    $"make sure that all register attributes or AddRegister assignments have different adresses.");
-            }
+            Register toAdd;
 
             if (regType == typeof(short)) {
-                Registers.Add(_address, new NRegister<short>(_address, _name));
+                toAdd = new NRegister<short>(_address, _name);
             } else if (regType == typeof(ushort)) {
-                Registers.Add(_address, new NRegister<ushort>(_address, _name));
+                toAdd = new NRegister<ushort>(_address, _name);
             } else if (regType == typeof(int)) {
-                Registers.Add(_address,  new NRegister<int>(_address, _name));
+                toAdd = new NRegister<int>(_address, _name);
             } else if (regType == typeof(uint)) {
-                Registers.Add(_address,  new NRegister<uint>(_address, _name));
+                toAdd = new NRegister<uint>(_address, _name);
             } else if (regType == typeof(float)) {
-                Registers.Add(_address,  new NRegister<float>(_address, _name));
+                toAdd = new NRegister<float>(_address, _name);
             } else if (regType == typeof(string)) {
-                Registers.Add(_address,  new SRegister(_address, _length, _name));
+                toAdd = new SRegister(_address, _length, _name);
             } else if (regType == typeof(TimeSpan)) {
-                Registers.Add(_address, new NRegister<TimeSpan>(_address, _name));
+                toAdd = new NRegister<TimeSpan>(_address, _name);
             } else if (regType == typeof(bool)) {
-                Registers.Add(_address, new BRegister(_address, RegisterType.R, _name));
+                toAdd = new BRegister(_address, RegisterType.R, _name);
             } else {
                 throw new NotSupportedException($"The type {regType} is not allowed for Registers \n" +
                                                 $"Allowed are: short, ushort, int, uint, float and string");
+            }
+
+
+            if (Registers.Any(x => x.GetRegisterPLCName() == toAdd.GetRegisterPLCName())) {
+                throw new NotSupportedException($"Cannot add a register multiple times, " +
+                    $"make sure that all register attributes or AddRegister assignments have different adresses.");
             }
 
         }
@@ -337,12 +338,7 @@ namespace MewtocolNet {
                 throw new NotSupportedException($"_lenght parameter only allowed for register of type string");
             }
 
-            if (Registers.Any(x => x.Key == _address) && !_isBitwise) {
-                throw new NotSupportedException($"Cannot add a register multiple times, " +
-                    $"make sure that all register attributes or AddRegister assignments have different adresses.");
-            }
-
-            if (Registers.Any(x => x.Key == _address) && _isBitwise) {
+            if (Registers.Any(x => x.MemoryAdress == _address) && _isBitwise) {
                 return;
             }
 
@@ -366,15 +362,19 @@ namespace MewtocolNet {
                 reg = new BRegister(_address, RegisterType.R, _name);
             }
 
-
             if (reg == null) {
                 throw new NotSupportedException($"The type {regType} is not allowed for Registers \n" +
                                                 $"Allowed are: short, ushort, int, uint, float and string");
             } else {
 
-                reg.collectionType = _colType;
 
-                Registers.Add(_address, reg);
+                if (Registers.Any(x => x.GetRegisterPLCName() == reg.GetRegisterPLCName()) && !_isBitwise) {
+                    throw new NotSupportedException($"Cannot add a register multiple times, " +
+                        $"make sure that all register attributes or AddRegister assignments have different adresses.");
+                }
+
+                reg.collectionType = _colType;
+                Registers.Add(reg);
             }
 
         }
@@ -389,7 +389,7 @@ namespace MewtocolNet {
         /// <returns></returns>
         public Register GetRegister (string name) {
 
-            return Registers.FirstOrDefault(x => x.Value.Name == name).Value;
+            return Registers.FirstOrDefault(x => x.Name == name);
 
         }
 
@@ -400,8 +400,8 @@ namespace MewtocolNet {
         /// <returns>A casted register or the <code>default</code> value</returns>
         public T GetRegister<T> (string name) where T : Register  {
             try {
-                var reg = Registers.FirstOrDefault(x => x.Value.Name == name);
-                return reg.Value as T;
+                var reg = Registers.FirstOrDefault(x => x.Name == name);
+                return reg as T;
             } catch (InvalidCastException) {
                 return default(T);
             }
@@ -416,7 +416,7 @@ namespace MewtocolNet {
         /// </summary>
         public List<Register> GetAllRegisters () {
 
-            return Registers.Values.ToList();
+            return Registers;
 
         }
 

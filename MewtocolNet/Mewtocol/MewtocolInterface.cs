@@ -67,7 +67,7 @@ namespace MewtocolNet {
         /// <summary>
         /// The registered data registers of the PLC
         /// </summary>
-        public Dictionary<int, Register> Registers { get; set; } = new Dictionary<int, Register>();
+        public List<Register> Registers { get; set; } = new List<Register>();
 
         private string ip;
         private int port;
