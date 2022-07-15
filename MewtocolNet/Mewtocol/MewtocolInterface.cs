@@ -12,6 +12,9 @@ using MewtocolNet.Logging;
 using System.Collections;
 using System.Diagnostics;
 using System.ComponentModel;
+using System.Net;
+using System.Threading;
+using MewtocolNet.Queue;
 
 namespace MewtocolNet {
 
@@ -86,7 +89,7 @@ namespace MewtocolNet {
         /// </summary>
         public int StationNumber => stationNumber;
 
-        private int cycleTimeMs;
+        private int cycleTimeMs = 25;
         /// <summary>
         /// The duration of the last message cycle
         /// </summary>
@@ -98,9 +101,10 @@ namespace MewtocolNet {
             }
         }
 
-
-        internal List<Task> PriorityTasks { get; set; } = new List<Task>();
-
+        internal NetworkStream stream;
+        internal TcpClient client;
+        internal readonly SerialQueue queue = new SerialQueue();
+        private int RecBufferSize = 64;
         internal int SendExceptionsInRow = 0;
 
         #region Initialization
@@ -204,8 +208,6 @@ namespace MewtocolNet {
                 return;
 
             OnMajorSocketException();
-
-            PriorityTasks.Clear();
 
         }
 
@@ -335,9 +337,12 @@ namespace MewtocolNet {
 
                             var bytes = BitConverter.GetBytes(reg16.Value);
                             BitArray bitAr = new BitArray(bytes);
-                            prop.SetValue(collection, bitAr[bitIndex]);
-                            collection.TriggerPropertyChanged(prop.Name);
 
+                            if (bitIndex < bitAr.Length && bitIndex >= 0) {
+                                prop.SetValue(collection, bitAr[bitIndex]);
+                                collection.TriggerPropertyChanged(prop.Name);
+                            }
+                                
                         } else if (bitWiseFound != null && reg is NRegister<int> reg32) {
                             var casted = (RegisterAttribute)bitWiseFound;
                             var bitIndex = casted.AssignedBitIndex;
@@ -542,6 +547,25 @@ namespace MewtocolNet {
 
         #region Low level command handling
 
+        private async Task ConnectTCP () {
+
+            var targetIP = IPAddress.Parse(ip);
+
+            client = new TcpClient() {
+                ReceiveBufferSize = RecBufferSize,
+                NoDelay = false,
+                ExclusiveAddressUse = true
+            };
+
+            await client.ConnectAsync(targetIP, port);
+
+            stream = client.GetStream();
+            stream.ReadTimeout = 1000;
+
+            Console.WriteLine($"Connected {client.Connected}");
+
+        }
+
         /// <summary>
         /// Calculates checksum and sends a command to the PLC then awaits results
         /// </summary>
@@ -553,29 +577,42 @@ namespace MewtocolNet {
             _msg += "\r";
 
             //send request
+            try {
 
-            string response = null;
+                var response = await queue.Enqueue(() => SendSingleBlock(_msg));
 
-            if (ContinousReaderRunning) {
+                if (response == null) {
+                    return new CommandResult {
+                        Success = false,
+                        Error = "0000",
+                        ErrorDescription = "null result"
+                    };
+                }
 
-                //if the poller is active then add all messages to a qeueue
+                //error catching
+                Regex errorcheck = new Regex(@"\%[0-9]{2}\!([0-9]{2})", RegexOptions.IgnoreCase);
+                Match m = errorcheck.Match(response.ToString());
+                if (m.Success) {
+                    string eCode = m.Groups[1].Value;
+                    string eDes = Links.LinkedData.ErrorCodes[Convert.ToInt32(eCode)];
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"Response is: {response}");
+                    Logger.Log($"Error on command {_msg.Replace("\r", "")} the PLC returned error code: {eCode}, {eDes}", LogLevel.Error);
+                    Console.ResetColor();
+                    return new CommandResult {
+                        Success = false,
+                        Error = eCode,
+                        ErrorDescription = eDes
+                    };
+                }
 
-                var awaittask = SendSingleBlock(_msg);
-                PriorityTasks.Add(awaittask);
-                await awaittask;
+                return new CommandResult {
+                    Success = true,
+                    Error = "0000",
+                    Response = response.ToString()
+                };
 
-                PriorityTasks.Remove(awaittask);
-                response = awaittask.Result;
-
-            } else {
-
-                //poller not active let the user manage message timing
-
-                response = await SendSingleBlock(_msg);
-
-            }
-
-            if (response == null) {
+            } catch {
                 return new CommandResult {
                     Success = false,
                     Error = "0000",
@@ -583,97 +620,63 @@ namespace MewtocolNet {
                 };
             }
 
-            //error catching
-            Regex errorcheck = new Regex(@"\%[0-9]{2}\!([0-9]{2})", RegexOptions.IgnoreCase);
-            Match m = errorcheck.Match(response.ToString());
-            if (m.Success) {
-                string eCode = m.Groups[1].Value;
-                string eDes = Links.LinkedData.ErrorCodes[Convert.ToInt32(eCode)];
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Response is: {response}");
-                Console.WriteLine($"Error on command {_msg.Replace("\r", "")} the PLC returned error code: {eCode}, {eDes}");
-                Console.ResetColor();
-                return new CommandResult {
-                    Success = false,
-                    Error = eCode,
-                    ErrorDescription = eDes
-                };
-            }
-
-            return new CommandResult {
-                Success = true,
-                Error = "0000",
-                Response = response.ToString()
-            };
-
         }
 
         private async Task<string> SendSingleBlock (string _blockString) {
 
-            Stopwatch sw = Stopwatch.StartNew();
-
-            using (TcpClient client = new TcpClient() { ReceiveBufferSize = 64, NoDelay = true, ExclusiveAddressUse = true }) {
-
-                try {
-
-                    await client.ConnectAsync(ip, port);
-
-                    using (NetworkStream stream = client.GetStream()) {
-
-                        var message = _blockString.ToHexASCIIBytes();
-                        var messageAscii = BitConverter.ToString(message).Replace("-", " ");
-
-                        //send request
-                        try {
-                            using (var sendStream = new MemoryStream(message)) {
-                                await sendStream.CopyToAsync(stream);
-                                Logger.Log($"OUT MSG: {_blockString}", LogLevel.Critical, this);
-                                //log message sent
-                                ASCIIEncoding enc = new ASCIIEncoding();
-                                string characters = enc.GetString(message);
-                            }
-                        } catch (IOException) {
-                            Logger.Log($"Critical IO exception on send", LogLevel.Critical, this);
-                            return null;
-                        } catch (SocketException) {
-                            OnMajorSocketException();
-                            return null;
-                        }
-
-                        //await result
-                        StringBuilder response = new StringBuilder();
-                        try {
-                            byte[] responseBuffer = new byte[256];
-                            do {
-                                int bytes = stream.Read(responseBuffer, 0, responseBuffer.Length);
-                                response.Append(Encoding.UTF8.GetString(responseBuffer, 0, bytes));
-                            }
-                            while (stream.DataAvailable);
-                        } catch (IOException) {
-                            Logger.Log($"Critical IO exception on receive", LogLevel.Critical, this);
-                            return null;
-                        } catch (SocketException) {
-                            OnMajorSocketException();
-                            return null;
-                        }
-
-                        sw.Stop();
-                        var curCycle = (int)sw.ElapsedMilliseconds;
-                        if (Math.Abs(CycleTimeMs - curCycle) > 2) {
-                            CycleTimeMs = curCycle;
-                        }
-
-                        Logger.Log($"IN MSG ({(int)sw.Elapsed.TotalMilliseconds}ms): {response}", LogLevel.Critical, this);
-                        return response.ToString();
-                    }
-
-                } catch (SocketException) {
-
-                    OnMajorSocketException();
+            if (client == null || !client.Connected ) {
+                await ConnectTCP();
+                if (!client.Connected)
                     return null;
+            }
+
+            var message = _blockString.ToHexASCIIBytes();
+
+            //send request
+            using (var sendStream = new MemoryStream(message)) {
+                await sendStream.CopyToAsync(stream);
+                Logger.Log($"[--------------------------------]", LogLevel.Critical, this);
+                Logger.Log($"--> OUT MSG: {_blockString}", LogLevel.Critical, this);
+            }
+
+            //await result
+            StringBuilder response = new StringBuilder();
+            try {
+
+                byte[] responseBuffer = new byte[128 * 16];
+
+                bool endLineCode = false;
+                bool startMsgCode = false;
+
+                while (!endLineCode && !startMsgCode) {
+
+                    do {
+                        int bytes = await stream.ReadAsync(responseBuffer, 0, responseBuffer.Length);
+
+                        endLineCode = responseBuffer.Any(x => x == 0x0D);
+                        startMsgCode = responseBuffer.Count(x => x == 0x25) > 1;
+
+                        if (!endLineCode && !startMsgCode) break;
+
+                        response.Append(Encoding.UTF8.GetString(responseBuffer, 0, bytes));
+                    }
+                    while (stream.DataAvailable);
 
                 }
 
+            } catch (IOException) {
+                Logger.Log($"Critical IO exception on receive", LogLevel.Critical, this);
+                return null;
+            } catch (SocketException) {
+                OnMajorSocketException();
+                return null;
+            }
+
+            if(!string.IsNullOrEmpty(response.ToString())) {
+                Logger.Log($"<-- IN MSG (TXT): {response} ({response.Length} bytes)", LogLevel.Critical, this);
+                return response.ToString();
+            } else {
+                return null;
             }
 
         }
@@ -708,5 +711,6 @@ namespace MewtocolNet {
         #endregion
 
     }
+
 
 }

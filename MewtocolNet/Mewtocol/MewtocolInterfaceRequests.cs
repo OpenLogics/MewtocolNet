@@ -117,7 +117,6 @@ namespace MewtocolNet {
 
             string startStr = start.ToString().PadLeft(5, '0');
             var wordLength = count / 2;
-            bool wasOdd = false;
             if (count % 2 != 0) 
                 wordLength++;
 
@@ -128,7 +127,12 @@ namespace MewtocolNet {
 
             if(result.Success && !string.IsNullOrEmpty(result.Response)) {
 
+                var res = result;
+
                 var bytes = result.Response.ParseDTByteString(wordLength * 4).HexStringToByteArray();
+
+                if (bytes == null)
+                    return null;
 
                 return bytes.BigToMixedEndian().Take(count).ToArray();
 
@@ -196,7 +200,6 @@ namespace MewtocolNet {
         /// </summary>
         /// <typeparam name="T">Type of number (short, ushort, int, uint, float)</typeparam>
         /// <param name="_toRead">The register to read</param>
-        /// <param name="_stationNumber">Station number to access</param>
         /// <returns>A result with the given NumberRegister containing the readback value and a result struct</returns>
         public async Task<NRegisterResult<T>> ReadNumRegister<T> (NRegister<T> _toRead) {
 
@@ -205,40 +208,47 @@ namespace MewtocolNet {
             string requeststring = $"%{GetStationNumber()}#RD{_toRead.BuildMewtocolIdent()}";
             var result = await SendCommandAsync(requeststring);
 
-            if(!result.Success || string.IsNullOrEmpty(result.Response)) {
-                return new NRegisterResult<T> {
-                    Result = result,
-                    Register = _toRead
-                };
+            var failedResult = new NRegisterResult<T> {
+                Result = result,
+                Register = _toRead
+            };
+
+            if (!result.Success || string.IsNullOrEmpty(result.Response)) {
+                return failedResult;
             }
                 
             if (numType == typeof(short)) {
 
                 var resultBytes = result.Response.ParseDTByteString(4).ReverseByteOrder();
+                if (resultBytes == null) return failedResult;
                 var val = short.Parse(resultBytes, NumberStyles.HexNumber);
                 _toRead.SetValueFromPLC(val);
 
             } else if (numType == typeof(ushort)) {
 
                 var resultBytes = result.Response.ParseDTByteString(4).ReverseByteOrder();
+                if (resultBytes == null) return failedResult;
                 var val = ushort.Parse(resultBytes, NumberStyles.HexNumber);
                 _toRead.SetValueFromPLC(val);
 
             } else if (numType == typeof(int)) {
 
                 var resultBytes = result.Response.ParseDTByteString(8).ReverseByteOrder();
+                if (resultBytes == null) return failedResult;
                 var val = int.Parse(resultBytes, NumberStyles.HexNumber);
                 _toRead.SetValueFromPLC(val);
 
             } else if (numType == typeof(uint)) {
 
                 var resultBytes = result.Response.ParseDTByteString(8).ReverseByteOrder();
+                if (resultBytes == null) return failedResult;
                 var val = uint.Parse(resultBytes, NumberStyles.HexNumber);
                 _toRead.SetValueFromPLC(val);
 
             } else if (numType == typeof(float)) {
 
                 var resultBytes = result.Response.ParseDTByteString(8).ReverseByteOrder();
+                if (resultBytes == null) return failedResult;
                 //convert to unsigned int first
                 var val = uint.Parse(resultBytes, NumberStyles.HexNumber);
 
@@ -250,6 +260,7 @@ namespace MewtocolNet {
             } else if (numType == typeof(TimeSpan)) {
 
                 var resultBytes = result.Response.ParseDTByteString(8).ReverseByteOrder();
+                if (resultBytes == null) return failedResult;
                 //convert to unsigned int first
                 var vallong = long.Parse(resultBytes, NumberStyles.HexNumber);
                 var valMillis = vallong * 10;

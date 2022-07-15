@@ -18,11 +18,11 @@ namespace Examples {
         public bool TestBoolInputXD { get; private set; } 
 
         //corresponds to a DT1101 - DT1104 string register in the PLC with (STRING[4])
-        [Register(1101, 4)]
-        public string TestString1 { get; private set; }
+        //[Register(1101, 4)]
+        //public string TestString1 { get; private set; }
 
         //corresponds to a DT7000 16 bit int register in the PLC
-        [Register(7000)]
+        [Register(899)]
         public short TestInt16 { get; private set; }
 
         //corresponds to a DTD7001 - DTD7002 32 bit int register in the PLC

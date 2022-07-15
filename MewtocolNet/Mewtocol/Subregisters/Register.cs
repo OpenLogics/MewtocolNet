@@ -145,7 +145,7 @@ namespace MewtocolNet.Registers {
                 return boolReg.Value.ToString();
             }
             if (this is SRegister stringReg) {
-                return stringReg.Value.ToString();
+                return stringReg.Value ?? "";
             }
 
             return "Type of the register is not supported.";

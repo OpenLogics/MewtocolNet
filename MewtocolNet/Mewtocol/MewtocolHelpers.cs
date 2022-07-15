@@ -75,7 +75,7 @@ namespace MewtocolNet {
             var res = new Regex(@"\%([0-9]{2})\$RD.{8}(.*)...").Match(_onString);
             if(res.Success) {
                 string val = res.Groups[2].Value;
-                return val.GetStringFromAsciiHex().Trim();
+                return val.GetStringFromAsciiHex()?.Trim();
             }
             return null;
         }
@@ -143,7 +143,7 @@ namespace MewtocolNet {
 
         internal static string GetStringFromAsciiHex (this string input) {
             if (input.Length % 2 != 0)
-                throw new ArgumentException("input not a hex string");
+                return null;
             byte[] bytes = new byte[input.Length / 2];
             for (int i = 0; i < input.Length; i += 2) {
                 String hex = input.Substring(i, 2);
@@ -158,6 +158,8 @@ namespace MewtocolNet {
         }
 
         internal static byte[] HexStringToByteArray(this string hex) {
+            if (hex == null)
+                return null;
             return Enumerable.Range(0, hex.Length)
                              .Where(x => x % 2 == 0)
                              .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))

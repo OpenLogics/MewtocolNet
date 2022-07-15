@@ -40,18 +40,30 @@ namespace Examples {
 
                             await Task.Delay(2000);
 
-                            Console.WriteLine("Testregister was toggled");
+                            await interf.SetRegisterAsync(nameof(registers.TestInt32), 100);
+
+                            _ = Task.Factory.StartNew(async () => {
+                                while(true) {
+                                    for (int i = 0; i < 5; i++) {
+                                        var bytes = await interf.ReadByteRange(1020, 20);
+                                        await interf.SetRegisterAsync(nameof(registers.TestBool1), !registers.TestBool1);
+                                        await interf.SetRegisterAsync(nameof(registers.TestInt32), registers.TestInt32 + 100);
+                                        await Task.Delay(1333);
+                                    }
+                                    await Task.Delay(10000);
+                                }
+                            });
 
                             //adds 10 each time the plc connects to the PLCs INT regíster
-                            interf.SetRegister(nameof(registers.TestInt16), (short)(registers.TestInt16 + 10));
+                            //interf.SetRegister(nameof(registers.TestInt16), (short)(registers.TestInt16 + 10));
                             //adds 1 each time the plc connects to the PLCs DINT regíster
-                            interf.SetRegister(nameof(registers.TestInt32), (registers.TestInt32 + 1));
+                            //interf.SetRegister(nameof(registers.TestInt32), (registers.TestInt32 + 1));
                             //adds 11.11 each time the plc connects to the PLCs REAL regíster
-                            interf.SetRegister(nameof(registers.TestFloat32), (float)(registers.TestFloat32 + 11.11));
+                            //interf.SetRegister(nameof(registers.TestFloat32), (float)(registers.TestFloat32 + 11.11));
                             //writes 'Hello' to the PLCs string register
-                            interf.SetRegister(nameof(registers.TestString2), "Hello");
+                            //interf.SetRegister(nameof(registers.TestString2), "Hello");
                             //set the current second to the PLCs TIME register
-                            interf.SetRegister(nameof(registers.TestTime), TimeSpan.FromSeconds(DateTime.Now.Second));
+                            //interf.SetRegister(nameof(registers.TestTime), TimeSpan.FromSeconds(DateTime.Now.Second));
 
                         });
 

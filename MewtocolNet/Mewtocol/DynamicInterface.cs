@@ -33,134 +33,90 @@ namespace MewtocolNet {
         /// </summary>
         internal void AttachPoller () {
 
-            if (ContinousReaderRunning) return;
+            if (ContinousReaderRunning)
+                return;
 
-            cTokenAutoUpdater = new CancellationTokenSource();
+            Task.Factory.StartNew(async () => {
 
-            Logger.Log("Poller is attaching", LogLevel.Info, this);
+                cTokenAutoUpdater = new CancellationTokenSource();
 
-            try {
+                Logger.Log("Poller is attaching", LogLevel.Info, this);
 
-                Task.Factory.StartNew(async () => {
+                int it = 0;
 
-                    var plcinf = await GetPLCInfoAsync();
-                    if (plcinf == null) {
-                        Logger.Log("PLC not reachable, stopping logger", LogLevel.Info, this);
-                        return;
-                    }
+                while (it < Registers.Count + 1) {
 
-                    PolledCycle += MewtocolInterface_PolledCycle;
-                    void MewtocolInterface_PolledCycle () {
-
-                        StringBuilder stringBuilder = new StringBuilder();
-                        foreach (var reg in GetAllRegisters()) {
-                            string address = $"{reg.GetRegisterString()}{reg.GetStartingMemoryArea()}".PadRight(8, (char)32);
-                            stringBuilder.AppendLine($"{address}{(reg.Name != null ? $" ({reg.Name})" : "")}: {reg.GetValueString()}");
-                        }
-
-                        Logger.Log($"Registers loaded are: \n" +
-                                   $"--------------------\n" +
-                                   $"{stringBuilder.ToString()}" +
-                                   $"--------------------",
-                                   LogLevel.Verbose, this);
-
-                        Logger.Log("Logger did its first cycle successfully", LogLevel.Info, this);
-
-                        PolledCycle -= MewtocolInterface_PolledCycle;
-                    }
-
-                    ContinousReaderRunning = true;
-
-                    int getPLCinfoCycleCount = 0;
-
-                    while (ContinousReaderRunning) {
-
-                        //do priority tasks first
-                        if (PriorityTasks != null && PriorityTasks.Count > 0) {
-
-                            try {
-                                await PriorityTasks?.FirstOrDefault(x => !x.IsCompleted);
-                            } catch (NullReferenceException) { }
-
-                        } else if (getPLCinfoCycleCount > 25) {
-
-                            await GetPLCInfoAsync();
-                            getPLCinfoCycleCount = 0;
-
-                        }
-
-                        foreach (var reg in Registers) {
-
-                            if (reg is NRegister<short> shortReg) {
-                                var lastVal = shortReg.Value;
-                                var readout = (await ReadNumRegister(shortReg)).Register.Value;
-                                if (lastVal != readout) {
-                                    InvokeRegisterChanged(shortReg);
-                                }
-                            }
-                            if (reg is NRegister<ushort> ushortReg) {
-                                var lastVal = ushortReg.Value;
-                                var readout = (await ReadNumRegister(ushortReg)).Register.Value;
-                                if (lastVal != readout) {
-                                    InvokeRegisterChanged(ushortReg);
-                                }
-                            }
-                            if (reg is NRegister<int> intReg) {
-                                var lastVal = intReg.Value;
-                                var readout = (await ReadNumRegister(intReg)).Register.Value;
-                                if (lastVal != readout) {
-                                    InvokeRegisterChanged(intReg);
-                                }
-                            }
-                            if (reg is NRegister<uint> uintReg) {
-                                var lastVal = uintReg.Value;
-                                var readout = (await ReadNumRegister(uintReg)).Register.Value;
-                                if (lastVal != readout) {
-                                    InvokeRegisterChanged(uintReg);
-                                }
-                            }
-                            if (reg is NRegister<float> floatReg) {
-                                var lastVal = floatReg.Value;
-                                var readout = (await ReadNumRegister(floatReg)).Register.Value;
-                                if (lastVal != readout) {
-                                    InvokeRegisterChanged(floatReg);
-                                }
-                            }
-                            if (reg is NRegister<TimeSpan> tsReg) {
-                                var lastVal = tsReg.Value;
-                                var readout = (await ReadNumRegister(tsReg)).Register.Value;
-                                if (lastVal != readout) {
-                                    InvokeRegisterChanged(tsReg);
-                                }
-                            }
-                            if (reg is BRegister boolReg) {
-                                var lastVal = boolReg.Value;
-                                var readout = (await ReadBoolRegister(boolReg)).Register.Value;
-                                if (lastVal != readout) {
-                                    InvokeRegisterChanged(boolReg);
-                                }
-                            }
-                            if (reg is SRegister stringReg) {
-                                var lastVal = stringReg.Value;
-                                var readout = (await ReadStringRegister(stringReg)).Register.Value;
-                                if (lastVal != readout) {
-                                    InvokeRegisterChanged(stringReg);
-                                }
-
-                            }
-
-                        }
-
-                        getPLCinfoCycleCount++;
-
+                    if (it >= Registers.Count) {
+                        it = 0;
                         //invoke cycle polled event
                         InvokePolledCycleDone();
-
+                        continue;
                     }
 
-                }, cTokenAutoUpdater.Token);
+                    var reg = Registers[it];
 
-            } catch (TaskCanceledException) { }  
+                    if (reg is NRegister<short> shortReg) {
+                        var lastVal = shortReg.Value;
+                        var readout = (await ReadNumRegister(shortReg)).Register.Value;
+                        if (lastVal != readout) {
+                            InvokeRegisterChanged(shortReg);
+                        }
+                    }
+                    if (reg is NRegister<ushort> ushortReg) {
+                        var lastVal = ushortReg.Value;
+                        var readout = (await ReadNumRegister(ushortReg)).Register.Value;
+                        if (lastVal != readout) {
+                            InvokeRegisterChanged(ushortReg);
+                        }
+                    }
+                    if (reg is NRegister<int> intReg) {
+                        var lastVal = intReg.Value;
+                        var readout = (await ReadNumRegister(intReg)).Register.Value;
+                        if (lastVal != readout) {
+                            InvokeRegisterChanged(intReg);
+                        }
+                    }
+                    if (reg is NRegister<uint> uintReg) {
+                        var lastVal = uintReg.Value;
+                        var readout = (await ReadNumRegister(uintReg)).Register.Value;
+                        if (lastVal != readout) {
+                            InvokeRegisterChanged(uintReg);
+                        }
+                    }
+                    if (reg is NRegister<float> floatReg) {
+                        var lastVal = floatReg.Value;
+                        var readout = (await ReadNumRegister(floatReg)).Register.Value;
+                        if (lastVal != readout) {
+                            InvokeRegisterChanged(floatReg);
+                        }
+                    }
+                    if (reg is NRegister<TimeSpan> tsReg) {
+                        var lastVal = tsReg.Value;
+                        var readout = (await ReadNumRegister(tsReg)).Register.Value;
+                        if (lastVal != readout) {
+                            InvokeRegisterChanged(tsReg);
+                        }
+                    }
+                    if (reg is BRegister boolReg) {
+                        var lastVal = boolReg.Value;
+                        var readout = (await ReadBoolRegister(boolReg)).Register.Value;
+                        if (lastVal != readout) {
+                            InvokeRegisterChanged(boolReg);
+                        }
+                    }
+                    if (reg is SRegister stringReg) {
+                        var lastVal = stringReg.Value;
+                        var readout = (await ReadStringRegister(stringReg)).Register.Value;
+                        if (lastVal != readout) {
+                            InvokeRegisterChanged(stringReg);
+                        }
+                    }
+
+                    it++;
+
+                }
+
+            });
 
         }
 
