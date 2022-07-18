@@ -28,7 +28,7 @@ This software was written by WOLF Medizintechnik GmbH (@WOmed/dev).
 
 ## .NET Support
 
-This library was written in **netstandard2.0** and should by compatible with a lot of .NET environments.
+This library was written in **netstandard2.0** and should be compatible with a lot of .NET environments.
 
 For a full list of supported .NET clrs see [this page](https://docs.microsoft.com/de-de/dotnet/standard/net-standard?tabs=net-standard-2-0#select-net-standard-version)
 
