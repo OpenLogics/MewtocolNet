@@ -15,7 +15,6 @@ namespace MewtocolNet {
     public partial class MewtocolInterface {
 
         internal event Action PolledCycle;
-        internal CancellationTokenSource cTokenAutoUpdater;
         internal bool ContinousReaderRunning;
         internal bool usePoller = false;
 
@@ -24,7 +23,6 @@ namespace MewtocolNet {
         internal void KillPoller () {
 
             ContinousReaderRunning = false;
-            cTokenAutoUpdater?.Cancel();
 
         }
 
@@ -38,18 +36,23 @@ namespace MewtocolNet {
 
             Task.Factory.StartNew(async () => {
 
-                cTokenAutoUpdater = new CancellationTokenSource();
-
                 Logger.Log("Poller is attaching", LogLevel.Info, this);
 
                 int it = 0;
+                ContinousReaderRunning = true;
 
-                while (it < Registers.Count + 1) {
+                while (ContinousReaderRunning) {
 
-                    if (it >= Registers.Count) {
+                    if (it >= Registers.Count + 1) {
                         it = 0;
                         //invoke cycle polled event
                         InvokePolledCycleDone();
+                        continue;
+                    }
+
+                    if (it >= Registers.Count) {
+                        await GetPLCInfoAsync();
+                        it++;
                         continue;
                     }
 

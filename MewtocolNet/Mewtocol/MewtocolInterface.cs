@@ -21,7 +21,7 @@ namespace MewtocolNet {
     /// <summary>
     /// The PLC com interface class
     /// </summary>
-    public partial class MewtocolInterface : INotifyPropertyChanged {
+    public partial class MewtocolInterface : INotifyPropertyChanged, IDisposable {
 
         /// <summary>
         /// Gets triggered when the PLC connection was established
@@ -43,6 +43,15 @@ namespace MewtocolNet {
         /// </summary>
         public event PropertyChangedEventHandler PropertyChanged;
 
+        private int connectTimeout = 1000;
+        /// <summary>
+        /// The initial connection timeout in milliseconds
+        /// </summary>
+        public int ConnectTimeout {
+            get { return connectTimeout; }
+            set { connectTimeout = value; }
+        }
+
         private bool isConnected;
         /// <summary>
         /// The current connection state of the interface
@@ -54,6 +63,16 @@ namespace MewtocolNet {
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsConnected)));
             }
         }
+
+        private bool disposed;
+        /// <summary>
+        /// True if the current interface was disposed
+        /// </summary>
+        public bool Disposed {
+            get { return disposed; }
+            private set { disposed = value; }
+        }
+
 
         private PLCInfo plcInfo;
         /// <summary>
@@ -75,6 +94,7 @@ namespace MewtocolNet {
         private string ip;
         private int port;
         private int stationNumber;
+        private int cycleTimeMs = 25;
 
         /// <summary>
         /// The current IP of the PLC connection
@@ -89,7 +109,6 @@ namespace MewtocolNet {
         /// </summary>
         public int StationNumber => stationNumber;
 
-        private int cycleTimeMs = 25;
         /// <summary>
         /// The duration of the last message cycle
         /// </summary>
@@ -135,7 +154,6 @@ namespace MewtocolNet {
             RegisterChanged += (o) => {
 
                 string address = $"{o.GetRegisterString()}{o.MemoryAdress}".PadRight(5, (char)32);
-                ;
 
                 Logger.Log($"{address} " +
                            $"{(o.Name != null ? $"({o.Name}) " : "")}" +
@@ -200,14 +218,14 @@ namespace MewtocolNet {
         }
 
         /// <summary>
-        /// Closes all permanent polling 
+        /// Closes the connection all cyclic polling 
         /// </summary>
         public void Disconnect () {
 
             if (!IsConnected)
                 return;
 
-            OnMajorSocketException();
+            OnMajorSocketExceptionWhileConnected();
 
         }
 
@@ -220,6 +238,70 @@ namespace MewtocolNet {
             usePoller = true;
 
             return this;
+
+        }
+
+        #endregion
+
+        #region TCP connection state handling
+
+        private async Task ConnectTCP () {
+
+            if (!IPAddress.TryParse(ip, out var targetIP)) {
+                throw new ArgumentException("The IP adress of the PLC was no valid format");
+            }
+
+            try {
+
+                client = new TcpClient() {
+                    ReceiveBufferSize = RecBufferSize,
+                    NoDelay = false,
+                    ExclusiveAddressUse = true,
+                };
+
+                var result = client.BeginConnect(targetIP, port, null, null);
+                var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(ConnectTimeout));
+
+                if(!success) {
+                    OnMajorSocketExceptionWhileConnecting();
+                    return;
+                }
+
+                stream = client.GetStream();
+                stream.ReadTimeout = 1000;
+
+                Console.WriteLine($"Connected {client.Connected}");
+                await Task.CompletedTask;
+
+            } catch (SocketException) {
+
+                OnMajorSocketExceptionWhileConnecting();
+
+            }
+
+        }
+
+        private void OnMajorSocketExceptionWhileConnecting () {
+
+            Logger.Log("The PLC connection timed out", LogLevel.Error, this);
+            CycleTimeMs = 0;
+            IsConnected = false;
+            KillPoller();
+
+        }
+
+        private void OnMajorSocketExceptionWhileConnected () {
+
+            if (IsConnected) {
+
+                Logger.Log("The PLC connection was closed", LogLevel.Error, this);
+                CycleTimeMs = 0;
+                IsConnected = false;
+                Disconnected?.Invoke();
+                KillPoller();
+                client.Close();
+
+            }
 
         }
 
@@ -547,25 +629,6 @@ namespace MewtocolNet {
 
         #region Low level command handling
 
-        private async Task ConnectTCP () {
-
-            var targetIP = IPAddress.Parse(ip);
-
-            client = new TcpClient() {
-                ReceiveBufferSize = RecBufferSize,
-                NoDelay = false,
-                ExclusiveAddressUse = true
-            };
-
-            await client.ConnectAsync(targetIP, port);
-
-            stream = client.GetStream();
-            stream.ReadTimeout = 1000;
-
-            Console.WriteLine($"Connected {client.Connected}");
-
-        }
-
         /// <summary>
         /// Calculates checksum and sends a command to the PLC then awaits results
         /// </summary>
@@ -668,12 +731,12 @@ namespace MewtocolNet {
                 Logger.Log($"Critical IO exception on receive", LogLevel.Critical, this);
                 return null;
             } catch (SocketException) {
-                OnMajorSocketException();
+                OnMajorSocketExceptionWhileConnected();
                 return null;
             }
 
             if(!string.IsNullOrEmpty(response.ToString())) {
-                Logger.Log($"<-- IN MSG (TXT): {response} ({response.Length} bytes)", LogLevel.Critical, this);
+                Logger.Log($"<-- IN MSG: {response}", LogLevel.Critical, this);
                 return response.ToString();
             } else {
                 return null;
@@ -681,17 +744,22 @@ namespace MewtocolNet {
 
         }
 
-        private void OnMajorSocketException () {
+        #endregion
 
-            if (IsConnected) {
+        #region Disposing
 
-                Logger.Log("The PLC connection was closed", LogLevel.Error, this);
-                CycleTimeMs = 0;
-                IsConnected = false;
-                Disconnected?.Invoke();
-                KillPoller();
+        /// <summary>
+        /// Disposes the current interface and clears all its members
+        /// </summary>
+        public void Dispose () {
 
-            }
+            if (Disposed) return;
+
+            Disconnect();
+
+            GC.SuppressFinalize(this);
+
+            Disposed = true;
 
         }
 
