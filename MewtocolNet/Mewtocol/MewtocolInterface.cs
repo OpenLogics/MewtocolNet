@@ -123,8 +123,9 @@ namespace MewtocolNet {
         internal NetworkStream stream;
         internal TcpClient client;
         internal readonly SerialQueue queue = new SerialQueue();
-        private int RecBufferSize = 64;
+        private int RecBufferSize = 128;
         internal int SendExceptionsInRow = 0;
+        internal bool ImportantTaskRunning = false;
 
         #region Initialization
 
@@ -214,6 +215,23 @@ namespace MewtocolNet {
             }
 
             return this;
+
+        }
+
+        /// <summary>
+        /// Changes the connections parameters of the PLC, only applyable when the connection is offline
+        /// </summary>
+        /// <param name="_ip">Ip adress</param>
+        /// <param name="_port">Port number</param>
+        /// <param name="_station">Station number</param>
+        public void ChangeConnectionSettings (string _ip, int _port, int _station = 1) {
+
+            if (IsConnected)
+                throw new Exception("Cannot change the connection settings while the PLC is connected");
+
+            ip = _ip;
+            port = _port;
+            stationNumber = _station;
 
         }
 

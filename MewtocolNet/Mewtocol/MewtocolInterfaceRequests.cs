@@ -115,30 +115,40 @@ namespace MewtocolNet {
         /// <returns>A byte array or null of there was an error</returns>
         public async Task<byte[]> ReadByteRange (int start, int count) {
 
-            string startStr = start.ToString().PadLeft(5, '0');
+            var byteList = new List<byte>();
+            
             var wordLength = count / 2;
             if (count % 2 != 0) 
                 wordLength++;
 
-            string endStr = (start + wordLength - 1).ToString().PadLeft(5, '0');
 
-            string requeststring = $"%{GetStationNumber()}#RDD{startStr}{endStr}";
-            var result = await SendCommandAsync(requeststring);
+            //read blocks of max 4 words per msg
+            for (int i = 0; i < wordLength; i+=8) {
 
-            if(result.Success && !string.IsNullOrEmpty(result.Response)) {
+                int curWordStart = start + i;
+                int curWordEnd = curWordStart + 7;
 
-                var res = result;
+                string startStr = curWordStart.ToString().PadLeft(5, '0');
+                string endStr = (curWordEnd).ToString().PadLeft(5, '0');
 
-                var bytes = result.Response.ParseDTByteString(wordLength * 4).HexStringToByteArray();
+                string requeststring = $"%{GetStationNumber()}#RDD{startStr}{endStr}";
+                var result = await SendCommandAsync(requeststring);
 
-                if (bytes == null)
-                    return null;
+                if (result.Success && !string.IsNullOrEmpty(result.Response)) {
 
-                return bytes.BigToMixedEndian().Take(count).ToArray();
+                    var bytes = result.Response.ParseDTByteString(8 * 4).HexStringToByteArray();
+
+                    if (bytes == null) {
+                        return null;
+                    }
+
+                    byteList.AddRange(bytes.BigToMixedEndian().Take(count).ToArray());
+
+                }
 
             }
 
-            return null;
+            return byteList.ToArray();  
 
         }
 

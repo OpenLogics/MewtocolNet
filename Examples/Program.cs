@@ -47,29 +47,36 @@ class Program {
             await interf.ConnectAsync(
                 (plcinf) => {
 
-                        //reading a value from the register collection
+                    //reading a value from the register collection
                     Console.WriteLine($"BitValue is: {registers.BitValue}");
                     Console.WriteLine($"TestEnum is: {registers.TestEnum}");
 
-                        //writing a value to the registers
+                    //writing a value to the registers
                     Task.Factory.StartNew(async () => {
 
-                            //set plc to run mode if not already
+                        //set plc to run mode if not already
                         await interf.SetOperationMode(OPMode.Run);
+
+
+                        int startAdress = 10000;
+                        int entryByteSize = 20 * 20;
+
+                        var bytes = await interf.ReadByteRange(startAdress, entryByteSize);
+                        Console.WriteLine($"Bytes: {string.Join('-', bytes)}");
 
                         await Task.Delay(2000);
 
                         await interf.SetRegisterAsync(nameof(registers.TestInt32), 100);
 
-                            //adds 10 each time the plc connects to the PLCs INT regíster
+                        //adds 10 each time the plc connects to the PLCs INT regíster
                         interf.SetRegister(nameof(registers.TestInt16), (short)(registers.TestInt16 + 10));
-                            //adds 1 each time the plc connects to the PLCs DINT regíster
+                        //adds 1 each time the plc connects to the PLCs DINT regíster
                         interf.SetRegister(nameof(registers.TestInt32), (registers.TestInt32 + 1));
-                            //adds 11.11 each time the plc connects to the PLCs REAL regíster
+                        //adds 11.11 each time the plc connects to the PLCs REAL regíster
                         interf.SetRegister(nameof(registers.TestFloat32), (float)(registers.TestFloat32 + 11.11));
-                            //writes 'Hello' to the PLCs string register
+                        //writes 'Hello' to the PLCs string register
                         interf.SetRegister(nameof(registers.TestString2), "Hello");
-                            //set the current second to the PLCs TIME register
+                        //set the current second to the PLCs TIME register
                         interf.SetRegister(nameof(registers.TestTime), TimeSpan.FromSeconds(DateTime.Now.Second));
 
                     });
