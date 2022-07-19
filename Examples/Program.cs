@@ -97,14 +97,14 @@ class Program {
 
         Task.Factory.StartNew(async () => {
 
-            using(var interf = new MewtocolInterface("10.237.191.3")) {
+            //automatic endpoint
+            using (var interf = new MewtocolInterface("10.237.191.3")) {
 
                 await interf.ConnectAsync();
 
-                if(interf.IsConnected) {
+                if (interf.IsConnected) {
 
-                    var plcInf = await interf.GetPLCInfoAsync();
-                    Console.WriteLine(plcInf);
+                    await Task.Delay(5000);
 
                 }
 
@@ -112,15 +112,16 @@ class Program {
 
             }
 
-
+            //manual endpoint
             using (var interf = new MewtocolInterface("10.237.191.3")) {
+
+                interf.HostEndpoint = new System.Net.IPEndPoint(System.Net.IPAddress.Parse("10.237.191.77"), 0);
 
                 await interf.ConnectAsync();
 
-                if (interf.IsConnected) {
+                if(interf.IsConnected) {
 
-                    var plcInf = await interf.GetPLCInfoAsync();
-                    Console.WriteLine(plcInf);
+                    await Task.Delay(5000);
 
                 }
 

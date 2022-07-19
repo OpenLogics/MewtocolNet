@@ -43,7 +43,7 @@ namespace MewtocolNet {
         /// </summary>
         public event PropertyChangedEventHandler PropertyChanged;
 
-        private int connectTimeout = 1000;
+        private int connectTimeout = 3000;
         /// <summary>
         /// The initial connection timeout in milliseconds
         /// </summary>
@@ -277,31 +277,40 @@ namespace MewtocolNet {
             try {
 
                 if(HostEndpoint != null) {
+                    
                     client = new TcpClient(HostEndpoint) {
                         ReceiveBufferSize = RecBufferSize,
                         NoDelay = false,
-                        ExclusiveAddressUse = true,
                     };
+                    var ep = (IPEndPoint)client.Client.LocalEndPoint;
+                    Logger.Log($"Connecting [MAN] endpoint: {ep.Address}:{ep.Port}", LogLevel.Verbose, this);
+
                 } else {
+
                     client = new TcpClient() {
                         ReceiveBufferSize = RecBufferSize,
                         NoDelay = false,
                         ExclusiveAddressUse = true,
                     };
+
                 }
 
                 var result = client.BeginConnect(targetIP, port, null, null);
                 var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(ConnectTimeout));
 
-                if(!success) {
+                if(!success || !client.Connected) {
                     OnMajorSocketExceptionWhileConnecting();
                     return;
+                }
+
+                if(HostEndpoint == null) {
+                    var ep = (IPEndPoint)client.Client.LocalEndPoint;
+                    Logger.Log($"Connecting [AUTO] endpoint: {ep.Address.MapToIPv4()}:{ep.Port}", LogLevel.Verbose, this);
                 }
 
                 stream = client.GetStream();
                 stream.ReadTimeout = 1000;
 
-                Console.WriteLine($"Connected {client.Connected}");
                 await Task.CompletedTask;
 
             } catch (SocketException) {
@@ -720,9 +729,10 @@ namespace MewtocolNet {
 
             if (client == null || !client.Connected ) {
                 await ConnectTCP();
-                if (!client.Connected)
-                    return null;
             }
+
+            if (client == null || !client.Connected)
+                return null;
 
             var message = _blockString.ToHexASCIIBytes();
 
@@ -759,7 +769,7 @@ namespace MewtocolNet {
                 }
 
             } catch (IOException) {
-                Logger.Log($"Critical IO exception on receive", LogLevel.Critical, this);
+                OnMajorSocketExceptionWhileConnected();
                 return null;
             } catch (SocketException) {
                 OnMajorSocketExceptionWhileConnected();
