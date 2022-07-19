@@ -34,8 +34,17 @@ namespace MewtocolNet.RegisterAttributes {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
+        /// <summary>
+        /// Gets called when the register collection base was linked to its parent mewtocol interface
+        /// </summary>
+        /// <param name="plc">The parent interface</param>
         public virtual void OnInterfaceLinked (MewtocolInterface plc) { }
 
+        /// <summary>
+        /// Gets called when the register collection base was linked to its parent mewtocol interface
+        /// and the plc connection is established
+        /// </summary>
+        /// <param name="plc">The parent interface</param>
         public virtual void OnInterfaceLinkedAndOnline (MewtocolInterface plc) { }
 
     }

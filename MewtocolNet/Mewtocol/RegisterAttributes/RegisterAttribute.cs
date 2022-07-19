@@ -6,22 +6,39 @@ using System.Threading.Tasks;
 
 namespace MewtocolNet.RegisterAttributes {
 
+    /// <summary>
+    /// The size of the bitwise register
+    /// </summary>
     public enum BitCount {
+        /// <summary>
+        /// 16 bit
+        /// </summary>
         B16,
+        /// <summary>
+        /// 32 bit
+        /// </summary>
         B32
     }
 
+    /// <summary>
+    /// Defines the behavior of a register property
+    /// </summary>
     [AttributeUsage(AttributeTargets.Property)]
     public class RegisterAttribute : Attribute {
 
-        public int MemoryArea;
-        public int StringLength;
-        public RegisterType RegisterType;
-        public SpecialAddress SpecialAddress = SpecialAddress.None;
-        public BitCount BitCount;
-        public int AssignedBitIndex = -1;
+        internal int MemoryArea;
+        internal int StringLength;
+        internal RegisterType RegisterType;
+        internal SpecialAddress SpecialAddress = SpecialAddress.None;
+        internal BitCount BitCount;
+        internal int AssignedBitIndex = -1;
 
 
+        /// <summary>
+        /// Attribute for string type or numeric registers 
+        /// </summary>
+        /// <param name="memoryArea">The area in the plcs memory</param>
+        /// <param name="stringLength">The max string length in the plc</param>
         public RegisterAttribute (int memoryArea, int stringLength = 1) {
 
             MemoryArea = memoryArea;
@@ -29,6 +46,11 @@ namespace MewtocolNet.RegisterAttributes {
 
         }
 
+        /// <summary>
+        /// Attribute for boolean registers
+        /// </summary>
+        /// <param name="memoryArea">The area in the plcs memory</param>
+        /// <param name="type">The type of boolean register</param>
         public RegisterAttribute (int memoryArea, RegisterType type) {
 
             if (type.ToString().StartsWith("DT"))
@@ -40,6 +62,11 @@ namespace MewtocolNet.RegisterAttributes {
 
         }
 
+        /// <summary>
+        /// Attribute for boolean registers
+        /// </summary>
+        /// <param name="spAdress">The special area in the plcs memory</param>
+        /// <param name="type">The type of boolean register</param>
         public RegisterAttribute (RegisterType type, SpecialAddress spAdress) {
 
             if (type.ToString().StartsWith("DT"))
@@ -50,7 +77,11 @@ namespace MewtocolNet.RegisterAttributes {
 
         }
 
-
+        /// <summary>
+        /// Attribute to read numeric registers as bitwise
+        /// </summary>
+        /// <param name="memoryArea">The area in the plcs memory</param>
+        /// <param name="bitcount">The number of bits to parse</param>
         public RegisterAttribute (int memoryArea, BitCount bitcount) {
 
             MemoryArea = memoryArea;
@@ -59,6 +90,12 @@ namespace MewtocolNet.RegisterAttributes {
 
         }
 
+        /// <summary>
+        /// Attribute to read numeric registers as bitwise
+        /// </summary>
+        /// <param name="memoryArea">The area in the plcs memory</param>
+        /// <param name="bitcount">The number of bits to parse</param>
+        /// <param name="assignBit">The index of the bit that gets linked to the bool</param>
         public RegisterAttribute (int memoryArea, uint assignBit, BitCount bitcount) {
 
             if(assignBit > 15 && bitcount == BitCount.B16) {

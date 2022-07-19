@@ -190,6 +190,7 @@ namespace MewtocolNet {
         /// Writes to the given bool register on the PLC
         /// </summary>
         /// <param name="_toWrite">The register to write to</param>
+        /// <param name="value">The value to write</param>
         /// <returns>The success state of the write operation</returns>
         public async Task<bool> WriteBoolRegister (BRegister _toWrite, bool value) {
 
@@ -294,7 +295,7 @@ namespace MewtocolNet {
         /// </summary>
         /// <typeparam name="T">Type of number (short, ushort, int, uint, float)</typeparam>
         /// <param name="_toWrite">The register to write</param>
-        /// <param name="_stationNumber">Station number to access</param>
+        /// <param name="_value">The value to write</param>
         /// <returns>The success state of the write operation</returns>
         public async Task<bool> WriteNumRegister<T> (NRegister<T> _toWrite, T _value) {
 

@@ -75,6 +75,9 @@ namespace MewtocolNet.Registers {
             };
         }
 
+        /// <summary>
+        /// Builds the register area name
+        /// </summary>
         public virtual string BuildMewtocolIdent() {
 
             StringBuilder asciistring = new StringBuilder("D");
@@ -178,6 +181,9 @@ namespace MewtocolNet.Registers {
 
         }
 
+        /// <summary>
+        /// Gets the register dataarea string DT for 16bit and DDT for 32 bit types
+        /// </summary>
         public string GetRegisterString () {
 
             if (this is NRegister<short> shortReg) {

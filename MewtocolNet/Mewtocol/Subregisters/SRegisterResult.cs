@@ -1,15 +1,19 @@
 ﻿namespace MewtocolNet.Registers {
+
+    /// <summary>
+    /// The results of a string register operation
+    /// </summary>
     public class SRegisterResult {
+
+        /// <summary>
+        /// The command result
+        /// </summary>
         public CommandResult Result { get; set; }
+        /// <summary>
+        /// The register definition used
+        /// </summary>
         public SRegister Register { get; set; }
 
-        public override string ToString() {
-            string errmsg = Result.Success ? "" : $", Error [{Result.ErrorDescription}]";
-            return $"Result [{Result.Success}], Register [{Register.ToString()}]{errmsg}";
-        }
     }
-
-
-
 
 }

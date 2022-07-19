@@ -9,9 +9,12 @@ namespace MewtocolNet.Registers {
 
         private string lastVal = "";
 
+        /// <summary>
+        /// The current value of the register
+        /// </summary>
         public string Value => lastVal;
 
-        public short ReservedSize { get; set; }
+        internal short ReservedSize { get; set; }
 
         /// <summary>
         /// Defines a register containing a string
@@ -32,10 +35,9 @@ namespace MewtocolNet.Registers {
             memoryLength = (int)Math.Round(wordsize + 1);
         }
 
-        public override string ToString() {
-            return $"Adress: {MemoryAdress} Val: {Value}";
-        }
-
+        /// <summary>
+        /// Builds the register identifier for the mewotocol protocol
+        /// </summary>
         public override string BuildMewtocolIdent() {
 
             StringBuilder asciistring = new StringBuilder("D");
@@ -64,7 +66,6 @@ namespace MewtocolNet.Registers {
             TriggerChangedEvnt(this);
             TriggerNotifyChange();
         }
-
 
     }
 

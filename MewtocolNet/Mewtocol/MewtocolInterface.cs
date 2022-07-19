@@ -52,6 +52,11 @@ namespace MewtocolNet {
             set { connectTimeout = value; }
         }
 
+        /// <summary>
+        /// The host ip endpoint, leave it null to use an automatic interface
+        /// </summary>
+        public IPEndPoint HostEndpoint { get; set; }
+
         private bool isConnected;
         /// <summary>
         /// The current connection state of the interface
@@ -271,11 +276,19 @@ namespace MewtocolNet {
 
             try {
 
-                client = new TcpClient() {
-                    ReceiveBufferSize = RecBufferSize,
-                    NoDelay = false,
-                    ExclusiveAddressUse = true,
-                };
+                if(HostEndpoint != null) {
+                    client = new TcpClient(HostEndpoint) {
+                        ReceiveBufferSize = RecBufferSize,
+                        NoDelay = false,
+                        ExclusiveAddressUse = true,
+                    };
+                } else {
+                    client = new TcpClient() {
+                        ReceiveBufferSize = RecBufferSize,
+                        NoDelay = false,
+                        ExclusiveAddressUse = true,
+                    };
+                }
 
                 var result = client.BeginConnect(targetIP, port, null, null);
                 var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(ConnectTimeout));

@@ -6,13 +6,16 @@ namespace MewtocolNet.Registers {
     /// </summary>
     /// <typeparam name="T">The type of the numeric value</typeparam>
     public class NRegisterResult<T> {
-        public CommandResult Result { get; set; }
-        public NRegister<T> Register { get; set; }
 
-        public override string ToString() {
-            string errmsg = Result.Success ? "" : $", Error [{Result.ErrorDescription}]";
-            return $"Result [{Result.Success}], Register [{Register.ToString()}]{errmsg}";
-        }
+        /// <summary>
+        /// Command result
+        /// </summary>
+        public CommandResult Result { get; set; }
+
+        /// <summary>
+        /// The used register
+        /// </summary>
+        public NRegister<T> Register { get; set; }
 
         /// <summary>
         /// Trys to get the value of there is one

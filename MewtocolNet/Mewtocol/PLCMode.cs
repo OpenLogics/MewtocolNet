@@ -6,13 +6,38 @@ namespace MewtocolNet.Registers {
     /// All modes
     /// </summary>
     public class PLCMode {
+
+        /// <summary>
+        /// PLC is running
+        /// </summary>
         public bool RunMode { get; set; }
+        /// <summary>
+        /// PLC is in test
+        /// </summary>
         public bool TestRunMode { get; set; }
+        /// <summary>
+        /// BreakExcecuting
+        /// </summary>
         public bool BreakExcecuting { get; set; }
+        /// <summary>
+        /// BreakValid
+        /// </summary>
         public bool BreakValid { get; set; }
+        /// <summary>
+        /// PLC output is enabled
+        /// </summary>
         public bool OutputEnabled { get; set; }
+        /// <summary>
+        /// PLC runs step per step
+        /// </summary>
         public bool StepRunMode { get; set; }
+        /// <summary>
+        /// Message executing
+        /// </summary>
         public bool MessageExecuting { get; set; }
+        /// <summary>
+        /// PLC is in remote mode
+        /// </summary>
         public bool RemoteMode { get; set; }
 
         /// <summary>

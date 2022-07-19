@@ -12,8 +12,7 @@ namespace MewtocolNet.Registers {
         internal RegisterType RegType { get; private set; }     
         internal SpecialAddress SpecialAddress { get; private set; }        
 
-        public bool NeedValue;
-        public bool LastValue;
+        internal bool LastValue;
 
         /// <summary>
         /// The value of the register
@@ -54,6 +53,9 @@ namespace MewtocolNet.Registers {
 
         }
 
+        /// <summary>
+        /// Builds the register area name
+        /// </summary>
         public override string BuildMewtocolIdent () {
 
             //build area code from register type
@@ -73,9 +75,7 @@ namespace MewtocolNet.Registers {
             TriggerChangedEvnt(this);
             TriggerNotifyChange();
         }
-        public override string ToString() {
-            return $"Adress: {MemoryAdress} Val: {Value}";
-        }
+
     }
 
 }

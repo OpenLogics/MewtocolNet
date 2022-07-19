@@ -7,8 +7,7 @@ namespace MewtocolNet.Registers {
     /// <typeparam name="T">The type of the numeric value</typeparam>
     public class NRegister<T> : Register {
 
-        public T NeedValue;
-        public T LastValue;
+        internal T LastValue;
 
         /// <summary>
         /// The value of the register
@@ -76,10 +75,6 @@ namespace MewtocolNet.Registers {
             LastValue = (T)val;
             TriggerChangedEvnt(this);
             TriggerNotifyChange();
-        }
-
-        public override string ToString() {
-            return $"Adress: {MemoryAdress} Val: {Value}";
         }
 
     }
