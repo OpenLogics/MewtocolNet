@@ -115,9 +115,14 @@ namespace MewtocolNet.Registers {
         public string GetValueString () {
 
             if (enumType != null && this is NRegister<int> intEnumReg) {
+
                 var dict = new Dictionary<int, string>();
+
                 foreach (var name in Enum.GetNames(enumType)) {
-                    dict.Add((int)Enum.Parse(enumType, name), name);
+                    int enumKey = (int)Enum.Parse(enumType, name);
+                    if(!dict.ContainsKey(enumKey)) {
+                        dict.Add(enumKey, name);
+                    }
                 }
 
                 if(dict.ContainsKey(intEnumReg.Value)) {
@@ -125,6 +130,7 @@ namespace MewtocolNet.Registers {
                 } else {
                     return $"{intEnumReg.Value} (Missing Enum)";
                 }   
+
             }
             if (this is NRegister<short> shortReg) {
                 return $"{shortReg.Value}{(isUsedBitwise ? $" [{shortReg.GetBitwise().ToBitString()}]" : "")}";

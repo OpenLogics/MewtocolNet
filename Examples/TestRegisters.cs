@@ -68,6 +68,8 @@ namespace Examples {
         [Register(50)]
         public CurrentState TestEnum { get; private set; }
 
+        [Register(100)]
+        public TimeSpan TsTest2 { get; private set; }
 
     }
 }

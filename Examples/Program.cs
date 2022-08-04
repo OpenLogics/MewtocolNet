@@ -32,7 +32,7 @@ class Program {
         Task.Factory.StartNew(async () => {
 
             //attaching the logger
-            Logger.LogLevel = LogLevel.Critical;
+            Logger.LogLevel = LogLevel.Verbose;
             Logger.OnNewLogMessage((date, msg) => {
                 Console.WriteLine($"{date.ToString("HH:mm:ss")} {msg}");
             });
