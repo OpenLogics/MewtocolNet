@@ -52,6 +52,15 @@ namespace MewtocolNet {
             set { connectTimeout = value; }
         }
 
+        private int pollerDelayMs = 0;
+        /// <summary>
+        /// Delay for each poller cycle in milliseconds, default = 0
+        /// </summary>
+        public int PollerDelayMs {
+            get { return pollerDelayMs; }
+            set { pollerDelayMs = value; }
+        }
+
         /// <summary>
         /// The host ip endpoint, leave it null to use an automatic interface
         /// </summary>
@@ -101,6 +110,9 @@ namespace MewtocolNet {
         private int stationNumber;
         private int cycleTimeMs = 25;
 
+        private int bytesTotalCountedUpstream = 0;
+        private int bytesTotalCountedDownstream = 0;
+
         /// <summary>
         /// The current IP of the PLC connection
         /// </summary>
@@ -125,12 +137,39 @@ namespace MewtocolNet {
             }
         }
 
+        private int bytesPerSecondUpstream = 0;
+        /// <summary>
+        /// The current transmission speed in bytes per second
+        /// </summary>
+        public int BytesPerSecondUpstream {
+            get { return bytesPerSecondUpstream; }  
+            private set {
+                bytesPerSecondUpstream = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BytesPerSecondUpstream)));
+            }
+        }
+
+        private int bytesPerSecondDownstream = 0;
+        /// <summary>
+        /// The current transmission speed in bytes per second
+        /// </summary>
+        public int BytesPerSecondDownstream {
+            get { return bytesPerSecondDownstream; }
+            private set {
+                bytesPerSecondDownstream = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BytesPerSecondDownstream)));
+            }
+        }
+
         internal NetworkStream stream;
         internal TcpClient client;
         internal readonly SerialQueue queue = new SerialQueue();
         private int RecBufferSize = 128;
         internal int SendExceptionsInRow = 0;
         internal bool ImportantTaskRunning = false;
+
+        private Stopwatch speedStopwatchUpstr;
+        private Stopwatch speedStopwatchDownstr;
 
         #region Initialization
 
@@ -736,12 +775,29 @@ namespace MewtocolNet {
 
             var message = _blockString.ToHexASCIIBytes();
 
+            //time measuring
+            if(speedStopwatchUpstr == null) {
+                speedStopwatchUpstr = Stopwatch.StartNew();
+            }
+
+            if(speedStopwatchUpstr.Elapsed.TotalSeconds >= 1) {
+                speedStopwatchUpstr.Restart();
+                bytesTotalCountedUpstream = 0;
+            }
+
             //send request
             using (var sendStream = new MemoryStream(message)) {
                 await sendStream.CopyToAsync(stream);
                 Logger.Log($"[--------------------------------]", LogLevel.Critical, this);
                 Logger.Log($"--> OUT MSG: {_blockString}", LogLevel.Critical, this);
             }
+
+            //calc upstream speed
+            bytesTotalCountedUpstream += message.Length;
+
+            var perSecUpstream = (double)((bytesTotalCountedUpstream / speedStopwatchUpstr.Elapsed.TotalMilliseconds) * 1000);
+            if (perSecUpstream <= 10000)
+                BytesPerSecondUpstream = (int)Math.Round(perSecUpstream, MidpointRounding.AwayFromZero);
 
             //await result
             StringBuilder response = new StringBuilder();
@@ -755,6 +811,17 @@ namespace MewtocolNet {
                 while (!endLineCode && !startMsgCode) {
 
                     do {
+
+                        //time measuring
+                        if (speedStopwatchDownstr == null) {
+                            speedStopwatchDownstr = Stopwatch.StartNew();
+                        }
+
+                        if (speedStopwatchDownstr.Elapsed.TotalSeconds >= 1) {
+                            speedStopwatchDownstr.Restart();
+                            bytesTotalCountedDownstream = 0;
+                        }
+
                         int bytes = await stream.ReadAsync(responseBuffer, 0, responseBuffer.Length);
 
                         endLineCode = responseBuffer.Any(x => x == 0x0D);
@@ -777,8 +844,18 @@ namespace MewtocolNet {
             }
 
             if(!string.IsNullOrEmpty(response.ToString())) {
+                
                 Logger.Log($"<-- IN MSG: {response}", LogLevel.Critical, this);
+
+                bytesTotalCountedDownstream += Encoding.ASCII.GetByteCount(response.ToString());
+
+                var perSecDownstream = (double)((bytesTotalCountedDownstream / speedStopwatchDownstr.Elapsed.TotalMilliseconds) * 1000);
+
+                if(perSecUpstream <= 10000) 
+                    BytesPerSecondDownstream = (int)Math.Round(perSecUpstream, MidpointRounding.AwayFromZero);
+
                 return response.ToString();
+
             } else {
                 return null;
             }

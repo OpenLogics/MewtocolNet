@@ -79,6 +79,14 @@ class Program {
                         //set the current second to the PLCs TIME register
                         interf.SetRegister(nameof(registers.TestTime), TimeSpan.FromSeconds(DateTime.Now.Second));
 
+                        while(true) {
+
+                            Console.WriteLine($"Speed UP: {interf.BytesPerSecondUpstream} B/s");
+                            Console.WriteLine($"Speed DOWN: {interf.BytesPerSecondDownstream} B/s");
+
+                            await Task.Delay(1000);
+                        }
+
                     });
 
                 }

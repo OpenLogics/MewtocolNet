@@ -117,6 +117,8 @@ namespace MewtocolNet {
 
                     it++;
 
+                    await Task.Delay(PollerDelayMs);
+
                 }
 
             });
