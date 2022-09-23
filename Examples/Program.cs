@@ -32,7 +32,7 @@ class Program {
         Task.Factory.StartNew(async () => {
 
             //attaching the logger
-            Logger.LogLevel = LogLevel.Verbose;
+            Logger.LogLevel = LogLevel.Critical;
             Logger.OnNewLogMessage((date, msg) => {
                 Console.WriteLine($"{date.ToString("HH:mm:ss")} {msg}");
             });
@@ -43,6 +43,13 @@ class Program {
 
             //attaching the register collection and an automatic poller
             interf.WithRegisterCollection(registers).WithPoller();
+
+            _ = Task.Factory.StartNew(async () => {
+                while (true) {
+                    Console.Title = $"Polling Paused: {interf.PollingPaused}, Speed UP: {interf.BytesPerSecondUpstream} B/s, Speed DOWN: {interf.BytesPerSecondDownstream} B/s";
+                    await Task.Delay(1000);
+                }
+            });
 
             await interf.ConnectAsync(
                 (plcinf) => {
@@ -79,13 +86,27 @@ class Program {
                         //set the current second to the PLCs TIME register
                         interf.SetRegister(nameof(registers.TestTime), TimeSpan.FromSeconds(DateTime.Now.Second));
 
+                        //test pausing poller
+
+                        bool pollerPaused = false;
+
                         while(true) {
 
-                            Console.WriteLine($"Speed UP: {interf.BytesPerSecondUpstream} B/s");
-                            Console.WriteLine($"Speed DOWN: {interf.BytesPerSecondDownstream} B/s");
+                            await Task.Delay(5000);
 
-                            await Task.Delay(1000);
+                            pollerPaused = !pollerPaused;
+
+                            if(pollerPaused) {
+                                Console.WriteLine("Pausing poller");
+                                await interf.PausePollingAsync();
+                                Console.WriteLine("Paused poller");
+                            } else {
+                                interf.ResumePolling();
+                                Console.WriteLine("Resumed poller");
+                            }
+
                         }
+
 
                     });
 
