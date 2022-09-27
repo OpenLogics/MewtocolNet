@@ -112,8 +112,9 @@ namespace MewtocolNet {
         /// </summary>
         /// <param name="start">Start adress</param>
         /// <param name="count">Number of bytes to get</param>
+        /// <param name="onProgress">Gets invoked when the progress changes, contains the progress as a double</param>
         /// <returns>A byte array or null of there was an error</returns>
-        public async Task<byte[]> ReadByteRange (int start, int count) {
+        public async Task<byte[]> ReadByteRange (int start, int count, Action<double> onProgress = null) {
 
             var byteList = new List<byte>();
             
@@ -145,6 +146,9 @@ namespace MewtocolNet {
                     byteList.AddRange(bytes.BigToMixedEndian().Take(count).ToArray());
 
                 }
+
+                if(onProgress != null)  
+                    onProgress((double)i / wordLength);
 
             }
 

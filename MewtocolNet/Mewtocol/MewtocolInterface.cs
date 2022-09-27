@@ -52,13 +52,24 @@ namespace MewtocolNet {
             set { connectTimeout = value; }
         }
 
-        private int pollerDelayMs = 0;
+        private volatile int pollerDelayMs = 0;
         /// <summary>
         /// Delay for each poller cycle in milliseconds, default = 0
         /// </summary>
         public int PollerDelayMs {
-            get { return pollerDelayMs; }
-            set { pollerDelayMs = value; }
+            get => pollerDelayMs;
+            set { 
+                pollerDelayMs = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PollerDelayMs)));
+            }
+        }
+
+        private volatile int queuedMessages;
+        /// <summary>
+        /// Currently queued Messages
+        /// </summary>
+        public int QueuedMessages {
+            get => queuedMessages;
         }
 
         /// <summary>
@@ -721,7 +732,9 @@ namespace MewtocolNet {
             //send request
             try {
 
+                queuedMessages++;
                 var response = await queue.Enqueue(() => SendSingleBlock(_msg));
+                queuedMessages--;
 
                 if (response == null) {
                     return new CommandResult {

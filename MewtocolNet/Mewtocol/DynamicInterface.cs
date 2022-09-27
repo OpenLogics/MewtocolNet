@@ -168,7 +168,7 @@ namespace MewtocolNet {
 
                         iteration++;
 
-                        await Task.Delay(PollerDelayMs);
+                        await Task.Delay(pollerDelayMs);
 
                     }
 

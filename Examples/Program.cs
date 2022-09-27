@@ -27,6 +27,8 @@ class Program {
         Console.ReadLine();
     }
 
+    private static bool isProgressReadout = false;
+
     static void Scenario1 () {
 
         Task.Factory.StartNew(async () => {
@@ -46,76 +48,115 @@ class Program {
 
             _ = Task.Factory.StartNew(async () => {
                 while (true) {
-                    Console.Title = $"Polling Paused: {interf.PollingPaused}, Speed UP: {interf.BytesPerSecondUpstream} B/s, Speed DOWN: {interf.BytesPerSecondDownstream} B/s";
+                    if (isProgressReadout) continue;
+                    Console.Title = $"Polling Paused: {interf.PollingPaused}, " +
+                    $"Speed UP: {interf.BytesPerSecondUpstream} B/s, " +
+                    $"Speed DOWN: {interf.BytesPerSecondDownstream} B/s, " +
+                    $"Poll delay: {interf.PollerDelayMs} ms, " +
+                    $"Queued MSGs: {interf.QueuedMessages}";
                     await Task.Delay(1000);
                 }
             });
 
-            await interf.ConnectAsync(
-                (plcinf) => {
-
-                    //reading a value from the register collection
-                    Console.WriteLine($"BitValue is: {registers.BitValue}");
-                    Console.WriteLine($"TestEnum is: {registers.TestEnum}");
-
-                    //writing a value to the registers
-                    Task.Factory.StartNew(async () => {
-
-                        //set plc to run mode if not already
-                        await interf.SetOperationMode(OPMode.Run);
-
-
-                        int startAdress = 10000;
-                        int entryByteSize = 20 * 20;
-
-                        var bytes = await interf.ReadByteRange(startAdress, entryByteSize);
-                        Console.WriteLine($"Bytes: {string.Join('-', bytes)}");
-
-                        await Task.Delay(2000);
-
-                        await interf.SetRegisterAsync(nameof(registers.TestInt32), 100);
-
-                        //adds 10 each time the plc connects to the PLCs INT regíster
-                        interf.SetRegister(nameof(registers.TestInt16), (short)(registers.TestInt16 + 10));
-                        //adds 1 each time the plc connects to the PLCs DINT regíster
-                        interf.SetRegister(nameof(registers.TestInt32), (registers.TestInt32 + 1));
-                        //adds 11.11 each time the plc connects to the PLCs REAL regíster
-                        interf.SetRegister(nameof(registers.TestFloat32), (float)(registers.TestFloat32 + 11.11));
-                        //writes 'Hello' to the PLCs string register
-                        interf.SetRegister(nameof(registers.TestString2), "Hello");
-                        //set the current second to the PLCs TIME register
-                        interf.SetRegister(nameof(registers.TestTime), TimeSpan.FromSeconds(DateTime.Now.Second));
-
-                        //test pausing poller
-
-                        bool pollerPaused = false;
-
-                        while(true) {
-
-                            await Task.Delay(5000);
-
-                            pollerPaused = !pollerPaused;
-
-                            if(pollerPaused) {
-                                Console.WriteLine("Pausing poller");
-                                await interf.PausePollingAsync();
-                                Console.WriteLine("Paused poller");
-                            } else {
-                                interf.ResumePolling();
-                                Console.WriteLine("Resumed poller");
-                            }
-
-                        }
-
-
-                    });
-
-                }
-            );
+            await interf.ConnectAsync((plcinf) => AfterConnect(interf, registers));
 
         });
 
     }
+
+    static void AfterConnect (MewtocolInterface interf, TestRegisters registers) {
+
+        //reading a value from the register collection
+        Console.WriteLine($"BitValue is: {registers.BitValue}");
+        Console.WriteLine($"TestEnum is: {registers.TestEnum}");
+
+        _ = Task.Factory.StartNew(async () => {
+
+            while(true) {
+
+                isProgressReadout = true;
+
+                await interf.ReadByteRange(1000, 2000, (p) => {
+
+                    var totSteps = 10;
+                    var cSteps = totSteps * p;
+
+                    string progBar = "";
+                    for (int i = 0; i < totSteps; i++) {
+
+                        if(i < (int)cSteps) {
+                            progBar += "⬛";
+                        } else {
+                            progBar += "⬜";
+                        }
+                        
+                    }
+
+                    Console.Title = $"Prog read range: {(p * 100).ToString("N1")}% {progBar} Queued MSGs: {interf.QueuedMessages}";
+
+                });
+
+                isProgressReadout = false;
+
+                await Task.Delay(3000);
+
+            }
+
+        });
+
+        //writing a value to the registers
+        _ = Task.Factory.StartNew(async () => {
+
+            //set plc to run mode if not already
+            await interf.SetOperationMode(OPMode.Run);
+
+            int startAdress = 10000;
+            int entryByteSize = 20 * 20;
+
+            var bytes = await interf.ReadByteRange(startAdress, entryByteSize);
+            Console.WriteLine($"Bytes: {string.Join('-', bytes)}");
+
+            await Task.Delay(2000);
+
+            await interf.SetRegisterAsync(nameof(registers.TestInt32), 100);
+
+            //adds 10 each time the plc connects to the PLCs INT regíster
+            interf.SetRegister(nameof(registers.TestInt16), (short)(registers.TestInt16 + 10));
+            //adds 1 each time the plc connects to the PLCs DINT regíster
+            interf.SetRegister(nameof(registers.TestInt32), (registers.TestInt32 + 1));
+            //adds 11.11 each time the plc connects to the PLCs REAL regíster
+            interf.SetRegister(nameof(registers.TestFloat32), (float)(registers.TestFloat32 + 11.11));
+            //writes 'Hello' to the PLCs string register
+            interf.SetRegister(nameof(registers.TestString2), "Hello");
+            //set the current second to the PLCs TIME register
+            interf.SetRegister(nameof(registers.TestTime), TimeSpan.FromSeconds(DateTime.Now.Second));
+
+            //test pausing poller
+
+            bool pollerPaused = false;
+
+            while (true) {
+
+                await Task.Delay(5000);
+
+                pollerPaused = !pollerPaused;
+
+                if (pollerPaused) {
+                    Console.WriteLine("Pausing poller");
+                    await interf.PausePollingAsync();
+                    //interf.PollerDelayMs += 10;
+                    Console.WriteLine("Paused poller");
+                } else {
+                    interf.ResumePolling();
+                    Console.WriteLine("Resumed poller");
+                }
+
+            }
+
+
+        });
+
+    } 
 
     static void Scenario2 () {
 
