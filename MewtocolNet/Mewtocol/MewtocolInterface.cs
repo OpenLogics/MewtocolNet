@@ -733,8 +733,11 @@ namespace MewtocolNet {
             try {
 
                 queuedMessages++;
+                
                 var response = await queue.Enqueue(() => SendSingleBlock(_msg));
-                queuedMessages--;
+
+                if (queuedMessages > 0) 
+                    queuedMessages--;
 
                 if (response == null) {
                     return new CommandResult {
