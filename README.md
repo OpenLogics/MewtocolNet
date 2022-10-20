@@ -1,7 +1,6 @@
-[![.NET Windows](https://github.com/WOmed/MewtocolNet/actions/workflows/dotnet-windows.yml/badge.svg)](https://github.com/WOmed/MewtocolNet/actions/workflows/dotnet-windows.yml)
-![Nuget](https://img.shields.io/nuget/v/MewtocolNet)
+[![Publish to Nuget](https://github.com/WOmed/MewtocolNet/actions/workflows/publish.yml/badge.svg)](https://github.com/WOmed/MewtocolNet/actions/workflows/publish.yml)
+![Nuget](https://img.shields.io/nuget/v/Mewtocol.NET)
 ![Lines of code](https://img.shields.io/tokei/lines/github/WOmed/MewtocolNet)
-![Nuget](https://img.shields.io/nuget/dt/MewtocolNet)
 ![GitHub](https://img.shields.io/github/license/WOmed/MewtocolNet)
 ![Status](https://img.shields.io/badge/Status-In%20dev-orange)
 
@@ -53,12 +52,12 @@ Where is the RS232/Serial support?
 
 Install this package by using [Nuget](https://www.nuget.org/packages/MewtocolNet/) or reference 
 ```XML
-<PackageReference Include="MewtocolNet" Version="0.6.0" />
+<PackageReference Include="Mewtocol.NET" Version="0.6.1"/>
 ```
 in your dependencies.
 Alternatively use the dotnet CLI and run 
 ```Shell
-dotnet add package MewtocolNet
+dotnet add package Mewtocol.NET
 ```
 
 # Protocol description
