@@ -1,5 +1,5 @@
 [![Publish to Nuget](https://github.com/WOmed/MewtocolNet/actions/workflows/publish.yml/badge.svg)](https://github.com/WOmed/MewtocolNet/actions/workflows/publish.yml)
-![Nuget](https://img.shields.io/nuget/v/Mewtocol.NET)
+[![Nuget](https://img.shields.io/nuget/v/Mewtocol.NET)](https://www.nuget.org/packages/Mewtocol.NET)
 ![Lines of code](https://img.shields.io/tokei/lines/github/WOmed/MewtocolNet)
 ![GitHub](https://img.shields.io/github/license/WOmed/MewtocolNet)
 ![Status](https://img.shields.io/badge/Status-In%20dev-orange)
@@ -50,7 +50,7 @@ Where is the RS232/Serial support?
 
 # Installing
 
-Install this package by using [Nuget](https://www.nuget.org/packages/MewtocolNet/) or reference 
+Install this package by using [Nuget](https://www.nuget.org/packages/Mewtocol.NET) or reference 
 ```XML
 <PackageReference Include="Mewtocol.NET" Version="0.6.1"/>
 ```
