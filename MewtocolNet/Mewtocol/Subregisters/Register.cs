@@ -94,6 +94,38 @@ namespace MewtocolNet.Registers {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Value"));
         }
 
+        internal void ClearValue () {
+
+            if (enumType != null && this is NRegister<int> intEnumReg) {
+                intEnumReg.SetValueFromPLC((int)0);
+            }
+            if (this is NRegister<short> shortReg) {
+                shortReg.SetValueFromPLC((short)0);
+            }
+            if (this is NRegister<ushort> ushortReg) {
+                ushortReg.SetValueFromPLC((ushort)0);
+            }
+            if (this is NRegister<int> intReg) {
+                intReg.SetValueFromPLC((int)0);
+            }
+            if (this is NRegister<uint> uintReg) {
+                uintReg.SetValueFromPLC((uint)0);
+            }
+            if (this is NRegister<float> floatReg) {
+                floatReg.SetValueFromPLC((float)0);
+            }
+            if (this is NRegister<TimeSpan> tsReg) {
+                tsReg.SetValueFromPLC(TimeSpan.Zero);
+            }
+            if (this is BRegister boolReg) {
+                boolReg.SetValueFromPLC(false);
+            }
+            if (this is SRegister stringReg) {
+                stringReg.SetValueFromPLC(null);
+            }
+
+        }
+
         /// <summary>
         /// Gets the starting memory are either numeric or A,B,C,D etc for special areas like inputs
         /// </summary>

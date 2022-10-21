@@ -34,7 +34,7 @@ class Program {
         Task.Factory.StartNew(async () => {
 
             //attaching the logger
-            Logger.LogLevel = LogLevel.Critical;
+            Logger.LogLevel = LogLevel.Verbose;
             Logger.OnNewLogMessage((date, msg) => {
                 Console.WriteLine($"{date.ToString("HH:mm:ss")} {msg}");
             });
@@ -50,6 +50,7 @@ class Program {
                 while (true) {
                     if (isProgressReadout) continue;
                     Console.Title = $"Polling Paused: {interf.PollingPaused}, " +
+                    $"Poller active: {interf.PollerActive}, " +
                     $"Speed UP: {interf.BytesPerSecondUpstream} B/s, " +
                     $"Speed DOWN: {interf.BytesPerSecondDownstream} B/s, " +
                     $"Poll delay: {interf.PollerDelayMs} ms, " +
@@ -58,7 +59,21 @@ class Program {
                 }
             });
 
-            await interf.ConnectAsync((plcinf) => AfterConnect(interf, registers));
+            //await interf.ConnectAsync((plcinf) => AfterConnect(interf, registers));
+
+            bool flip = false;
+            while(true) {
+
+                if(!flip) {
+                    await interf.ConnectAsync();
+                } else {
+                    interf.Disconnect();
+                }
+
+                flip = !flip;
+                await Task.Delay(5000);
+
+            }
 
         });
 

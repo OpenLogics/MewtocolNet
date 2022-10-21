@@ -395,6 +395,17 @@ namespace MewtocolNet {
 
         }
 
+        private void ClearRegisterVals () {
+
+            for (int i = 0; i < Registers.Count; i++) {
+
+                var reg = Registers[i];
+                reg.ClearValue();
+
+            }
+
+        }
+
         #endregion
 
         #region Register Collection

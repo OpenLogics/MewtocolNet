@@ -19,11 +19,17 @@ namespace MewtocolNet {
         /// </summary>
         public bool PollingPaused => pollerIsPaused;
 
+        /// <summary>
+        /// True if the poller is actvice (can be paused)
+        /// </summary>
+        public bool PollerActive => !pollerTaskStopped;
+
         internal event Action PolledCycle;
         
         internal volatile bool pollerTaskRunning;
         internal volatile bool pollerTaskStopped;
         internal volatile bool pollerIsPaused;
+        internal volatile bool pollerFirstCycle = false;
 
         internal bool usePoller = false;
 
@@ -36,6 +42,8 @@ namespace MewtocolNet {
 
             pollerTaskRunning = false;
             pollerTaskStopped = true;
+
+            ClearRegisterVals();
 
         }
 
@@ -79,6 +87,8 @@ namespace MewtocolNet {
 
             if (pollerTaskRunning)
                 return;
+
+            pollerFirstCycle = true;
 
             Task.Factory.StartNew(async () => {
 
@@ -167,6 +177,7 @@ namespace MewtocolNet {
                         }
 
                         iteration++;
+                        pollerFirstCycle = false;
 
                         await Task.Delay(pollerDelayMs);
 
