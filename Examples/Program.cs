@@ -3,12 +3,21 @@ using System.Threading.Tasks;
 using MewtocolNet;
 using MewtocolNet.Logging;
 using MewtocolNet.Registers;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Examples;
 
 class Program {
 
     static void Main(string[] args) {
+
+        AppDomain.CurrentDomain.UnhandledException += (s,e) => {
+            Console.WriteLine(e.ExceptionObject.ToString());
+        };
+
+        TaskScheduler.UnobservedTaskException += (s,e) => {
+            Console.WriteLine(e.Exception.ToString());
+        };
 
         Console.WriteLine("Enter your scenario number:\n" +
                           "1 = Permanent connection\n" +
@@ -59,21 +68,21 @@ class Program {
                 }
             });
 
-            //await interf.ConnectAsync((plcinf) => AfterConnect(interf, registers));
+            await interf.ConnectAsync();
 
-            bool flip = false;
-            while(true) {
+            //bool flip = false;
+            //while(true) {
 
-                if(!flip) {
-                    await interf.ConnectAsync();
-                } else {
-                    interf.Disconnect();
-                }
+            //    if(!flip) {
+            //        await interf.ConnectAsync();
+            //    } else {
+            //        interf.Disconnect();
+            //    }
 
-                flip = !flip;
-                await Task.Delay(5000);
+            //    flip = !flip;
+            //    await Task.Delay(5000);
 
-            }
+            //}
 
         });
 
