@@ -2,10 +2,10 @@ name: Test mewtocol on real hardware
 
 on:
     workflow_dispatch:
-#    push:
-#      branches:
-#        - main
-#        - master
+    push:
+      branches:
+        - main
+        - master
         
 jobs:
   
