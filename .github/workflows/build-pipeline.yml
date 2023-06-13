@@ -1,4 +1,4 @@
-name: Test mewtocol on real hardware
+name: Build pipeline
 
 on:
     workflow_dispatch:
@@ -9,6 +9,7 @@ on:
         
 jobs:
   
+  #Check the online status of the test PLCs first
   check-plcs-online: 
     name: 'Test PLC online status'
     runs-on: [self-hosted, linux, x64, womed-local-linux]
@@ -20,6 +21,7 @@ jobs:
       - name: 'Ping FPX-C30T'
         run: ping 192.168.115.213 -w 5
 
+  #Run unit tests on the test PLCs
   run-unit-tests:
     name: 'Run unit tests'
     needs: check-plcs-online
@@ -38,9 +40,14 @@ jobs:
           cd '${{ github.workspace }}/MewtocolTests'
           dotnet test --logger:"console;verbosity=detailed"
 
+  #Run code ql check
+  code-ql-check:
+    uses: ./.github/workflows/codeql.yml
+
+  #Publish to nuget if version tag change detected
   publish-and-push-nuget:
     name: 'Build and publish to NuGet'
-    needs: run-unit-tests
+    needs: [run-unit-tests, ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
