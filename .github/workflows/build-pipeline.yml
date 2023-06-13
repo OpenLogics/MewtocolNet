@@ -40,11 +40,11 @@ jobs:
           cd '${{ github.workspace }}/MewtocolTests'
           dotnet test --logger "trx;logfilename=testresults.trx"
       #Generate a test report
-      - name: 'Test Report'
+      - name: 'Generate Test Report'
         uses: dorny/test-reporter@v1
         if: success() || failure()    # run this step even if previous step failed
         with:
-          name: XUnit Tests           # Name of the check run which will be created
+          name: Unit Test Report      # Name of the check run which will be created
           path: '${{ github.workspace }}/MewtocolTests/TestResults/testresults.trx'  # Path to test results
           reporter: dotnet-trx        # Format of test results
 
