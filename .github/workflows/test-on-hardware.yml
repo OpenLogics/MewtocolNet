@@ -1,0 +1,19 @@
+name: Test mewtocol on real hardware
+
+on:
+    workflow_dispatch:
+#    push:
+#      branches:
+#        - main
+#        - master
+        
+jobs:
+  check-plcs-online: 
+    runs-on: womed-local-linux
+    steps:
+      - name: 'Ping FPX-H-C30T'
+        run: ping 192.168.115.210 -w 5
+      - name: 'Ping FPX-H-C14R'
+        run: ping 192.168.115.212 -w 5
+      - name: 'Ping FPX-C30T'
+        run: ping 192.168.115.213 -w 5
