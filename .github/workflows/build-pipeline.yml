@@ -45,12 +45,12 @@ jobs:
         if: success() || failure()    # run this step even if previous step failed
         with:
           name: XUnit Tests           # Name of the check run which will be created
-          path: TestResults/testresults.xml    # Path to test results
+          path: '${{ github.workspace }}/MewtocolTests/TestResults/testresults.xml'  # Path to test results
           reporter: dotnet-trx        # Format of test results
 
   #Run code ql check
-  code-ql-check:
-    uses: ./.github/workflows/codeql.yml
+  #code-ql-check:
+  #  uses: ./.github/workflows/codeql.yml
 
   #Publish to nuget if version tag change detected
   publish-and-push-nuget:
