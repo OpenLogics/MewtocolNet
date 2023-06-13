@@ -2,8 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace MewtocolNet.Registers {
@@ -251,6 +253,111 @@ namespace MewtocolNet.Registers {
             }
 
             return "Type of the register is not supported.";
+
+        }
+
+        /// <summary>
+        /// Builds a register from a given register string like DT100 / XA / Y1
+        /// </summary>
+        /// <param name="regString">The input string to parse</param>
+        /// <returns>A built register</returns>
+        public static Register FromString (string regString, string name = null) {
+
+            var match = Regex.Match(regString, @"(X|Y|R)([A-F]|[0-9_.-]{1,5})");
+
+            if (match != null && match.Success) {
+
+                var typeGroup = match.Groups[1].Value;
+                var areaGroup = match.Groups[2].Value;
+
+                bool isBool = false;
+                var parsedRegType = RegisterType.R;
+                if (new string[] { "X", "Y", "R" }.Contains(typeGroup)) {
+                    switch (typeGroup) {
+                        case "X":
+                        parsedRegType = RegisterType.X;
+                        isBool = true;
+                        break;
+                        case "Y":
+                        parsedRegType = RegisterType.Y;
+                        isBool = true;
+                        break;
+                        case "R":
+                        parsedRegType = RegisterType.R;
+                        isBool = true;
+                        break;
+                    }
+                }
+
+                if(!isBool) {
+                    throw new NotSupportedException($"Register with value {regString} is not of type bool");
+                }
+                     
+                if (int.TryParse(areaGroup, out var parsedNum) && isBool) {
+
+                    return new BRegister(parsedNum, parsedRegType, name);
+
+                } else if(Enum.TryParse<SpecialAddress>(areaGroup, out var parsedSpecial) && isBool) {
+
+                    return new BRegister(parsedSpecial, parsedRegType, name);
+
+                }
+            }
+
+            throw new NotSupportedException($"Register with value {regString} is not supported");
+
+        }
+
+        public static NRegister<T> FromString<T> (string regString, string name = null) {
+
+            var match = Regex.Match(regString, @"(DT|DDT)([0-9_.-]{1,5})");
+
+            if (match != null && match.Success) {
+
+                var typeGroup = match.Groups[1].Value;
+                var areaGroup = match.Groups[2].Value;
+
+                bool isTypeDoubleSize = false;
+                bool isSupportedNumericFormat = false;
+
+                if(typeGroup == "")
+
+                switch (typeGroup) {
+                    case "DT":
+                    isSupportedNumericFormat = true;
+                    break;
+                    case "DDT":
+                    isTypeDoubleSize = true;
+                    isSupportedNumericFormat = true;
+                    break;
+                }
+
+                if(typeof(T).IsDoubleNumericRegisterType() != isTypeDoubleSize) {
+                    throw new NotSupportedException($"Input register type was {typeGroup}, the cast type was not of the same size");
+                }
+
+                if (int.TryParse(areaGroup, out var parsedNum) && typeof(T).IsNumericSupportedType() && isSupportedNumericFormat ) {
+
+                    return new NRegister<T>(parsedNum, name);
+
+                } 
+
+            }
+
+            throw new NotSupportedException($"Register with value {regString} is not supported");
+
+        }
+
+        public static SRegister FromString (string regString, int reserved, string name = null) {
+
+            var match = Regex.Match(regString, @"(DT)([0-9_.-]{1,5})");
+
+            if (match != null && match.Success) {
+
+              
+            }
+
+            throw new NotSupportedException($"Register with value {regString} is not supported");
 
         }
 

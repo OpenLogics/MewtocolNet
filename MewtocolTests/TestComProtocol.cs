@@ -25,13 +25,11 @@ namespace MewtocolTests {
                 new NRegister<int>(50),
                 new NRegister<uint>(50),
                 new NRegister<float>(50),
-                new NRegister<BitArray>(50),
             };
 
             List<string> expcectedIdents = new List<string> {
                 "D0005000050", //single word register
                 "D0005000050", //single word register
-                "D0005000051", //double word register
                 "D0005000051", //double word register
                 "D0005000051", //double word register
                 "D0005000051", //double word register

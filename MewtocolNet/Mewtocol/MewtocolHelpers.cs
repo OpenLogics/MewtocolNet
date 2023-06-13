@@ -197,6 +197,39 @@ namespace MewtocolNet {
 
         }
 
+        internal static bool IsDoubleNumericRegisterType (this Type type) {
+
+            //Type[] singles = new Type[] {
+            //    typeof(short),
+            //    typeof(ushort),
+            //};
+
+            Type[] doubles = new Type[] {
+                typeof(int),
+                typeof(uint),
+                typeof(float),
+                typeof(TimeSpan),
+            };
+
+            return doubles.Contains(type);
+
+        }
+
+        internal static bool IsNumericSupportedType (this Type type) {
+
+            Type[] supported = new Type[] {
+                typeof(short),
+                typeof(ushort),
+                typeof(int),
+                typeof(uint),
+                typeof(float),
+                typeof(TimeSpan),
+            };
+
+            return supported.Contains(type);
+
+        }
+
     }
 
 }
