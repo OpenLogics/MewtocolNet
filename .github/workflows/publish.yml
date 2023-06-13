@@ -1,19 +1,15 @@
 name: publish to nuget
 on:
-  push:
-    branches:
-      - master # Default release branch, may also be named 'master' or 'develop'
+  workflow_run:
+    workflows: ["Test mewtocol on real hardware"]
+    types:
+      - completed
 jobs:
   publish:
     name: build, pack & publish
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-
-      # - name: Setup dotnet
-      #   uses: actions/setup-dotnet@v1
-      #   with:
-      #     dotnet-version: 3.1.200
 
       # Publish
       - name: publish on version change
