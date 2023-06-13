@@ -20,6 +20,7 @@ jobs:
         run: ping 192.168.115.213 -w 5
 
   run-unit-tests:
+    needs: check-plcs-online
     runs-on: [self-hosted, linux, x64, womed-local-linux]
     strategy:
       matrix:
@@ -32,5 +33,5 @@ jobs:
           dotnet-version: ${{ matrix.dotnet-version }}
       - name: 'Run tests'
         run: |
-          cd .\MewtocolTests
+          cd '${{ github.workspace }}/MewtocolTests'
           dotnet test --logger:"console;verbosity=detailed"
