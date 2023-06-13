@@ -1,4 +1,5 @@
 ﻿using MewtocolNet;
+using MewtocolNet.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,7 +38,16 @@ namespace MewtocolTests {
         };
 
         public TestClient (ITestOutputHelper output) {
+
             this.output = output;
+
+            Logger.LogLevel = LogLevel.Verbose;
+            Logger.OnNewLogMessage((d,m) => {
+
+                output.WriteLine($"Mewtocol Logger: {d} {m}");
+
+            });
+        
         }
 
         [Fact(DisplayName = "Connection cycle client to PLC")]
