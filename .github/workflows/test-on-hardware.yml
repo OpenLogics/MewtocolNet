@@ -9,7 +9,7 @@ on:
         
 jobs:
   check-plcs-online: 
-    runs-on: womed-local-linux
+    runs-on: [self-hosted, linux, x64, womed-local-linux]
     steps:
       - name: 'Ping FPX-H-C30T'
         run: ping 192.168.115.210 -w 5
