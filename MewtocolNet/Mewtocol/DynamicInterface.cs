@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using MewtocolNet.Logging;
+using MewtocolNet.RegisterAttributes;
 using MewtocolNet.Registers;
 
 namespace MewtocolNet {
@@ -191,6 +192,12 @@ namespace MewtocolNet {
                 pollerIsPaused = false;
 
             });
+
+        }
+
+        internal void PropertyRegisterWasSet (string propName, object value) {
+
+            SetRegister(propName, value);      
 
         }
 

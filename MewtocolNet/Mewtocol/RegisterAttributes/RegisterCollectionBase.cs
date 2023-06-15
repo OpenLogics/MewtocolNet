@@ -38,7 +38,9 @@ namespace MewtocolNet.RegisterAttributes
         /// <summary>
         /// Use this on the setter method of a property to enable automatic property register writing
         /// </summary>
-        public static void AutoSetter<T> (object value, ref T privateField) {
+        public void AutoSetter<T> (object value, ref T privateField, [CallerMemberName] string propName = null) {
+
+            PLCInterface.PropertyRegisterWasSet(propName, value);
 
             if(value is IRegister reg) {
 

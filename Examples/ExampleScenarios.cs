@@ -164,9 +164,19 @@ public class ExampleScenarios {
 
         await interf.ConnectAsync();
 
-        await interf.SetRegisterAsync(nameof(registers.StartCyclePLC), true);
+        //use the async method to make sure the cycling is stopped
+        await interf.SetRegisterAsync(nameof(registers.StartCyclePLC), false);
 
-        await Task.Delay(-1);
+        await Task.Delay(5000);
+
+        //set the register without waiting for it async
+        registers.StartCyclePLC = true;
+
+        await Task.Delay(5000);
+
+        registers.StartCyclePLC = false;
+
+        await Task.Delay(2000);
 
     }
 
