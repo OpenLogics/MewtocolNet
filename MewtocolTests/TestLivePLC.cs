@@ -10,7 +10,7 @@ using Xunit.Abstractions;
 
 namespace MewtocolTests {
 
-    public class TestClient {
+    public class TestLivePLC {
 
         private readonly ITestOutputHelper output;
 
@@ -37,7 +37,7 @@ namespace MewtocolTests {
 
         };
 
-        public TestClient (ITestOutputHelper output) {
+        public TestLivePLC (ITestOutputHelper output) {
 
             this.output = output;
 

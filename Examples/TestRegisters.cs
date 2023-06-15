@@ -10,8 +10,13 @@ namespace Examples {
         [Register(1000, RegisterType.R)]
         public bool TestBool1 { get; private set; }
 
+        private int testDuplicate;
+
         [Register(1000)]
-        public int TestDuplicate { get; private set; }
+        public int TestDuplicate { 
+            get => testDuplicate;
+            set => AutoSetter(value, ref testDuplicate);
+        }
 
         //corresponds to a XD input of the PLC
         [Register(RegisterType.X, SpecialAddress.D)]

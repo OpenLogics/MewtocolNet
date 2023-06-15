@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>Mewtocol.NET</PackageId>
-    <Version>0.6.2</Version>
+    <Version>0.7.0</Version>
     <Authors>Felix Weiss</Authors>
     <Company>Womed</Company>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -18,4 +18,9 @@
     <DocumentationFile>..\Builds\MewtocolNet.xml</DocumentationFile>
     <OutputPath>..\Builds</OutputPath>
   </PropertyGroup>
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+			<_Parameter1>MewtocolTests</_Parameter1>
+		</AssemblyAttribute>
+	</ItemGroup>
 </Project>

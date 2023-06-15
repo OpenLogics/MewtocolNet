@@ -1,18 +1,54 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Text;
 
 namespace MewtocolNet.Registers {
     /// <summary>
     /// Defines a register containing a string
     /// </summary>
-    public class SRegister : Register {
-
-        private string lastVal = "";
+    public class SRegister : IRegister {
 
         /// <summary>
-        /// The current value of the register
+        /// Gets called whenever the value was changed
         /// </summary>
-        public string Value => lastVal;
+        public event Action<object> ValueChanged;
+
+        /// <summary>
+        /// Triggers when a property on the register changes
+        /// </summary>
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        internal Type collectionType;
+
+        /// <summary>
+        /// The type of collection the register is in or null of added manually
+        /// </summary>
+        public Type CollectionType => collectionType;
+
+        internal string lastValue;
+
+        /// <summary>
+        /// The value of the register
+        /// </summary>
+        public object Value => lastValue;
+
+        internal string name;
+        /// <summary>
+        /// The register name or null of not defined
+        /// </summary>
+        public string Name => name;
+
+        internal int memoryAdress;
+        /// <summary>
+        /// The registers memory adress if not a special register
+        /// </summary>
+        public int MemoryAddress => memoryAdress;
+
+        internal int memoryLength;
+        /// <summary>
+        /// The registers memory length
+        /// </summary>
+        public int MemoryLength => memoryLength;
 
         internal short ReservedSize { get; set; }
 
@@ -35,15 +71,22 @@ namespace MewtocolNet.Registers {
             memoryLength = (int)Math.Round(wordsize + 1);
         }
 
+        internal SRegister WithCollectionType(Type colType) {
+
+            collectionType = colType;
+            return this;
+
+        }
+
         /// <summary>
         /// Builds the register identifier for the mewotocol protocol
         /// </summary>
-        public override string BuildMewtocolIdent() {
+        public string BuildMewtocolQuery() {
 
             StringBuilder asciistring = new StringBuilder("D");
 
-            asciistring.Append(MemoryAdress.ToString().PadLeft(5, '0'));
-            asciistring.Append((MemoryAdress + MemoryLength).ToString().PadLeft(5, '0'));
+            asciistring.Append(MemoryAddress.ToString().PadLeft(5, '0'));
+            asciistring.Append((MemoryAddress + MemoryLength).ToString().PadLeft(5, '0'));
 
             return asciistring.ToString();
         }
@@ -55,17 +98,44 @@ namespace MewtocolNet.Registers {
 
             StringBuilder asciistring = new StringBuilder("D");
 
-            asciistring.Append(MemoryAdress.ToString().PadLeft(5, '0'));
-            asciistring.Append((MemoryAdress + overwriteWordLength - 1).ToString().PadLeft(5, '0'));
+            asciistring.Append(MemoryAddress.ToString().PadLeft(5, '0'));
+            asciistring.Append((MemoryAddress + overwriteWordLength - 1).ToString().PadLeft(5, '0'));
 
             return asciistring.ToString();
         }
 
+        public Type GetCollectionType() => CollectionType;
+
+        public bool IsUsedBitwise() => false;
+
         internal void SetValueFromPLC (string val) {
-            lastVal = val;
+
+            lastValue = val;
+
             TriggerChangedEvnt(this);
             TriggerNotifyChange();
+        
         }
+
+        public string GetStartingMemoryArea() => this.MemoryAddress.ToString();
+
+        public string GetValueString() => Value?.ToString() ?? "";
+
+        public string GetRegisterString() => "DT";
+
+        public string GetCombinedName() => $"{(CollectionType != null ? $"{CollectionType.Name}." : "")}{Name ?? "Unnamed"}";
+
+        public string GetContainerName() => $"{(CollectionType != null ? $"{CollectionType.Name}" : "")}";
+
+        public string GetRegisterPLCName() => $"{GetRegisterString()}{MemoryAddress}";
+
+        public void ClearValue() => SetValueFromPLC(null);
+
+        internal void TriggerChangedEvnt(object changed) => ValueChanged?.Invoke(changed);
+
+        public void TriggerNotifyChange() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Value"));
+
+        public override string ToString () => $"{GetRegisterPLCName()} - Value: {GetValueString()}";
 
     }
 

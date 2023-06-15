@@ -21,12 +21,14 @@ namespace MewtocolNet.Registers {
         /// Trys to get the value of there is one
         /// </summary>
         public bool TryGetValue (out T value) {
+
             if(Result.Success) {
-                value = Register.Value;
+                value = (T)Register.Value;
                 return true;
             }
             value = default(T);
             return false;
+        
         }
 
     }
