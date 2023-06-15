@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using MewtocolNet.Logging;
+using MewtocolNet.RegisterAttributes;
 using MewtocolNet.Registers;
 
 namespace MewtocolNet {
@@ -25,7 +27,7 @@ namespace MewtocolNet {
         public bool PollerActive => !pollerTaskStopped;
 
         internal event Action PolledCycle;
-        
+
         internal volatile bool pollerTaskRunning;
         internal volatile bool pollerTaskStopped;
         internal volatile bool pollerIsPaused;
@@ -193,6 +195,12 @@ namespace MewtocolNet {
 
         }
 
+        internal void PropertyRegisterWasSet (string propName, object value) {
+
+            SetRegister(propName, value);      
+
+        }
+
         #endregion
 
         #region Register Adding
@@ -214,7 +222,7 @@ namespace MewtocolNet {
         /// <param name="_name">A naming definition for QOL, doesn't effect PLC and is optional</param>
         public void AddRegister (int _address, RegisterType _type, string _name = null) {
 
-            Register toAdd = null;
+            IRegister toAdd = null;
 
             //as number registers
             if (_type == RegisterType.DT_short) {
@@ -243,30 +251,29 @@ namespace MewtocolNet {
 
         internal void AddRegister (Type _colType, int _address, RegisterType _type, string _name = null) {
 
-            Register toAdd = null;
+            IRegister toAdd = null;
 
             //as number registers
             if (_type == RegisterType.DT_short) {
-                toAdd = new NRegister<short>(_address, _name);
+                toAdd = new NRegister<short>(_address, _name).WithCollectionType(_colType);
             }
             if (_type == RegisterType.DT_ushort) {
-                toAdd = new NRegister<ushort>(_address, _name);
+                toAdd = new NRegister<ushort>(_address, _name).WithCollectionType(_colType);
             }
             if (_type == RegisterType.DDT_int) {
-                toAdd = new NRegister<int>(_address, _name);
+                toAdd = new NRegister<int>(_address, _name).WithCollectionType(_colType);
             }
             if (_type == RegisterType.DDT_uint) {
-                toAdd = new NRegister<uint>(_address, _name);
+                toAdd = new NRegister<uint>(_address, _name).WithCollectionType(_colType);
             }
             if (_type == RegisterType.DDT_float) {
-                toAdd = new NRegister<float>(_address, _name);
+                toAdd = new NRegister<float>(_address, _name).WithCollectionType(_colType);
             }
 
             if (toAdd == null) {
-                toAdd = new BRegister(_address, _type, _name);
+                toAdd = new BRegister(_address, _type, _name).WithCollectionType(_colType);
             }
 
-            toAdd.collectionType = _colType;
             Registers.Add(toAdd);
 
         }
@@ -328,7 +335,7 @@ namespace MewtocolNet {
                 throw new NotSupportedException($"_lenght parameter only allowed for register of type string");
             }
 
-            Register toAdd;
+            IRegister toAdd;
 
             if (regType == typeof(short)) {
                 toAdd = new NRegister<short>(_address, _name);
@@ -359,7 +366,8 @@ namespace MewtocolNet {
 
         }
 
-        internal void AddRegister<T> (Type _colType, int _address, int _length = 1, string _name = null, bool _isBitwise = false, Type _enumType = null) {
+        //Internal register adding for auto register collection building
+        internal void AddRegister<T> (Type _colType, int _address, PropertyInfo boundProp, int _length = 1, bool _isBitwise = false, Type _enumType = null) {
 
             Type regType = typeof(T);
 
@@ -367,44 +375,50 @@ namespace MewtocolNet {
                 throw new NotSupportedException($"_lenght parameter only allowed for register of type string");
             }
 
-            if (Registers.Any(x => x.MemoryAdress == _address) && _isBitwise) {
+            if (Registers.Any(x => x.MemoryAddress == _address) && _isBitwise) {
                 return;
             }
 
-            Register reg = null;
+            IRegister reg = null;
+
+            string propName = boundProp.Name;
+
+            //rename the property name to prevent duplicate names in case of a bitwise prop
+            if(_isBitwise && regType == typeof(short))
+                propName = $"Auto_Bitwise_DT{_address}";
+
+            if (_isBitwise && regType == typeof(int))
+                propName = $"Auto_Bitwise_DDT{_address}";
 
             if (regType == typeof(short)) {
-                reg = new NRegister<short>(_address, _name, _isBitwise);
+                reg = new NRegister<short>(_address, propName, _isBitwise, _enumType).WithCollectionType(_colType);
             } else if (regType == typeof(ushort)) {
-                reg = new NRegister<ushort>(_address, _name);
+                reg = new NRegister<ushort>(_address, propName).WithCollectionType(_colType);
             } else if (regType == typeof(int)) {
-                reg = new NRegister<int>(_address, _name, _isBitwise, _enumType);
+                reg = new NRegister<int>(_address, propName, _isBitwise, _enumType).WithCollectionType(_colType);
             } else if (regType == typeof(uint)) {
-                reg = new NRegister<uint>(_address, _name);
+                reg = new NRegister<uint>(_address, propName).WithCollectionType(_colType);
             } else if (regType == typeof(float)) {
-                reg = new NRegister<float>(_address, _name);
+                reg = new NRegister<float>(_address, propName).WithCollectionType(_colType);
             } else if (regType == typeof(string)) {
-                reg = new SRegister(_address, _length, _name);
+                reg = new SRegister(_address, _length, propName).WithCollectionType(_colType);
             } else if (regType == typeof(TimeSpan)) {
-                reg = new NRegister<TimeSpan>(_address, _name);
+                reg = new NRegister<TimeSpan>(_address, propName).WithCollectionType(_colType);
             } else if (regType == typeof(bool)) {
-                reg = new BRegister(_address, RegisterType.R, _name);
+                reg = new BRegister(_address, RegisterType.R, propName).WithCollectionType(_colType);
             }
 
             if (reg == null) {
                 throw new NotSupportedException($"The type {regType} is not allowed for Registers \n" +
                                                 $"Allowed are: short, ushort, int, uint, float and string");
-            } else {
-
-
-                if (Registers.Any(x => x.GetRegisterPLCName() == reg.GetRegisterPLCName()) && !_isBitwise) {
-                    throw new NotSupportedException($"Cannot add a register multiple times, " +
-                        $"make sure that all register attributes or AddRegister assignments have different adresses.");
-                }
-
-                reg.collectionType = _colType;
-                Registers.Add(reg);
             }
+
+            if (Registers.Any(x => x.GetRegisterPLCName() == reg.GetRegisterPLCName()) && !_isBitwise) {
+                throw new NotSupportedException($"Cannot add a register multiple times, " +
+                    $"make sure that all register attributes or AddRegister assignments have different adresses.");
+            }
+
+            Registers.Add(reg);
 
         }
 
@@ -416,7 +430,7 @@ namespace MewtocolNet {
         /// Gets a register that was added by its name
         /// </summary>
         /// <returns></returns>
-        public Register GetRegister (string name) {
+        public IRegister GetRegister (string name) {
 
             return Registers.FirstOrDefault(x => x.Name == name);
 
@@ -427,13 +441,18 @@ namespace MewtocolNet {
         /// </summary>
         /// <typeparam name="T">The type of register</typeparam>
         /// <returns>A casted register or the <code>default</code> value</returns>
-        public T GetRegister<T> (string name) where T : Register  {
+        public T GetRegister<T> (string name) where T : IRegister {
             try {
+                
                 var reg = Registers.FirstOrDefault(x => x.Name == name);
-                return reg as T;
+                return (T)reg;
+
             } catch (InvalidCastException) {
+            
                 return default(T);
+            
             }
+
         }
 
         #endregion
@@ -443,7 +462,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Gets a list of all added registers
         /// </summary>
-        public List<Register> GetAllRegisters () {
+        public List<IRegister> GetAllRegisters () {
 
             return Registers;
 
@@ -453,7 +472,7 @@ namespace MewtocolNet {
 
         #region Event Invoking 
 
-        internal void InvokeRegisterChanged (Register reg) {
+        internal void InvokeRegisterChanged (IRegister reg) {
 
             RegisterChanged?.Invoke(reg);      
 

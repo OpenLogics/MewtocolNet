@@ -2,12 +2,12 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>Mewtocol.NET</PackageId>
-    <Version>0.6.2</Version>
+    <Version>0.7.0</Version>
     <Authors>Felix Weiss</Authors>
     <Company>Womed</Company>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Description>A Mewtocol protocol library to interface with Panasonic PLCs over TCP/Serial.</Description>
-    <Copyright>Copyright (c) 2022 WOLF Medizintechnik GmbH</Copyright>
+    <Copyright>Copyright (c) 2022 - 2023 WOLF Medizintechnik GmbH</Copyright>
     <PackageProjectUrl>https://github.com/WOmed/MewtocolNet</PackageProjectUrl>
     <RepositoryUrl>https://github.com/WOmed/MewtocolNet</RepositoryUrl>
     <PackageTags>plc;panasonic;mewtocol;automation;</PackageTags>
@@ -18,4 +18,9 @@
     <DocumentationFile>..\Builds\MewtocolNet.xml</DocumentationFile>
     <OutputPath>..\Builds</OutputPath>
   </PropertyGroup>
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+			<_Parameter1>MewtocolTests</_Parameter1>
+		</AssemblyAttribute>
+	</ItemGroup>
 </Project>

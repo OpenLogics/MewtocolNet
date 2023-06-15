@@ -52,7 +52,7 @@ Where is the RS232/Serial support?
 
 Install this package by using [Nuget](https://www.nuget.org/packages/Mewtocol.NET) or reference 
 ```XML
-<PackageReference Include="Mewtocol.NET" Version="0.6.2"/>
+<PackageReference Include="Mewtocol.NET" Version="0.7.0"/>
 ```
 in your dependencies.
 Alternatively use the dotnet CLI and run 
@@ -143,9 +143,28 @@ await plc.ConnectAsync(
 
 ⚠ **Never set a register by setting the property, always use one of the provided methods**
 
+Registers are stored in an underlying layer for automatic handling, each register has a unique name and address.
+
+Classes that derive from `RegisterCollectionBase` reference these registers automatically using attributes. 
+All the heavy lifting is done automatically for you, setting this up is described [here](https://github.com/WOmed/MewtocolNet/wiki/Attribute-handled-reading)
+
+### Asynchronous
+
+This operations awaits a task to make sure the register was actually set to your desired value before progressing
+
+```C#
+//sets the register to false
+await plc.SetRegisterAsync(nameof(registers.TestBool1), false);
+
+//set the current second to the PLCs TIME register
+await plc.SetRegisterAsync(nameof(registers.TestTime), TimeSpan.FromSeconds(DateTime.Now.Second));
+```
+
 ### Synchronous
 
 Sets the register without feedback if it was set
+
+You can use the method to set a register
 
 ```C#
 //inverts the boolean register
@@ -156,6 +175,13 @@ plc.SetRegister(nameof(registers.TestTime), TimeSpan.FromSeconds(DateTime.Now.Se
 
  //writes 'Test' to the PLCs string register
 plc.SetRegister(nameof(registers.TestString1), "Test");
+```
+
+or write to a register in your `RegisterCollectionBase` directly (you need to attach a register collection to your interface beforehand)
+
+```C#
+//inverts the boolean register
+registers.TestBool1 = true;
 ```
 
 You can also set a register by calling its name directly (Must be either in an attached register collection or added to the list manually)

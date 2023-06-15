@@ -15,8 +15,11 @@ using System.ComponentModel;
 using System.Net;
 using System.Threading;
 using MewtocolNet.Queue;
+using System.Reflection;
+using System.Timers;
 
-namespace MewtocolNet {
+namespace MewtocolNet
+{
 
     /// <summary>
     /// The PLC com interface class
@@ -36,7 +39,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Gets triggered when a registered data register changes its value
         /// </summary>
-        public event Action<Register> RegisterChanged;
+        public event Action<IRegister> RegisterChanged;
 
         /// <summary>
         /// Gets triggered when a property of the interface changes
@@ -114,7 +117,7 @@ namespace MewtocolNet {
         /// <summary>
         /// The registered data registers of the PLC
         /// </summary>
-        public List<Register> Registers { get; set; } = new List<Register>();
+        public List<IRegister> Registers { get; set; } = new List<IRegister>();
 
         private string ip;
         private int port;
@@ -209,7 +212,7 @@ namespace MewtocolNet {
 
             RegisterChanged += (o) => {
 
-                string address = $"{o.GetRegisterString()}{o.MemoryAdress}".PadRight(5, (char)32);
+                string address = $"{o.GetRegisterString()}{o.GetStartingMemoryArea()}".PadRight(5, (char)32);
 
                 Logger.Log($"{address} " +
                            $"{(o.Name != null ? $"({o.Name}) " : "")}" +
@@ -442,40 +445,46 @@ namespace MewtocolNet {
                         }
 
                         if (prop.PropertyType == typeof(short)) {
-                            AddRegister<short>(collection.GetType(), cAttribute.MemoryArea, _name: propName);
+                            AddRegister<short>(collection.GetType(), cAttribute.MemoryArea, prop);
                         }
 
                         if (prop.PropertyType == typeof(ushort)) {
-                            AddRegister<ushort>(collection.GetType(), cAttribute.MemoryArea, _name: propName);
+                            AddRegister<ushort>(collection.GetType(), cAttribute.MemoryArea, prop);
                         }
 
                         if (prop.PropertyType == typeof(int)) {
-                            AddRegister<int>(collection.GetType(), cAttribute.MemoryArea, _name: propName);
+                            AddRegister<int>(collection.GetType(), cAttribute.MemoryArea, prop);
                         }
 
                         if (prop.PropertyType == typeof(uint)) {
-                            AddRegister<uint>(collection.GetType(), cAttribute.MemoryArea, _name: propName);
+                            AddRegister<uint>(collection.GetType(), cAttribute.MemoryArea, prop);
                         }
 
                         if (prop.PropertyType == typeof(float)) {
-                            AddRegister<float>(collection.GetType(), cAttribute.MemoryArea, _name: propName);
+                            AddRegister<float>(collection.GetType(), cAttribute.MemoryArea, prop);
                         }
 
                         if (prop.PropertyType == typeof(string)) {
-                            AddRegister<string>(collection.GetType(), cAttribute.MemoryArea, cAttribute.StringLength, _name: propName);
+                            AddRegister<string>(collection.GetType(), cAttribute.MemoryArea, prop, cAttribute.StringLength);
                         }
 
                         if (prop.PropertyType.IsEnum) {
-                            AddRegister<int>(collection.GetType(), cAttribute.MemoryArea, _name: propName, _enumType: prop.PropertyType);
+
+                            if (cAttribute.BitCount == BitCount.B16) {
+                                AddRegister<short>(collection.GetType(), cAttribute.MemoryArea, prop, _enumType: prop.PropertyType);
+                            } else {
+                                AddRegister<int>(collection.GetType(), cAttribute.MemoryArea, prop, _enumType: prop.PropertyType);
+                            }
+
                         }
 
                         //read number as bit array
                         if (prop.PropertyType == typeof(BitArray)) {
 
                             if (cAttribute.BitCount == BitCount.B16) {
-                                AddRegister<short>(collection.GetType(), cAttribute.MemoryArea, _name: propName, _isBitwise: true);
+                                AddRegister<short>(collection.GetType(), cAttribute.MemoryArea, prop, _isBitwise: true);
                             } else {
-                                AddRegister<int>(collection.GetType(), cAttribute.MemoryArea, _name: propName, _isBitwise: true);
+                                AddRegister<int>(collection.GetType(), cAttribute.MemoryArea, prop, _isBitwise: true);
                             }
 
                         }
@@ -486,15 +495,15 @@ namespace MewtocolNet {
                             //var bitwiseCount = Registers.Count(x => x.Value.isUsedBitwise);
 
                             if (cAttribute.BitCount == BitCount.B16) {
-                                AddRegister<short>(collection.GetType(), cAttribute.MemoryArea, _name: $"Auto_Bitwise_DT{cAttribute.MemoryArea}", _isBitwise: true);
+                                AddRegister<short>(collection.GetType(), cAttribute.MemoryArea, prop, _isBitwise: true);
                             } else {
-                                AddRegister<int>(collection.GetType(), cAttribute.MemoryArea, _name: $"Auto_Bitwise_DDT{cAttribute.MemoryArea}", _isBitwise: true);
+                                AddRegister<int>(collection.GetType(), cAttribute.MemoryArea, prop, _isBitwise: true);
                             }
 
                         }
 
                         if (prop.PropertyType == typeof(TimeSpan)) {
-                            AddRegister<TimeSpan>(collection.GetType(), cAttribute.MemoryArea, _name: propName);
+                            AddRegister<TimeSpan>(collection.GetType(), cAttribute.MemoryArea, prop);
                         }
 
                     }
@@ -505,43 +514,51 @@ namespace MewtocolNet {
 
             RegisterChanged += (reg) => {
 
-                //if the register is also used bitwise assign the boolean bit value to the according prop
-                if(reg.isUsedBitwise) {
+                //register is used bitwise
+                if(reg.IsUsedBitwise()) {
 
                     for (int i = 0; i < props.Length; i++) {
 
                         var prop = props[i];
                         var bitWiseFound = prop.GetCustomAttributes(true)
-                        .FirstOrDefault(y => y.GetType() == typeof(RegisterAttribute) && ((RegisterAttribute)y).MemoryArea == reg.MemoryAdress);
+                        .FirstOrDefault(y => y.GetType() == typeof(RegisterAttribute) && ((RegisterAttribute)y).MemoryArea == reg.MemoryAddress);
 
-                        if(bitWiseFound != null && reg is NRegister<short> reg16) {
+                        if(bitWiseFound != null) {
+
                             var casted = (RegisterAttribute)bitWiseFound;
                             var bitIndex = casted.AssignedBitIndex;
 
-                            var bytes = BitConverter.GetBytes(reg16.Value);
-                            BitArray bitAr = new BitArray(bytes);
+                            BitArray bitAr = null;
 
-                            if (bitIndex < bitAr.Length && bitIndex >= 0) {
+                            if (reg is NRegister<short> reg16) {
+                                var bytes = BitConverter.GetBytes((short)reg16.Value);
+                                bitAr = new BitArray(bytes);
+                            } else if(reg is NRegister<int> reg32) {
+                                var bytes = BitConverter.GetBytes((int)reg32.Value);
+                                bitAr = new BitArray(bytes);
+                            }
+
+                            if (bitAr != null && bitIndex < bitAr.Length && bitIndex >= 0) {
+                                
+                                //set the specific bit index if needed
                                 prop.SetValue(collection, bitAr[bitIndex]);
                                 collection.TriggerPropertyChanged(prop.Name);
-                            }
-                                
-                        } else if (bitWiseFound != null && reg is NRegister<int> reg32) {
-                            var casted = (RegisterAttribute)bitWiseFound;
-                            var bitIndex = casted.AssignedBitIndex;
 
-                            var bytes = BitConverter.GetBytes(reg32.Value);
-                            BitArray bitAr = new BitArray(bytes);
-                            prop.SetValue(collection, bitAr[bitIndex]);
-                            collection.TriggerPropertyChanged(prop.Name);
+                            } else if (bitAr != null) {
+
+                                //set the specific bit array if needed
+                                prop.SetValue(collection, bitAr);
+                                collection.TriggerPropertyChanged(prop.Name);
+                            
+                            }
 
                         }
 
                     }
 
                 }
-
-
+                
+                //updating normal properties
                 var foundToUpdate = props.FirstOrDefault(x => x.Name == reg.Name);
 
                 if (foundToUpdate != null) {
@@ -557,67 +574,25 @@ namespace MewtocolNet {
                     //check if bit parse mode
                     if (registerAttr.AssignedBitIndex == -1) {
 
-                        //setting back booleans
-                        if (foundToUpdate.PropertyType == typeof(bool)) {
-                            foundToUpdate.SetValue(collection, ((BRegister)reg).Value);
-                        }
+                        HashSet<Type> NumericTypes = new HashSet<Type> {
+                            typeof(bool), 
+                            typeof(short), 
+                            typeof(ushort),
+                            typeof(int), 
+                            typeof(uint), 
+                            typeof(float), 
+                            typeof(TimeSpan), 
+                            typeof(string)
+                        };
 
-                        //setting back numbers
+                        var regValue = ((IRegister)reg).Value;
 
-                        if (foundToUpdate.PropertyType == typeof(short)) {
-                            foundToUpdate.SetValue(collection, ((NRegister<short>)reg).Value);
-                        }
-
-                        if (foundToUpdate.PropertyType == typeof(ushort)) {
-                            foundToUpdate.SetValue(collection, ((NRegister<ushort>)reg).Value);
-                        }
-
-                        if (foundToUpdate.PropertyType == typeof(int)) {
-                            foundToUpdate.SetValue(collection, ((NRegister<int>)reg).Value);
-                        }
-
-                        if (foundToUpdate.PropertyType == typeof(uint)) {
-                            foundToUpdate.SetValue(collection, ((NRegister<uint>)reg).Value);
-                        }
-
-                        if (foundToUpdate.PropertyType == typeof(float)) {
-                            foundToUpdate.SetValue(collection, ((NRegister<float>)reg).Value);
+                        if (NumericTypes.Any(x => foundToUpdate.PropertyType == x)) {
+                            foundToUpdate.SetValue(collection, regValue);
                         }
 
                         if (foundToUpdate.PropertyType.IsEnum) {
-                            foundToUpdate.SetValue(collection, ((NRegister<int>)reg).Value);
-                        }
-
-                        if (foundToUpdate.PropertyType == typeof(TimeSpan)) {
-                            foundToUpdate.SetValue(collection, ((NRegister<TimeSpan>)reg).Value);
-                        }
-
-                        //setting back strings
-
-                        if (foundToUpdate.PropertyType == typeof(string)) {
-                            foundToUpdate.SetValue(collection, ((SRegister)reg).Value);
-                        }
-
-                    }
-
-
-                    if (foundToUpdate.PropertyType == typeof(BitArray)) {
-
-                        //setting back bit registers
-                        if (reg is NRegister<short> shortReg) {
-
-                            var bytes = BitConverter.GetBytes(shortReg.Value);
-                            BitArray bitAr = new BitArray(bytes);
-                            foundToUpdate.SetValue(collection, bitAr);
-
-                        }
-
-                        if (reg is NRegister<int> intReg) {
-
-                            var bytes = BitConverter.GetBytes(intReg.Value);
-                            BitArray bitAr = new BitArray(bytes);
-                            foundToUpdate.SetValue(collection, bitAr);
-
+                            foundToUpdate.SetValue(collection, regValue);
                         }
 
                     }

@@ -8,7 +8,8 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MewtocolNet.RegisterAttributes {
+namespace MewtocolNet.RegisterAttributes
+{
 
     /// <summary>
     /// A register collection base with full auto read and notification support built in
@@ -32,6 +33,24 @@ namespace MewtocolNet.RegisterAttributes {
         public void TriggerPropertyChanged (string propertyName = null) {
             var handler = PropertyChanged;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        /// <summary>
+        /// Use this on the setter method of a property to enable automatic property register writing
+        /// </summary>
+        public void AutoSetter<T> (object value, ref T privateField, [CallerMemberName] string propName = null) {
+
+            PLCInterface.PropertyRegisterWasSet(propName, value);
+
+            if(value is IRegister reg) {
+
+                privateField = (T)reg.Value;
+                return;
+
+            }
+
+            privateField = (T)value;
+
         }
 
         /// <summary>

@@ -166,7 +166,7 @@ namespace MewtocolNet {
         /// <param name="_toRead">The register to read</param>
         public async Task<BRegisterResult> ReadBoolRegister (BRegister _toRead) {
 
-            string requeststring = $"%{GetStationNumber()}#RCS{_toRead.BuildMewtocolIdent()}";
+            string requeststring = $"%{GetStationNumber()}#RCS{_toRead.BuildMewtocolQuery()}";
             var result = await SendCommandAsync(requeststring);
 
             if(!result.Success) {
@@ -198,7 +198,7 @@ namespace MewtocolNet {
         /// <returns>The success state of the write operation</returns>
         public async Task<bool> WriteBoolRegister (BRegister _toWrite, bool value) {
 
-            string requeststring = $"%{GetStationNumber()}#WCS{_toWrite.BuildMewtocolIdent()}{(value ? "1" : "0")}";
+            string requeststring = $"%{GetStationNumber()}#WCS{_toWrite.BuildMewtocolQuery()}{(value ? "1" : "0")}";
 
             var result = await SendCommandAsync(requeststring);
 
@@ -220,7 +220,7 @@ namespace MewtocolNet {
 
             Type numType = typeof(T);
 
-            string requeststring = $"%{GetStationNumber()}#RD{_toRead.BuildMewtocolIdent()}";
+            string requeststring = $"%{GetStationNumber()}#RD{_toRead.BuildMewtocolQuery()}";
             var result = await SendCommandAsync(requeststring);
 
             var failedResult = new NRegisterResult<T> {
@@ -335,7 +335,7 @@ namespace MewtocolNet {
                 toWriteVal = null;
             }
 
-            string requeststring = $"%{GetStationNumber()}#WD{_toWrite.BuildMewtocolIdent()}{toWriteVal.ToHexString()}";
+            string requeststring = $"%{GetStationNumber()}#WD{_toWrite.BuildMewtocolQuery()}{toWriteVal.ToHexString()}";
 
             var result = await SendCommandAsync(requeststring);
 
@@ -362,7 +362,7 @@ namespace MewtocolNet {
         /// <returns></returns>
         public async Task<SRegisterResult> ReadStringRegister (SRegister _toRead, int _stationNumber = 1) {
 
-            string requeststring = $"%{GetStationNumber()}#RD{_toRead.BuildMewtocolIdent()}";
+            string requeststring = $"%{GetStationNumber()}#RD{_toRead.BuildMewtocolQuery()}";
             var result = await SendCommandAsync(requeststring);
             if (result.Success)
                 _toRead.SetValueFromPLC(result.Response.ParseDTString());
