@@ -141,8 +141,6 @@ await plc.ConnectAsync(
 
 ## Writing data registers / contacts
 
-⚠ **Never set a register by setting the property, always use one of the provided methods**
-
 Registers are stored in an underlying layer for automatic handling, each register has a unique name and address.
 
 Classes that derive from `RegisterCollectionBase` reference these registers automatically using attributes. 
