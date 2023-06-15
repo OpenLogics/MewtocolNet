@@ -7,7 +7,7 @@
     <Company>Womed</Company>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Description>A Mewtocol protocol library to interface with Panasonic PLCs over TCP/Serial.</Description>
-    <Copyright>Copyright (c) 2022 WOLF Medizintechnik GmbH</Copyright>
+    <Copyright>Copyright (c) 2022 - 2023 WOLF Medizintechnik GmbH</Copyright>
     <PackageProjectUrl>https://github.com/WOmed/MewtocolNet</PackageProjectUrl>
     <RepositoryUrl>https://github.com/WOmed/MewtocolNet</RepositoryUrl>
     <PackageTags>plc;panasonic;mewtocol;automation;</PackageTags>
