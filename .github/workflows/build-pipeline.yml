@@ -49,6 +49,11 @@ jobs:
           name: Unit Test Report      # Name of the check run which will be created
           path: '${{ github.workspace }}/MewtocolTests/TestResults/testresults.trx'  # Path to test results
           reporter: dotnet-trx        # Format of test results
+      #Upload to codecov
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        env: 
+            CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   #Run code ql check
   #code-ql-check:
