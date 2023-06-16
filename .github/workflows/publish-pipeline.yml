@@ -64,9 +64,9 @@ jobs:
       - name: Load cached test results
         uses: actions/cache/restore@v3
         with:
-          key: coverage-xml
+          key: coverage-data
           path: |
-            '${{ github.workspace }}/MewtocolTests/coverage.opencover.xml'
+            '${{ github.workspace }}/MewtocolTests/TestResults/coverage.opencover.xml'
 
       - name: 'Upload coverage xml to latest release'
         uses: actions/upload-release-asset@v1
@@ -74,7 +74,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           upload_url: "${{ github.event.release.upload_url }}"
-          asset_path: '${{ github.workspace }}/MewtocolTests/coverage.opencover.xml'
+          asset_path: '${{ github.workspace }}/MewtocolTests/TestResults/coverage.opencover.xml'
           asset_name: coverage.opencover.xml
           asset_content_type: application/xml
           

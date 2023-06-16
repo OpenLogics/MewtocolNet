@@ -41,7 +41,7 @@ jobs:
       - name: 'Run tests'
         run: |
           cd '${{ github.workspace }}/MewtocolTests'
-          dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
+          dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/
 
         #Upload to codecov
       - name: Upload coverage reports to Codecov
@@ -52,6 +52,6 @@ jobs:
       - name: Cache test results
         uses: actions/cache/save@v3
         with:
-          key: coverage-xml
+          key: coverage-data
           path: |
-            '${{ github.workspace }}/MewtocolTests/coverage.opencover.xml'
+            '${{ github.workspace }}/MewtocolTests/TestResults/'
