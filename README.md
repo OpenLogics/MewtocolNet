@@ -1,4 +1,5 @@
-[![Build pipeline](https://github.com/WOmed/MewtocolNet/actions/workflows/build-pipeline.yml/badge.svg)](https://github.com/WOmed/MewtocolNet/actions/workflows/build-pipeline.yml)
+[![Publish pipeline](https://github.com/WOmed/MewtocolNet/actions/workflows/publish-pipeline.yml/badge.svg)](https://github.com/WOmed/MewtocolNet/actions/workflows/publish-pipeline.yml)
+[![Test pipeline](https://github.com/WOmed/MewtocolNet/actions/workflows/test-pipeline.yml/badge.svg)](https://github.com/WOmed/MewtocolNet/actions/workflows/test-pipeline.yml)
 [![Nuget](https://img.shields.io/nuget/v/Mewtocol.NET)](https://www.nuget.org/packages/Mewtocol.NET)
 [![codecov](https://codecov.io/gh/WOmed/MewtocolNet/branch/master/graph/badge.svg?token=M50U8EZPC6)](https://codecov.io/gh/WOmed/MewtocolNet)
 ![GitHub](https://img.shields.io/github/license/WOmed/MewtocolNet)
