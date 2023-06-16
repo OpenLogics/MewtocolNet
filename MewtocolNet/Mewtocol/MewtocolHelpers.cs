@@ -24,28 +24,37 @@ namespace MewtocolNet {
 
         }
 
+        /// <summary>
+        /// Converts a string (after converting to upper case) to ascii bytes 
+        /// </summary>
         internal static byte[] ToHexASCIIBytes (this string _str) {
+
             ASCIIEncoding ascii = new ASCIIEncoding();
             byte[] bytes = ascii.GetBytes(_str.ToUpper()); 
             return bytes;
+
         }
 
         internal static string BuildBCCFrame (this string asciiArr) {
+
             Encoding ae = Encoding.ASCII;
             byte[] b = ae.GetBytes(asciiArr);
             byte xorTotalByte = 0;
             for(int i = 0; i < b.Length; i++)
             xorTotalByte ^= b[i];
             return asciiArr.Insert(asciiArr.Length, xorTotalByte.ToString("X2"));
+        
         }
 
         internal static byte[] ParseDTBytes (this string _onString ,int _blockSize = 4) {
+
             var res = new Regex(@"\%([0-9]{2})\$RD(.{"+_blockSize+"})").Match(_onString);
             if(res.Success) {
                 string val = res.Groups[2].Value;
                 return val.HexStringToByteArray();
             }
             return null;
+
         }
 
         internal static string ParseDTByteString (this string _onString, int _blockSize = 4) {
@@ -63,21 +72,25 @@ namespace MewtocolNet {
         }
 
         internal static bool? ParseRCSingleBit (this string _onString, int _blockSize = 4) {
+
             var res = new Regex(@"\%([0-9]{2})\$RC(.)").Match(_onString);
             if (res.Success) {
                 string val = res.Groups[2].Value;
                 return val == "1";
             }
             return null;
+
         }
 
         internal static string ParseDTString (this string _onString) {
+
             var res = new Regex(@"\%([0-9]{2})\$RD.{8}(.*)...").Match(_onString);
             if(res.Success) {
                 string val = res.Groups[2].Value;
                 return val.GetStringFromAsciiHex()?.Trim();
             }
             return null;
+
         }
 
         internal static string ReverseByteOrder (this string _onString) {
@@ -94,6 +107,7 @@ namespace MewtocolNet {
         }
 
         internal static IEnumerable<String> SplitInParts (this string s, int partLength) {
+
             if (s == null)
                 throw new ArgumentNullException(nameof(s));
             if (partLength <= 0)
@@ -101,6 +115,7 @@ namespace MewtocolNet {
 
             for (var i = 0; i < s.Length; i += partLength)
                 yield return s.Substring(i, Math.Min(partLength, s.Length - i));
+
         }
 
         internal static string BuildDTString (this string _inString, short _stringReservedSize) {
@@ -167,12 +182,14 @@ namespace MewtocolNet {
         }
 
         internal static string ToHexString (this byte[] arr) {
+
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < arr.Length; i++) {
                 byte b = arr[i];
                 sb.Append(b.ToString("X2"));
             }
             return sb.ToString();
+
         }
 
         internal static byte[] BigToMixedEndian (this byte[] arr) {

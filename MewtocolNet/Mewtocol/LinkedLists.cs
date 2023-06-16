@@ -5,7 +5,7 @@ namespace MewtocolNet.Links {
 
     internal class LinkedData {
 
-        internal static Dictionary<int, string> ErrorCodes = new System.Collections.Generic.Dictionary<int, string> {
+        internal static Dictionary<int, string> ErrorCodes = new Dictionary<int, string> {
 
             {21, "NACK error"},
             {22, "WACK error"},
