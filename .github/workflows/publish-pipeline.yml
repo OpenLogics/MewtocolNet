@@ -22,7 +22,10 @@ jobs:
       - uses: actions/checkout@v3
       
       - name: Set .csproj version to ${{github.ref_name}}
-        run: sed -i "s/\(<Version>\([0-9]\+\.\)\{2\}\)\([0-9]\+\)/\1${{github.ref_name}}/" MewtocolNet/MewtocolNet.csproj
+        run: |
+            VERSION=${{ github.ref_name }}
+            echo "VERSION=${VERSION:1}" >> $GITHUB_ENV
+            sed -i "s/<Version>[0-9].[0-9].[0-9]</Version>/<Version>${{ env.VERSION }}</Version>/g" MewtocolNet/MewtocolNet.csproj
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v2
@@ -42,3 +45,14 @@ jobs:
         run: | 
             cd '${{ github.workspace }}/Builds'
             dotnet nuget push "*.nupkg" --skip-duplicate --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/WOmed/index.json"  
+        
+      - name: 'Upload artifacts to latest release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: "${{ github.event.release.upload_url }}"
+          asset_path: ${{ github.workspace }}/Builds/Mewtocol.NET.${{ env.VERSION }}.nupkg
+          asset_name: Mewtocol.NET.${{ env.VERSION }}.nupkg
+          asset_content_type: application/zip
+        
