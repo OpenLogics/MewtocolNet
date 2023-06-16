@@ -54,4 +54,4 @@ jobs:
         with:
           key: coverage-data
           path: |
-            '${{ github.workspace }}/MewtocolTests/TestResults/'
+            ${{ github.workspace }}/MewtocolTests/TestResults
