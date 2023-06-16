@@ -1,0 +1,44 @@
+name: Publish pipeline
+
+on:
+    workflow_dispatch:
+    release:
+      types: [published]
+
+permissions: write-all      
+jobs:
+
+  test-pipeline:
+    name: 'Invoke the test pipeline'
+    uses: ./.github/workflows/test-pipeline.yml
+    secrets: inherit
+
+  #Deploy package
+  publish-package:
+    name: 'Build and publish package'
+    needs: test-pipeline
+    runs-on: [self-hosted, linux, x64, womed-local-linux]
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set .csproj version to ${{github.ref_name}}
+        run: sed -i "s/\(<Version>\([0-9]\+\.\)\{2\}\)\([0-9]\+\)/\1${{github.ref_name}}/" MewtocolNet/MewtocolNet.csproj
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v2
+        with:
+            dotnet-version: '6.0.x'
+        
+      - name: Restore dependencies
+        run: dotnet restore
+      
+      - name: Build
+        run: dotnet build "MewtocolNet"
+      
+      - name: Pack
+        run: dotnet pack "MewtocolNet"
+
+      - name: Publish
+        run: | 
+            cd '${{ github.workspace }}/Builds'
+            dotnet nuget push "*.nupkg" --skip-duplicate --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/WOmed/index.json"  

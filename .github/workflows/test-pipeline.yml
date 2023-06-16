@@ -1,4 +1,4 @@
-name: Build pipeline
+name: Test pipeline
 
 on:
     workflow_dispatch:
@@ -47,31 +47,3 @@ jobs:
         uses: codecov/codecov-action@v3
         env: 
             CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-  #Deplay package
-  publish-package:
-    name: 'Build and publish package'
-    needs: [run-unit-tests, ]
-    runs-on: [self-hosted, linux, x64, womed-local-linux]
-    steps:
-      - uses: actions/checkout@v3
-  
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v2
-        with:
-            dotnet-version: '6.0.x'
-        
-      - name: Restore dependencies
-        run: dotnet restore
-      
-      - name: Build
-        run: dotnet build "MewtocolNet"
-      
-      - name: Pack
-        run: dotnet pack "MewtocolNet"
-
-      - name: Publish
-        run: | 
-            cd '${{ github.workspace }}/Builds'
-            dotnet nuget push "*.nupkg" --skip-duplicate --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/WOmed/index.json"    
-            #dotnet nuget push "*.nupkg" --skip-duplicate --api-key ${{ secrets.NUGET_KEY }} --source "https://api.nuget.org"    
