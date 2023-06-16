@@ -51,12 +51,7 @@ Where is the RS232/Serial support?
 
 # Installing
 
-Install this package by using [Nuget](https://www.nuget.org/packages/Mewtocol.NET) or reference 
-```XML
-<PackageReference Include="Mewtocol.NET" Version="0.7.0"/>
-```
-in your dependencies.
-Alternatively use the dotnet CLI and run 
+Use the dotnet CLI and run 
 ```Shell
 dotnet add package Mewtocol.NET
 ```
