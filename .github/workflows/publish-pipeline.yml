@@ -25,7 +25,7 @@ jobs:
         run: |
             VERSION=${{ github.ref_name }}
             echo "VERSION=${VERSION:1}" >> $GITHUB_ENV
-            sed -i "s/<Version>[0-9].[0-9].[0-9]</Version>/<Version>${{ env.VERSION }}</Version>/g" MewtocolNet/MewtocolNet.csproj
+            sed -i 's/<Version>[0-9].[0-9].[0-9]<\/Version>/<Version>${{ env.VERSION }}<\/Version>/g' MewtocolNet/MewtocolNet.csproj
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v2
