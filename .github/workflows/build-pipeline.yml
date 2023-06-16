@@ -8,7 +8,8 @@ on:
         - master
       paths-ignore:
         - '**.md'
-        
+
+permissions: write-all      
 jobs:
   
   #Check the online status of the test PLCs first
