@@ -50,7 +50,7 @@ jobs:
             CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Cache test results
-        uses: actions/cache@v3
+        uses: actions/cache/save@v3
         with:
           key: coverage-xml
           path: |

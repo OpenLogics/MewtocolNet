@@ -62,9 +62,11 @@ jobs:
           asset_content_type: application/zip
     
       - name: Load cached test results
-        uses: actions/cache@v3
+        uses: actions/cache/restore@v3
         with:
-          restore-keys: coverage-xml
+          key: coverage-xml
+          path: |
+            '${{ github.workspace }}/MewtocolTests/coverage.opencover.xml'
 
       - name: 'Upload coverage xml to latest release'
         uses: actions/upload-release-asset@v1
