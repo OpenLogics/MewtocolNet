@@ -41,8 +41,17 @@ jobs:
       - name: 'Run tests'
         run: |
           cd '${{ github.workspace }}/MewtocolTests'
-          dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/
-
+          dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults
+      
+      - name: ReportGenerator
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.1.22
+        with:
+            reports: '${{ github.workspace }}/MewtocolTests/TestResults'
+            targetdir: '${{ github.workspace }}/MewtocolTests/Reports'
+            reporttypes: Html_Dark;HtmlInline;MarkdownSummaryGithub;Badges
+            historydir: '${{ github.workspace }}/MewtocolTests/Hist'
+            title: Report
+    
         #Upload to codecov
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
