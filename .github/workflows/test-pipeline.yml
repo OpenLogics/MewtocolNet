@@ -42,7 +42,9 @@ jobs:
         run: |
           cd './MewtocolTests'
           dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults
+          ls -l
           cd ../
+          ls -l
 
       - name: ReportGenerator
         uses: danielpalme/ReportGenerator-GitHub-Action@5.1.22
