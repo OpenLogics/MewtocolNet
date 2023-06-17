@@ -47,9 +47,7 @@ jobs:
         run: |
           cd './MewtocolTests'
           dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/coverage.opencover.xml
-          ls -l
           cd ../
-          ls -l
 
       - name: Report Generator
         uses: danielpalme/ReportGenerator-GitHub-Action@5.1.22
@@ -71,10 +69,11 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-            name: badge-combined
-            path: ./MewtocolTests/TestResults/badge_combined.svg
+            name: test-results
+            path: ./MewtocolTests/TestResults/
 
       - name: Cache test results
+        if: ${{ github.event_name == 'workflow_call' }}
         uses: actions/cache/save@v3
         with:
           key: ${{ inputs.cache-id }}
