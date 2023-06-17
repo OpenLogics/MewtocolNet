@@ -41,7 +41,7 @@ jobs:
       - name: 'Run tests'
         run: |
           cd './MewtocolTests'
-          dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults
+          dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/coverage.opencover.xml
           ls -l
           cd ../
           ls -l
