@@ -46,14 +46,17 @@ jobs:
           cd ../
           ls -l
 
-      - name: ReportGenerator
+      - name: Report Generator
         uses: danielpalme/ReportGenerator-GitHub-Action@5.1.22
         with:
             reports: './MewtocolTests/TestResults/coverage.opencover.xml'
-            targetdir: './MewtocolTests/Reports'
+            targetdir: './MewtocolTests/TestResults'
             reporttypes: Html_Dark;HtmlInline;MarkdownSummaryGithub;Badges
             historydir: './MewtocolTests/Hist'
             title: Report
+    
+      - name: Markdown report
+        run: cat './MewtocolTests/TestResults/SummaryGithub.md' >> $GITHUB_STEP_SUMMARY
     
         #Upload to codecov
       - name: Upload coverage reports to Codecov
