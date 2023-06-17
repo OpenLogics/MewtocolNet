@@ -3,6 +3,11 @@ name: Test pipeline
 on:
     workflow_dispatch:
     workflow_call:
+        inputs:
+          cache-id:
+            default: 'test-results'
+            required: false
+            type: string
     push:
       branches:
         - main
@@ -64,9 +69,14 @@ jobs:
         env: 
             CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+      - uses: actions/upload-artifact@v3
+        with:
+            name: badge-combined
+            path: ./MewtocolTests/TestResults/badge_combined.svg
+
       - name: Cache test results
         uses: actions/cache/save@v3
         with:
-          key: coverage-data
+          key: ${{ inputs.cache-id }}
           path: |
             ${{ github.workspace }}/MewtocolTests/TestResults
