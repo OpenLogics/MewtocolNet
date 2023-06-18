@@ -67,10 +67,10 @@ jobs:
         env: 
             CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-      - uses: actions/upload-artifact@v3
-        with:
-            name: test-results
-            path: ./MewtocolTests/TestResults/
+      #- uses: actions/upload-artifact@v3
+      #  with:
+      #      name: test-results
+      #      path: ./MewtocolTests/TestResults/
 
       - name: Cache test results
         if: ${{ github.event_name == 'workflow_call' }}
@@ -83,9 +83,10 @@ jobs:
       - name: Commit badge
         continue-on-error: true
         run: |
+            git checkout badges
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
-            git add "./MewtocolTests/TestResults/badge_combined.svg"
+            git add "./MewtocolTests/TestResults/badge_combined.svg" -f
             git commit -m "Add/Update badge"
             
       - name: Push badge commit
