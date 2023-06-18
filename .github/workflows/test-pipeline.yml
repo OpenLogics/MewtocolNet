@@ -61,8 +61,8 @@ jobs:
       - name: Markdown report and copy for badges branch
         run: |
             cat './MewtocolTests/TestResults/SummaryGithub.md' >> $GITHUB_STEP_SUMMARY
-            cp './MewtocolTests/TestResults/badge_combined.svg' '~/badge_combined.svg'
-            cp './MewtocolTests/TestResults/summary.html' '~/summary.html'
+            cp ./MewtocolTests/TestResults/badge_combined.svg ~/badge_combined.svg
+            cp ./MewtocolTests/TestResults/summary.html ~/summary.html
             ls -l ~
             
         #Upload to codecov
@@ -89,8 +89,8 @@ jobs:
         run: |
             git fetch
             git checkout badges
-            cp '~/summary.html' './MewtocolTests/TestResults/summary.html'
-            cp '~/badge_combined.svg' './MewtocolTests/TestResults/badge_combined.svg'
+            cp ~/summary.html ./MewtocolTests/TestResults/summary.html
+            cp ~/badge_combined.svg ./MewtocolTests/TestResults/badge_combined.svg
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
             git add "./MewtocolTests/TestResults/badge_combined.svg" -f
