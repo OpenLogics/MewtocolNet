@@ -1,7 +1,7 @@
 [![Publish pipeline](https://github.com/WOmed/MewtocolNet/actions/workflows/publish-pipeline.yml/badge.svg)](https://github.com/WOmed/MewtocolNet/actions/workflows/publish-pipeline.yml)
 [![Test pipeline](https://github.com/WOmed/MewtocolNet/actions/workflows/test-pipeline.yml/badge.svg)](https://github.com/WOmed/MewtocolNet/actions/workflows/test-pipeline.yml)
-[![Nuget](https://img.shields.io/nuget/v/Mewtocol.NET)](https://www.nuget.org/packages/Mewtocol.NET)
-[![codecov](https://codecov.io/gh/WOmed/MewtocolNet/branch/master/graph/badge.svg?token=M50U8EZPC6)](https://codecov.io/gh/WOmed/MewtocolNet)
+![GitHub tag (latest SemVer pre-release)](https://img.shields.io/github/v/tag/WOmed/MewtocolNet?label=Version)
+![gencov](https://github.com/WOmed/MewtocolNet/blob/badges/MewtocolTests/TestResults/badge_combined.svg)
 ![GitHub](https://img.shields.io/github/license/WOmed/MewtocolNet)
 ![Status](https://img.shields.io/badge/Status-In%20dev-orange)
 
