@@ -84,6 +84,7 @@ jobs:
         continue-on-error: true
         run: |
             git checkout badges
+            git fetch
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
             git add "./MewtocolTests/TestResults/badge_combined.svg" -f
