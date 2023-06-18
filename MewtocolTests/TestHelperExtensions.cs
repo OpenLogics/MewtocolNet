@@ -31,7 +31,7 @@ namespace MewtocolTests {
         }
 
         [Fact(DisplayName = nameof(MewtocolHelpers.ToHexString))]
-        public void ToHexStringGeneration() {
+        public void ToHexStringGeneration () {
 
             var bytes = new byte[6] {
                 0x10,
@@ -47,7 +47,7 @@ namespace MewtocolTests {
         }
 
         [Fact(DisplayName = nameof(MewtocolHelpers.ToHexASCIIBytes))]
-        public void ToHexASCIIBytesGeneration() {
+        public void ToHexASCIIBytesGeneration () {
 
             string test = "Hello, world!";
 
@@ -66,6 +66,41 @@ namespace MewtocolTests {
                 0x44,
                 0x21
             }, test.ToHexASCIIBytes());
+
+        }
+
+        [Fact(DisplayName = nameof(MewtocolHelpers.BuildBCCFrame))]
+        public void BuildBCCFrameGeneration () {
+
+            string test = "%01#RCSX0000";
+            string expect = "%01#RCSX00001D";
+
+            Assert.Equal(expect, test.BuildBCCFrame());
+
+        }
+
+        [Fact(DisplayName = nameof(MewtocolHelpers.ParseDTByteString))]
+        public void ParseDTByteStringGeneration () {
+
+            var testList = new List<string>() {
+                "1112",
+                "1C2C",
+                "FFFF",
+            };
+
+            foreach (var item in testList) {
+
+                Assert.Equal(item, $"%01$RD{item}".BuildBCCFrame().ParseDTByteString());
+
+            }
+
+        }
+
+        [Fact(DisplayName = nameof(MewtocolHelpers.ParseRCSingleBit))]
+        public void ParseRCSingleBitGeneration () {
+
+            Assert.True($"%01$RC1".BuildBCCFrame().ParseRCSingleBit());
+            Assert.False($"%01$RC0".BuildBCCFrame().ParseRCSingleBit());
 
         }
 

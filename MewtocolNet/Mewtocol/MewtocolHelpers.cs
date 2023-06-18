@@ -46,17 +46,9 @@ namespace MewtocolNet {
         
         }
 
-        internal static byte[] ParseDTBytes (this string _onString ,int _blockSize = 4) {
-
-            var res = new Regex(@"\%([0-9]{2})\$RD(.{"+_blockSize+"})").Match(_onString);
-            if(res.Success) {
-                string val = res.Groups[2].Value;
-                return val.HexStringToByteArray();
-            }
-            return null;
-
-        }
-
+        /// <summary>
+        /// Parses the byte string from a incoming RD message
+        /// </summary>
         internal static string ParseDTByteString (this string _onString, int _blockSize = 4) {
 
             if (_onString == null)
@@ -71,7 +63,7 @@ namespace MewtocolNet {
 
         }
 
-        internal static bool? ParseRCSingleBit (this string _onString, int _blockSize = 4) {
+        internal static bool? ParseRCSingleBit (this string _onString) {
 
             var res = new Regex(@"\%([0-9]{2})\$RC(.)").Match(_onString);
             if (res.Success) {
