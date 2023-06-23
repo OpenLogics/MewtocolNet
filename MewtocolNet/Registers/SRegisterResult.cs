@@ -1,4 +1,4 @@
-﻿namespace MewtocolNet.Subregisters {
+﻿namespace MewtocolNet.Registers {
 
     /// <summary>
     /// The results of a string register operation

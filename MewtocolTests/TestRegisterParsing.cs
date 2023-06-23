@@ -1,11 +1,5 @@
 ﻿using MewtocolNet;
-using MewtocolNet.Mewtocol;
 using MewtocolNet.Registers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,12 +9,12 @@ public class TestRegisterParsing {
 
     private readonly ITestOutputHelper output;
 
-    public TestRegisterParsing (ITestOutputHelper output) {
+    public TestRegisterParsing(ITestOutputHelper output) {
         this.output = output;
     }
 
     [Fact(DisplayName = "Parsing as BRegister (Phyiscal Outputs)")]
-    public void TestParsingBRegisterY () {
+    public void TestParsingBRegisterY() {
 
         var tests = new Dictionary<string, IRegister>() {
 
@@ -51,7 +45,7 @@ public class TestRegisterParsing {
     }
 
     [Fact(DisplayName = "Parsing as BRegister (Phyiscal Inputs)")]
-    public void TestParsingBRegisterX () {
+    public void TestParsingBRegisterX() {
 
         var tests = new Dictionary<string, IRegister>() {
 

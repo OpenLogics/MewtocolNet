@@ -1,7 +1,7 @@
 using MewtocolNet.Logging;
 using MewtocolNet.Queue;
 using MewtocolNet.RegisterAttributes;
-using MewtocolNet.Subregisters;
+using MewtocolNet.Registers;
 using System;
 using System.Collections;
 using System.Collections.Generic;

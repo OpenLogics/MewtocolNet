@@ -1,5 +1,5 @@
 ﻿using MewtocolNet.Logging;
-using MewtocolNet.Subregisters;
+using MewtocolNet.Registers;
 using System;
 using System.Collections.Generic;
 using System.Linq;

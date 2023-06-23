@@ -2,7 +2,8 @@
 using System.ComponentModel;
 using System.Text;
 
-namespace MewtocolNet.Subregisters {
+namespace MewtocolNet.Registers {
+
     /// <summary>
     /// Defines a register containing a string
     /// </summary>

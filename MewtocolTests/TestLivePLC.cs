@@ -1,16 +1,10 @@
 ﻿using MewtocolNet;
 using MewtocolNet.Logging;
 using MewtocolNet.PLCEnums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace MewtocolTests
-{
+namespace MewtocolTests {
 
     public class TestLivePLC {
 
@@ -39,21 +33,21 @@ namespace MewtocolTests
 
         };
 
-        public TestLivePLC (ITestOutputHelper output) {
+        public TestLivePLC(ITestOutputHelper output) {
 
             this.output = output;
 
             Logger.LogLevel = LogLevel.Verbose;
-            Logger.OnNewLogMessage((d,m) => {
+            Logger.OnNewLogMessage((d, m) => {
 
                 output.WriteLine($"Mewtocol Logger: {d} {m}");
 
             });
-        
+
         }
 
         [Fact(DisplayName = "Connection cycle client to PLC")]
-        public async void TestClientConnection () {
+        public async void TestClientConnection() {
 
             foreach (var plc in testData) {
 
@@ -74,7 +68,7 @@ namespace MewtocolTests
         }
 
         [Fact(DisplayName = "Reading basic information from PLC")]
-        public async void TestClientReadPLCStatus () {
+        public async void TestClientReadPLCStatus() {
 
             foreach (var plc in testData) {
 
@@ -107,9 +101,9 @@ namespace MewtocolTests
 
         public int PLCPort { get; set; }
 
-        public CpuType Type { get; set; } 
+        public CpuType Type { get; set; }
 
-        public int ProgCapacity { get; set; }   
+        public int ProgCapacity { get; set; }
 
     }
 

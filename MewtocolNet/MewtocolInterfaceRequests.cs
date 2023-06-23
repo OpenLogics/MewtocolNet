@@ -1,6 +1,6 @@
 using MewtocolNet.Logging;
 using MewtocolNet.PLCEnums;
-using MewtocolNet.Subregisters;
+using MewtocolNet.Registers;
 using System;
 using System.Collections.Generic;
 using System.Globalization;

@@ -1,7 +1,6 @@
-using Xunit;
-
 using MewtocolNet;
 using MewtocolNet.Registers;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace MewtocolTests {
@@ -10,12 +9,12 @@ namespace MewtocolTests {
 
         private readonly ITestOutputHelper output;
 
-        public TestRegisterInterface (ITestOutputHelper output) {
+        public TestRegisterInterface(ITestOutputHelper output) {
             this.output = output;
         }
 
         [Fact(DisplayName = "Numeric mewtocol query building")]
-        public void NumericRegisterMewtocolIdentifiers () {
+        public void NumericRegisterMewtocolIdentifiers() {
 
             List<IRegister> registers = new List<IRegister> {
                 new NRegister<short>(50, _name: null),
@@ -48,7 +47,7 @@ namespace MewtocolTests {
         }
 
         [Fact(DisplayName = "PLC register naming convention test")]
-        public void PLCRegisterIdentifiers () {
+        public void PLCRegisterIdentifiers() {
 
             List<IRegister> registers = new List<IRegister> {
                 //numeric ones
@@ -77,8 +76,8 @@ namespace MewtocolTests {
                 "DT50",
                 "DT60",
                 "DDT70",
-                "DDT80", 
-                "DDT90", 
+                "DDT80",
+                "DDT90",
                 "DDT100",
 
                 //boolean
@@ -107,7 +106,7 @@ namespace MewtocolTests {
         }
 
         [Fact(DisplayName = "Non allowed (Overflow address)")]
-        public void OverFlowRegisterAddress () {
+        public void OverFlowRegisterAddress() {
 
             var ex = Assert.Throws<NotSupportedException>(() => {
 
@@ -144,7 +143,7 @@ namespace MewtocolTests {
         }
 
         [Fact(DisplayName = "Non allowed (Wrong data type)")]
-        public void WrongDataTypeRegister () {
+        public void WrongDataTypeRegister() {
 
             var ex = Assert.Throws<NotSupportedException>(() => {
 

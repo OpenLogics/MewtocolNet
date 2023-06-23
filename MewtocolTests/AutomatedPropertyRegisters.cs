@@ -1,15 +1,11 @@
-using Xunit;
-
 using MewtocolNet;
-using System.Diagnostics;
-using Xunit.Abstractions;
-using System.Collections;
 using MewtocolNet.RegisterAttributes;
-using Microsoft.Win32;
-using MewtocolNet.Subregisters;
+using MewtocolNet.Registers;
+using System.Collections;
+using Xunit;
+using Xunit.Abstractions;
 
-namespace MewtocolTests
-{
+namespace MewtocolTests {
 
     public class AutomatedPropertyRegisters {
 
@@ -94,7 +90,7 @@ namespace MewtocolTests
             public CurrentState TestEnum32 { get; private set; }
 
         }
-       
+
         private void TestBasicGeneration(IRegister reg, string propName, object expectValue, int expectAddr, string expectPlcName) {
 
             Assert.NotNull(reg);
@@ -111,7 +107,7 @@ namespace MewtocolTests
         //actual tests
 
         [Fact(DisplayName = "Boolean R generation")]
-        public void BooleanGen () {
+        public void BooleanGen() {
 
             var interf = new MewtocolInterface("192.168.0.1");
             interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
@@ -124,7 +120,7 @@ namespace MewtocolTests
         }
 
         [Fact(DisplayName = "Boolean input XD generation")]
-        public void BooleanInputGen () {
+        public void BooleanInputGen() {
 
             var interf = new MewtocolInterface("192.168.0.1");
             interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
@@ -137,7 +133,7 @@ namespace MewtocolTests
         }
 
         [Fact(DisplayName = "Int16 generation")]
-        public void Int16Gen () {
+        public void Int16Gen() {
 
             var interf = new MewtocolInterface("192.168.0.1");
             interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
@@ -150,7 +146,7 @@ namespace MewtocolTests
         }
 
         [Fact(DisplayName = "UInt16 generation")]
-        public void UInt16Gen () {
+        public void UInt16Gen() {
 
             var interf = new MewtocolInterface("192.168.0.1");
             interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
@@ -163,7 +159,7 @@ namespace MewtocolTests
         }
 
         [Fact(DisplayName = "Int32 generation")]
-        public void Int32Gen () {
+        public void Int32Gen() {
 
             var interf = new MewtocolInterface("192.168.0.1");
             interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
@@ -176,7 +172,7 @@ namespace MewtocolTests
         }
 
         [Fact(DisplayName = "UInt32 generation")]
-        public void UInt32Gen () {
+        public void UInt32Gen() {
 
             var interf = new MewtocolInterface("192.168.0.1");
             interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
@@ -189,7 +185,7 @@ namespace MewtocolTests
         }
 
         [Fact(DisplayName = "Float32 generation")]
-        public void Float32Gen () {
+        public void Float32Gen() {
 
             var interf = new MewtocolInterface("192.168.0.1");
             interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
@@ -202,7 +198,7 @@ namespace MewtocolTests
         }
 
         [Fact(DisplayName = "String generation")]
-        public void StringGen () {
+        public void StringGen() {
 
             var interf = new MewtocolInterface("192.168.0.1");
             interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
@@ -218,7 +214,7 @@ namespace MewtocolTests
         }
 
         [Fact(DisplayName = "BitArray 16bit generation")]
-        public void BitArray16Gen () {
+        public void BitArray16Gen() {
 
             var interf = new MewtocolInterface("192.168.0.1");
             interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
@@ -234,7 +230,7 @@ namespace MewtocolTests
         }
 
         [Fact(DisplayName = "BitArray 32bit generation")]
-        public void BitArray32Gen () {
+        public void BitArray32Gen() {
 
             var interf = new MewtocolInterface("192.168.0.1");
             interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
@@ -250,7 +246,7 @@ namespace MewtocolTests
         }
 
         [Fact(DisplayName = "BitArray single bool generation")]
-        public void BitArraySingleBool16Gen () {
+        public void BitArraySingleBool16Gen() {
 
             var interf = new MewtocolInterface("192.168.0.1");
             interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
@@ -265,7 +261,7 @@ namespace MewtocolTests
         }
 
         [Fact(DisplayName = "TimeSpan generation")]
-        public void TimespanGen () {
+        public void TimespanGen() {
 
             var interf = new MewtocolInterface("192.168.0.1");
             interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
@@ -278,7 +274,7 @@ namespace MewtocolTests
         }
 
         [Fact(DisplayName = "Enum16 generation")]
-        public void Enum16Gen () {
+        public void Enum16Gen() {
 
             var interf = new MewtocolInterface("192.168.0.1");
             interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
@@ -291,7 +287,7 @@ namespace MewtocolTests
         }
 
         [Fact(DisplayName = "Enum32 generation")]
-        public void Enum32Gen () {
+        public void Enum32Gen() {
 
             var interf = new MewtocolInterface("192.168.0.1");
             interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();

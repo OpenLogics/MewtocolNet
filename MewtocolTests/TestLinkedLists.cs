@@ -1,22 +1,19 @@
-using Xunit;
-
 using MewtocolNet;
-using MewtocolNet.Registers;
+using Xunit;
 using Xunit.Abstractions;
 
-namespace MewtocolTests
-{
+namespace MewtocolTests {
 
     public class TestLinkedLists {
 
         private readonly ITestOutputHelper output;
 
-        public TestLinkedLists (ITestOutputHelper output) {
+        public TestLinkedLists(ITestOutputHelper output) {
             this.output = output;
         }
 
         [Fact(DisplayName = "Linked error list")]
-        public void NumericRegisterMewtocolIdentifiers () {
+        public void NumericRegisterMewtocolIdentifiers() {
 
             var expectedData = new Dictionary<int, string> {
 
