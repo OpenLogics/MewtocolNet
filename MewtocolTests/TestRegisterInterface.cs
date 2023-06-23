@@ -26,7 +26,7 @@ namespace MewtocolTests {
                 new NRegister<TimeSpan>(50, _name : null),
             };
 
-            List<string> expcectedIdents = new List<string> {
+            List<string> expectedIdents = new List<string> {
                 "D0005000050", //single word register
                 "D0005000050", //single word register
                 "D0005000051", //double word register
@@ -39,7 +39,7 @@ namespace MewtocolTests {
             for (int i = 0; i < registers.Count; i++) {
 
                 IRegister? reg = registers[i];
-                string expect = expcectedIdents[i];
+                string expect = expectedIdents[i];
 
                 Assert.Equal(expect, reg.BuildMewtocolQuery());
 
@@ -58,25 +58,38 @@ namespace MewtocolTests {
                 new NRegister<uint>(80, _name : null),
                 new NRegister<float>(90, _name : null),
                 new NRegister<TimeSpan>(100, _name : null),
+                
                 //boolean
-                new BRegister(100),
-                new BRegister(5, RegisterType.X),
-                new BRegister(SpecialAddress.A, RegisterType.X),
+                new BRegister(IOType.R, 0, 100),
+                new BRegister(IOType.X, 5),
+                new BRegister(IOType.X, 0xA),
+                new BRegister(IOType.X, 0xF, 109),
+                new BRegister(IOType.Y, 0xC, 75),
+
                 //string
                 new SRegister(999, 5),
             };
 
             List<string> expcectedIdents = new List<string> {
+                
+                //numeric ones
                 "DT50",
                 "DT60",
                 "DDT70",
                 "DDT80", 
                 "DDT90", 
                 "DDT100",
+
+                //boolean
                 "R100",
                 "X5",
                 "XA",
+                "X109F",
+                "Y75C",
+
+                 //string
                 "DT999"
+
             };
 
             //test mewtocol idents
@@ -104,7 +117,7 @@ namespace MewtocolTests {
 
             var ex1 = Assert.Throws<NotSupportedException>(() => {
 
-                new BRegister(100000);
+                new BRegister(IOType.R, _areaAdress: 512);
 
             });
 
@@ -112,11 +125,19 @@ namespace MewtocolTests {
 
             var ex2 = Assert.Throws<NotSupportedException>(() => {
 
-                new SRegister(100000, 5);
+                new BRegister(IOType.X, _areaAdress: 110);
 
             });
 
             output.WriteLine(ex2.Message.ToString());
+
+            var ex3 = Assert.Throws<NotSupportedException>(() => {
+
+                new SRegister(100000, 5);
+
+            });
+
+            output.WriteLine(ex3.Message.ToString());
 
         }
 
@@ -126,32 +147,6 @@ namespace MewtocolTests {
             var ex = Assert.Throws<NotSupportedException>(() => {
 
                 new NRegister<double>(100, _name: null);
-
-            });
-
-            output.WriteLine(ex.Message.ToString());
-
-        }
-
-        [Fact(DisplayName = "Non allowed (Wrong bool type address)")]
-        public void WrongDataTypeRegisterBool1 () {
-
-            var ex = Assert.Throws<NotSupportedException>(() => {
-
-                new BRegister(100, RegisterType.DDT_int);
-
-            });
-
-            output.WriteLine(ex.Message.ToString());
-
-        }
-
-        [Fact(DisplayName = "Non allowed (Wrong bool special address)")]
-        public void WrongDataTypeRegisterBool2 () {
-
-            var ex = Assert.Throws<NotSupportedException>(() => {
-
-                new BRegister(SpecialAddress.None, RegisterType.X);
 
             });
 

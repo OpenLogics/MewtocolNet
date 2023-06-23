@@ -53,7 +53,7 @@ namespace MewtocolTests {
 
             };
 
-            Assert.Equal(expectedData, LinkedData.ErrorCodes);
+            Assert.Equal(expectedData, CodeDescriptions.Error);
 
         }
 

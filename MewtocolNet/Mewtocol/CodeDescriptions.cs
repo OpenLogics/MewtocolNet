@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace MewtocolNet.Links {
 
-    internal class LinkedData {
+    internal class CodeDescriptions {
 
-        internal static Dictionary<int, string> ErrorCodes = new Dictionary<int, string> {
+        internal static Dictionary<int, string> Error = new Dictionary<int, string> {
 
             {21, "NACK error"},
             {22, "WACK error"},

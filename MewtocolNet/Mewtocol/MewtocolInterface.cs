@@ -17,6 +17,8 @@ using System.Threading;
 using MewtocolNet.Queue;
 using System.Reflection;
 using System.Timers;
+using System.Data;
+using System.Xml.Linq;
 
 namespace MewtocolNet
 {
@@ -437,11 +439,10 @@ namespace MewtocolNet
                     if (attr is RegisterAttribute cAttribute) {
 
                         if (prop.PropertyType == typeof(bool) && cAttribute.AssignedBitIndex == -1) {
-                            if (cAttribute.SpecialAddress == SpecialAddress.None) {
-                                AddRegister(collection.GetType(), cAttribute.MemoryArea, cAttribute.RegisterType, _name: propName);
-                            } else {
-                                AddRegister(collection.GetType(), cAttribute.SpecialAddress, cAttribute.RegisterType, _name: propName);
-                            }
+
+                            //add bool register non bit assgined
+                            Registers.Add(new BRegister((IOType)(int)cAttribute.RegisterType, cAttribute.SpecialAddress, cAttribute.MemoryArea, _name: propName).WithCollectionType(collection.GetType()));
+
                         }
 
                         if (prop.PropertyType == typeof(short)) {
@@ -738,7 +739,7 @@ namespace MewtocolNet
                 Match m = errorcheck.Match(response.ToString());
                 if (m.Success) {
                     string eCode = m.Groups[1].Value;
-                    string eDes = Links.LinkedData.ErrorCodes[Convert.ToInt32(eCode)];
+                    string eDes = Links.CodeDescriptions.Error[Convert.ToInt32(eCode)];
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine($"Response is: {response}");
                     Logger.Log($"Error on command {_msg.Replace("\r", "")} the PLC returned error code: {eCode}, {eDes}", LogLevel.Error);

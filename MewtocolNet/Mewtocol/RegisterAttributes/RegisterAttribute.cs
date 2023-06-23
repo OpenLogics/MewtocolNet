@@ -23,16 +23,15 @@ namespace MewtocolNet.RegisterAttributes {
     /// <summary>
     /// Defines the behavior of a register property
     /// </summary>
-    [AttributeUsage(AttributeTargets.Property)]
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
     public class RegisterAttribute : Attribute {
 
         internal int MemoryArea;
         internal int StringLength;
         internal RegisterType RegisterType;
-        internal SpecialAddress SpecialAddress = SpecialAddress.None;
+        internal byte SpecialAddress = 0x0;
         internal BitCount BitCount;
         internal int AssignedBitIndex = -1;
-
 
         /// <summary>
         /// Attribute for string type or numeric registers 
@@ -49,31 +48,22 @@ namespace MewtocolNet.RegisterAttributes {
         /// <summary>
         /// Attribute for boolean registers
         /// </summary>
-        /// <param name="memoryArea">The area in the plcs memory</param>
-        /// <param name="type">The type of boolean register</param>
-        public RegisterAttribute (int memoryArea, RegisterType type) {
+        public RegisterAttribute(IOType type, byte spAdress = 0x0) {
 
-            if (type.ToString().StartsWith("DT"))
-                throw new NotSupportedException("DT types are not supported for attribute register setups because the number type is casted automatically");
-
-            MemoryArea = memoryArea;
-            RegisterType = type;
-            SpecialAddress = SpecialAddress.None;
+            MemoryArea = 0;
+            RegisterType = (RegisterType)(int)type;
+            SpecialAddress = spAdress;
 
         }
 
         /// <summary>
         /// Attribute for boolean registers
         /// </summary>
-        /// <param name="spAdress">The special area in the plcs memory</param>
-        /// <param name="type">The type of boolean register</param>
-        public RegisterAttribute (RegisterType type, SpecialAddress spAdress) {
+        public RegisterAttribute (IOType type, int memoryArea, byte spAdress = 0x0) {
 
-            if (type.ToString().StartsWith("DT"))
-                throw new NotSupportedException("DT types are not supported for attribute register setups because the number type is casted automatically");
-
-            RegisterType = type;
-            SpecialAddress = spAdress;
+            MemoryArea = memoryArea;
+            RegisterType = (RegisterType)(int)type;
+            SpecialAddress = spAdress;  
 
         }
 

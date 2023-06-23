@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Data;
 using System.Text;
 using MewtocolNet;
 
@@ -22,8 +23,6 @@ namespace MewtocolNet.Registers {
 
         internal RegisterType RegType { get; private set; }     
 
-        internal SpecialAddress SpecialAddress { get; private set; }
-
         internal Type collectionType;
 
         /// <summary>
@@ -44,50 +43,46 @@ namespace MewtocolNet.Registers {
         /// </summary>
         public string Name => name;
 
-        internal int memoryAdress;
+        internal int memoryAddress;
         /// <summary>
         /// The registers memory adress if not a special register
         /// </summary>
-        public int MemoryAddress => memoryAdress;
+        public int MemoryAddress => memoryAddress;
+
+        internal byte specialAddress;
+        /// <summary>
+        /// The registers memory adress if not a special register
+        /// </summary>
+        public byte SpecialAddress => specialAddress;
 
         /// <summary>
-        /// Defines a register containing a number
+        /// Creates a new boolean register
         /// </summary>
-        /// <param name="_address">Memory start adress max 99999</param>
-        /// <param name="_type">Type of boolean register</param>
-        /// <param name="_name">Name of the register</param>
-        public BRegister (int _address, RegisterType _type = RegisterType.R, string _name = null) {
+        /// <param name="_io">The io type prefix</param>
+        /// <param name="_spAddress">The special address</param>
+        /// <param name="_areaAdress">The area special address</param>
+        /// <param name="_name">The custom name</param>
+        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="Exception"></exception>
+        public BRegister (IOType _io, byte _spAddress = 0x0, int _areaAdress = 0, string _name = null) {
 
-            if (_address > 99999) throw new NotSupportedException("Memory addresses cant be greater than 99999");
+            if (_areaAdress < 0)
+                throw new NotSupportedException("The area address cant be negative");
 
-            if (_type != RegisterType.X && _type != RegisterType.Y && _type != RegisterType.R)
-                throw new NotSupportedException("The register type cant be numeric, use X, Y or R");
+            if(_io == IOType.R && _areaAdress >= 512)
+                throw new NotSupportedException("R area addresses cant be greater than 511");
 
-            memoryAdress = _address;
+            if ((_io == IOType.X || _io == IOType.Y) && _areaAdress >= 110)
+                throw new NotSupportedException("XY area addresses cant be greater than 110");
+
+            if (_spAddress > 0xF)
+                throw new NotSupportedException("Special address cant be greater 15 or 0xF");
+
+            memoryAddress = (int)_areaAdress;
+            specialAddress = _spAddress;
             name = _name;
 
-            RegType = _type;
-
-        }
-
-        /// <summary>
-        /// Defines a register containing a number
-        /// </summary>
-        /// <param name="_address">Memory start adress max 99999</param>
-        /// <param name="_type">Type of boolean register</param>
-        /// <param name="_name">Name of the register</param>
-        public BRegister (SpecialAddress _address, RegisterType _type = RegisterType.R, string _name = null) {
-
-            if (_address == SpecialAddress.None)
-                throw new NotSupportedException("Special address cant be none");
-
-            if (_type != RegisterType.X && _type != RegisterType.Y && _type != RegisterType.R)
-                throw new NotSupportedException("The register type cant be numeric, use X, Y or R");
-
-            SpecialAddress = _address;
-            name = _name;
-
-            RegType = _type;
+            RegType = (RegisterType)(int)_io;
 
         }
 
@@ -105,12 +100,13 @@ namespace MewtocolNet.Registers {
 
             //build area code from register type
             StringBuilder asciistring = new StringBuilder(RegType.ToString());
-            if(SpecialAddress == SpecialAddress.None) {
-                asciistring.Append(MemoryAddress.ToString().PadLeft(4, '0'));
-            } else {
-                asciistring.Append(SpecialAddress.ToString().PadLeft(4, '0'));
-            }
-            
+
+            string memPadded = MemoryAddress.ToString().PadLeft(4, '0');
+            string sp = SpecialAddress.ToString("X1");
+
+            asciistring.Append(memPadded);
+            asciistring.Append(sp);
+
             return asciistring.ToString();
 
         }
@@ -124,9 +120,6 @@ namespace MewtocolNet.Registers {
         }
 
         public string GetStartingMemoryArea() {
-
-            if (SpecialAddress != SpecialAddress.None)
-                return SpecialAddress.ToString();
 
             return MemoryAddress.ToString();
 
@@ -148,8 +141,18 @@ namespace MewtocolNet.Registers {
 
         public string GetRegisterPLCName() {
 
-            if (SpecialAddress != SpecialAddress.None) {
-                return $"{GetRegisterString()}{SpecialAddress}";
+            var spAdressEnd = SpecialAddress.ToString("X1");
+
+            if (MemoryAddress == 0) {
+
+                return $"{GetRegisterString()}{spAdressEnd}";
+
+            }
+
+            if(MemoryAddress > 0 && SpecialAddress != 0) {
+
+                return $"{GetRegisterString()}{MemoryAddress}{spAdressEnd}";
+
             }
 
             return $"{GetRegisterString()}{MemoryAddress}";

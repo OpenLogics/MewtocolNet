@@ -7,64 +7,62 @@ using System.Threading.Tasks;
 namespace MewtocolNet { 
 
     /// <summary>
-    /// The special register type
+    /// The register prefixed type
     /// </summary>
     public enum RegisterType {
 
         /// <summary>
         /// Physical input as a bool (Relay)
         /// </summary>
-        X,
+        X = 0,
         /// <summary>
         /// Physical output as a bool (Relay)
         /// </summary>
-        Y,
+        Y = 1,
         /// <summary>
         /// Internal as a bool (Relay)
         /// </summary>
-        R,
+        R = 2,
         /// <summary>
         /// Data area as a short (Register)
         /// </summary>
-        DT_short,
+        DT_short = 3,
         /// <summary>
         /// Data area as an unsigned short (Register)
         /// </summary>
-        DT_ushort,
+        DT_ushort = 4,
         /// <summary>
         /// Double data area as an integer  (Register)
         /// </summary>
-        DDT_int,
+        DDT_int = 5,
         /// <summary>
         /// Double data area as an unsigned integer (Register)
         /// </summary>
-        DDT_uint,
+        DDT_uint = 6,
         /// <summary>
         /// Double data area as an floating point number (Register)
         /// </summary>
-        DDT_float,
+        DDT_float = 7,
 
     }
 
     /// <summary>
-    /// The special input / output channel address
+    /// The type of an input/output register
     /// </summary>
-    public enum SpecialAddress {
-
-        #pragma warning disable CS1591
+    public enum IOType {
 
         /// <summary>
-        /// No defined
+        /// Physical input as a bool (Relay)
         /// </summary>
-        None,
-        A = -10,
-        B = -11,
-        C = -12,
-        D = -13,
-        E = -14,
-        F = -15,
-
-        #pragma warning restore
+        X = 0,
+        /// <summary>
+        /// Physical output as a bool (Relay)
+        /// </summary>
+        Y = 1,
+        /// <summary>
+        /// Internal relay
+        /// </summary>
+        R = 2,
 
     }
 

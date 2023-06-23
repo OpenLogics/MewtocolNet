@@ -21,11 +21,12 @@ namespace MewtocolTests {
         public class TestRegisterCollection : RegisterCollectionBase {
 
             //corresponds to a R100 boolean register in the PLC
-            [Register(1000, RegisterType.R)]
+            //can also be written as R1000 because the last one is a special address
+            [Register(IOType.R, 100, spAdress: 0)]
             public bool TestBool1 { get; private set; }
 
             //corresponds to a XD input of the PLC
-            [Register(RegisterType.X, SpecialAddress.D)]
+            [Register(IOType.X, (byte)0xD)]
             public bool TestBoolInputXD { get; private set; }
 
             //corresponds to a DT1101 - DT1104 string register in the PLC with (STRING[4])
@@ -117,7 +118,7 @@ namespace MewtocolTests {
             var register = interf.GetRegister(nameof(TestRegisterCollection.TestBool1));
 
             //test generic properties
-            TestBasicGeneration(register, nameof(TestRegisterCollection.TestBool1), false, 1000, "R1000");
+            TestBasicGeneration(register, nameof(TestRegisterCollection.TestBool1), false, 100, "R100");
 
         }
 

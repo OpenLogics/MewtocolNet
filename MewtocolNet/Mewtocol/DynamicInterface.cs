@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -205,167 +206,6 @@ namespace MewtocolNet {
 
         #region Register Adding
 
-
-        /// <summary>
-        /// Adds a PLC memory register to the watchlist <para/>
-        /// The registers can be read back by attaching <see cref="WithPoller"/>
-        /// </summary>
-        /// <param name="_address">The address of the register in the PLCs memory</param>
-        /// <param name="_type">
-        /// The memory area type
-        /// <para>X = Physical input area (bool)</para>
-        /// <para>Y = Physical input area (bool)</para>
-        /// <para>R = Internal relay area (bool)</para>
-        /// <para>DT = Internal data area (short/ushort)</para>
-        /// <para>DDT = Internal relay area (int/uint)</para>
-        /// </param>
-        /// <param name="_name">A naming definition for QOL, doesn't effect PLC and is optional</param>
-        public void AddRegister (int _address, RegisterType _type, string _name = null) {
-
-            IRegister toAdd = null;
-
-            //as number registers
-            if (_type == RegisterType.DT_short) {
-                toAdd = new NRegister<short>(_address, _name);
-            }
-            if (_type == RegisterType.DT_ushort) {
-                toAdd = new NRegister<ushort>(_address, _name);
-            }
-            if (_type == RegisterType.DDT_int) {
-                toAdd = new NRegister<int>(_address, _name);
-            }
-            if (_type == RegisterType.DDT_uint) {
-                toAdd = new NRegister<uint>(_address, _name);
-            }
-            if (_type == RegisterType.DDT_float) {
-                toAdd = new NRegister<float>(_address, _name);
-            }
-
-            if(toAdd == null) {
-                toAdd = new BRegister(_address, _type, _name);
-            }
-
-            Registers.Add(toAdd);
-
-        }
-
-        internal void AddRegister (Type _colType, int _address, RegisterType _type, string _name = null) {
-
-            IRegister toAdd = null;
-
-            //as number registers
-            if (_type == RegisterType.DT_short) {
-                toAdd = new NRegister<short>(_address, _name).WithCollectionType(_colType);
-            }
-            if (_type == RegisterType.DT_ushort) {
-                toAdd = new NRegister<ushort>(_address, _name).WithCollectionType(_colType);
-            }
-            if (_type == RegisterType.DDT_int) {
-                toAdd = new NRegister<int>(_address, _name).WithCollectionType(_colType);
-            }
-            if (_type == RegisterType.DDT_uint) {
-                toAdd = new NRegister<uint>(_address, _name).WithCollectionType(_colType);
-            }
-            if (_type == RegisterType.DDT_float) {
-                toAdd = new NRegister<float>(_address, _name).WithCollectionType(_colType);
-            }
-
-            if (toAdd == null) {
-                toAdd = new BRegister(_address, _type, _name).WithCollectionType(_colType);
-            }
-
-            Registers.Add(toAdd);
-
-        }
-
-        /// <summary>
-        /// Adds a PLC memory register to the watchlist <para/>
-        /// The registers can be read back by attaching <see cref="WithPoller"/>
-        /// </summary>
-        /// <param name="_spAddress">The special address of the register in the PLCs memory</param>
-        /// <param name="_type">
-        /// The memory area type
-        /// <para>X = Physical input area (bool)</para>
-        /// <para>Y = Physical input area (bool)</para>
-        /// <para>R = Internal relay area (bool)</para>
-        /// <para>DT = Internal data area (short/ushort)</para>
-        /// <para>DDT = Internal relay area (int/uint)</para>
-        /// </param>
-        /// <param name="_name">A naming definition for QOL, doesn't effect PLC and is optional</param>
-        public void AddRegister (SpecialAddress _spAddress, RegisterType _type, string _name = null) {
-
-            //as bool registers
-            Registers.Add(new BRegister(_spAddress, _type, _name));
-
-        }
-
-        internal void AddRegister (Type _colType, SpecialAddress _spAddress, RegisterType _type, string _name = null) {
-
-            var reg = new BRegister(_spAddress, _type, _name);
-
-            reg.collectionType = _colType;
-
-            //as bool registers
-            Registers.Add(reg);
-
-        }
-
-        /// <summary>
-        /// Adds a PLC memory register to the watchlist <para/>
-        /// The registers can be read back by attaching <see cref="WithPoller"/>
-        /// </summary>
-        /// <typeparam name="T">
-        /// The type of the register translated from C# to IEC 61131-3 types
-        /// <para>C# ------ IEC</para>
-        /// <para>short => INT/WORD</para>
-        /// <para>ushort => UINT</para>
-        /// <para>int => DOUBLE</para>
-        /// <para>uint => UDOUBLE</para>
-        /// <para>float => REAL</para>
-        /// <para>string => STRING</para>
-        /// </typeparam>
-        /// <param name="_name">A naming definition for QOL, doesn't effect PLC and is optional</param>
-        /// <param name="_address">The address of the register in the PLCs memory</param>
-        /// <param name="_length">The length of the string (Can be ignored for other types)</param>
-        public void AddRegister<T>(int _address, int _length = 1, string _name = null) {
-
-            Type regType = typeof(T);
-
-            if (regType != typeof(string) && _length != 1) {
-                throw new NotSupportedException($"_lenght parameter only allowed for register of type string");
-            }
-
-            IRegister toAdd;
-
-            if (regType == typeof(short)) {
-                toAdd = new NRegister<short>(_address, _name);
-            } else if (regType == typeof(ushort)) {
-                toAdd = new NRegister<ushort>(_address, _name);
-            } else if (regType == typeof(int)) {
-                toAdd = new NRegister<int>(_address, _name);
-            } else if (regType == typeof(uint)) {
-                toAdd = new NRegister<uint>(_address, _name);
-            } else if (regType == typeof(float)) {
-                toAdd = new NRegister<float>(_address, _name);
-            } else if (regType == typeof(string)) {
-                toAdd = new SRegister(_address, _length, _name);
-            } else if (regType == typeof(TimeSpan)) {
-                toAdd = new NRegister<TimeSpan>(_address, _name);
-            } else if (regType == typeof(bool)) {
-                toAdd = new BRegister(_address, RegisterType.R, _name);
-            } else {
-                throw new NotSupportedException($"The type {regType} is not allowed for Registers \n" +
-                                                $"Allowed are: short, ushort, int, uint, float and string");
-            }
-
-
-            if (Registers.Any(x => x.GetRegisterPLCName() == toAdd.GetRegisterPLCName())) {
-                throw new NotSupportedException($"Cannot add a register multiple times, " +
-                    $"make sure that all register attributes or AddRegister assignments have different adresses.");
-            }
-
-        }
-
         //Internal register adding for auto register collection building
         internal void AddRegister<T> (Type _colType, int _address, PropertyInfo boundProp, int _length = 1, bool _isBitwise = false, Type _enumType = null) {
 
@@ -405,7 +245,7 @@ namespace MewtocolNet {
             } else if (regType == typeof(TimeSpan)) {
                 reg = new NRegister<TimeSpan>(_address, propName).WithCollectionType(_colType);
             } else if (regType == typeof(bool)) {
-                reg = new BRegister(_address, RegisterType.R, propName).WithCollectionType(_colType);
+                reg = new BRegister(IOType.R, 0x0, _address,propName).WithCollectionType(_colType);
             }
 
             if (reg == null) {

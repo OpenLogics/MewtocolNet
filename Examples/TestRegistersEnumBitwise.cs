@@ -9,7 +9,7 @@ namespace Examples {
 
         private bool startCyclePLC;
 
-        [Register(50, RegisterType.R)]
+        [Register(IOType.R, 50)]
         public bool StartCyclePLC { 
             get => startCyclePLC;
             set => AutoSetter(value, ref startCyclePLC);

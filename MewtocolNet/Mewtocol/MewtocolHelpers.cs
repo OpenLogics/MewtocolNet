@@ -239,6 +239,24 @@ namespace MewtocolNet {
 
         }
 
+        /// <summary>
+        /// Checks if the register type is non numeric
+        /// </summary>
+        internal static bool IsBoolean (this RegisterType type) {
+
+            return type == RegisterType.X || type == RegisterType.Y || type == RegisterType.R;
+
+        }
+
+        /// <summary>
+        /// Checks if the register type is an physical in or output of the plc
+        /// </summary>
+        internal static bool IsPhysicalInOutType (this RegisterType type) {
+
+            return type == RegisterType.X || type == RegisterType.Y;
+
+        }
+
     }
 
 }

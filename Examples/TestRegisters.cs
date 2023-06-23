@@ -7,7 +7,7 @@ namespace Examples {
     public class TestRegisters : RegisterCollectionBase {
 
         //corresponds to a R100 boolean register in the PLC
-        [Register(1000, RegisterType.R)]
+        [Register(IOType.R, 1000)]
         public bool TestBool1 { get; private set; }
 
         private int testDuplicate;
@@ -19,7 +19,7 @@ namespace Examples {
         }
 
         //corresponds to a XD input of the PLC
-        [Register(RegisterType.X, SpecialAddress.D)]
+        [Register(IOType.X, (byte)0xD)]
         public bool TestBoolInputXD { get; private set; } 
 
         //corresponds to a DT1101 - DT1104 string register in the PLC with (STRING[4])
