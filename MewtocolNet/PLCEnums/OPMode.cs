@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace MewtocolNet {
+﻿namespace MewtocolNet.PLCEnums {
 
     /// <summary>
     /// CPU type of the PLC

@@ -1,27 +1,21 @@
+using MewtocolNet.Logging;
+using MewtocolNet.Queue;
+using MewtocolNet.RegisterAttributes;
+using MewtocolNet.Subregisters;
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Linq;
-using MewtocolNet.Registers;
-using MewtocolNet.RegisterAttributes;
-using MewtocolNet.Logging;
-using System.Collections;
-using System.Diagnostics;
-using System.ComponentModel;
-using System.Net;
-using System.Threading;
-using MewtocolNet.Queue;
-using System.Reflection;
-using System.Timers;
-using System.Data;
-using System.Xml.Linq;
 
-namespace MewtocolNet
-{
+namespace MewtocolNet {
 
     /// <summary>
     /// The PLC com interface class
@@ -63,7 +57,7 @@ namespace MewtocolNet
         /// </summary>
         public int PollerDelayMs {
             get => pollerDelayMs;
-            set { 
+            set {
                 pollerDelayMs = value;
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PollerDelayMs)));
             }
@@ -108,8 +102,8 @@ namespace MewtocolNet
         /// <summary>
         /// Generic information about the connected PLC
         /// </summary>
-        public PLCInfo PlcInfo { 
-            get => plcInfo; 
+        public PLCInfo PlcInfo {
+            get => plcInfo;
             private set {
                 plcInfo = value;
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PlcInfo)));
@@ -158,7 +152,7 @@ namespace MewtocolNet
         /// The current transmission speed in bytes per second
         /// </summary>
         public int BytesPerSecondUpstream {
-            get { return bytesPerSecondUpstream; }  
+            get { return bytesPerSecondUpstream; }
             private set {
                 bytesPerSecondUpstream = value;
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BytesPerSecondUpstream)));
@@ -195,7 +189,7 @@ namespace MewtocolNet
         /// <param name="_ip">IP adress of the PLC</param>
         /// <param name="_port">Port of the PLC</param>
         /// <param name="_station">Station Number of the PLC</param>
-        public MewtocolInterface (string _ip, int _port = 9094, int _station = 1) {
+        public MewtocolInterface(string _ip, int _port = 9094, int _station = 1) {
 
             ip = _ip;
             port = _port;
@@ -203,7 +197,7 @@ namespace MewtocolNet
 
             Connected += MewtocolInterface_Connected;
 
-            void MewtocolInterface_Connected (PLCInfo obj) {
+            void MewtocolInterface_Connected(PLCInfo obj) {
 
                 if (usePoller)
                     AttachPoller();
@@ -237,7 +231,7 @@ namespace MewtocolNet
         /// </param>
         /// <param name="OnFailed">Gets called when an error or timeout during connection occurs</param>
         /// <returns></returns>
-        public async Task<MewtocolInterface> ConnectAsync (Action<PLCInfo> OnConnected = null, Action OnFailed = null) {
+        public async Task<MewtocolInterface> ConnectAsync(Action<PLCInfo> OnConnected = null, Action OnFailed = null) {
 
             Logger.Log("Connecting to PLC...", LogLevel.Info, this);
 
@@ -258,7 +252,7 @@ namespace MewtocolNet
                     }
 
                     PolledCycle += OnPollCycleDone;
-                    void OnPollCycleDone () {
+                    void OnPollCycleDone() {
                         OnConnected(plcinf);
                         PolledCycle -= OnPollCycleDone;
                     }
@@ -284,7 +278,7 @@ namespace MewtocolNet
         /// <param name="_ip">Ip adress</param>
         /// <param name="_port">Port number</param>
         /// <param name="_station">Station number</param>
-        public void ChangeConnectionSettings (string _ip, int _port, int _station = 1) {
+        public void ChangeConnectionSettings(string _ip, int _port, int _station = 1) {
 
             if (IsConnected)
                 throw new Exception("Cannot change the connection settings while the PLC is connected");
@@ -298,7 +292,7 @@ namespace MewtocolNet
         /// <summary>
         /// Closes the connection all cyclic polling 
         /// </summary>
-        public void Disconnect () {
+        public void Disconnect() {
 
             if (!IsConnected)
                 return;
@@ -311,7 +305,7 @@ namespace MewtocolNet
         /// Attaches a poller to the interface that continously 
         /// polls the registered data registers and writes the values to them
         /// </summary>
-        public MewtocolInterface WithPoller () {
+        public MewtocolInterface WithPoller() {
 
             usePoller = true;
 
@@ -323,7 +317,7 @@ namespace MewtocolNet
 
         #region TCP connection state handling
 
-        private async Task ConnectTCP () {
+        private async Task ConnectTCP() {
 
             if (!IPAddress.TryParse(ip, out var targetIP)) {
                 throw new ArgumentException("The IP adress of the PLC was no valid format");
@@ -331,8 +325,8 @@ namespace MewtocolNet
 
             try {
 
-                if(HostEndpoint != null) {
-                    
+                if (HostEndpoint != null) {
+
                     client = new TcpClient(HostEndpoint) {
                         ReceiveBufferSize = RecBufferSize,
                         NoDelay = false,
@@ -353,12 +347,12 @@ namespace MewtocolNet
                 var result = client.BeginConnect(targetIP, port, null, null);
                 var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(ConnectTimeout));
 
-                if(!success || !client.Connected) {
+                if (!success || !client.Connected) {
                     OnMajorSocketExceptionWhileConnecting();
                     return;
                 }
 
-                if(HostEndpoint == null) {
+                if (HostEndpoint == null) {
                     var ep = (IPEndPoint)client.Client.LocalEndPoint;
                     Logger.Log($"Connecting [AUTO] endpoint: {ep.Address.MapToIPv4()}:{ep.Port}", LogLevel.Verbose, this);
                 }
@@ -376,7 +370,7 @@ namespace MewtocolNet
 
         }
 
-        private void OnMajorSocketExceptionWhileConnecting () {
+        private void OnMajorSocketExceptionWhileConnecting() {
 
             Logger.Log("The PLC connection timed out", LogLevel.Error, this);
             CycleTimeMs = 0;
@@ -385,7 +379,7 @@ namespace MewtocolNet
 
         }
 
-        private void OnMajorSocketExceptionWhileConnected () {
+        private void OnMajorSocketExceptionWhileConnected() {
 
             if (IsConnected) {
 
@@ -400,7 +394,7 @@ namespace MewtocolNet
 
         }
 
-        private void ClearRegisterVals () {
+        private void ClearRegisterVals() {
 
             for (int i = 0; i < Registers.Count; i++) {
 
@@ -423,7 +417,7 @@ namespace MewtocolNet
         /// and assert some propertys with the custom <see cref="RegisterAttribute"/>.
         /// </summary>
         /// <param name="collection">A collection inherting the <see cref="RegisterCollectionBase"/> class</param>
-        public MewtocolInterface WithRegisterCollection (RegisterCollectionBase collection) {
+        public MewtocolInterface WithRegisterCollection(RegisterCollectionBase collection) {
 
             collection.PLCInterface = this;
 
@@ -516,7 +510,7 @@ namespace MewtocolNet
             RegisterChanged += (reg) => {
 
                 //register is used bitwise
-                if(reg.IsUsedBitwise()) {
+                if (reg.IsUsedBitwise()) {
 
                     for (int i = 0; i < props.Length; i++) {
 
@@ -524,7 +518,7 @@ namespace MewtocolNet
                         var bitWiseFound = prop.GetCustomAttributes(true)
                         .FirstOrDefault(y => y.GetType() == typeof(RegisterAttribute) && ((RegisterAttribute)y).MemoryArea == reg.MemoryAddress);
 
-                        if(bitWiseFound != null) {
+                        if (bitWiseFound != null) {
 
                             var casted = (RegisterAttribute)bitWiseFound;
                             var bitIndex = casted.AssignedBitIndex;
@@ -534,13 +528,13 @@ namespace MewtocolNet
                             if (reg is NRegister<short> reg16) {
                                 var bytes = BitConverter.GetBytes((short)reg16.Value);
                                 bitAr = new BitArray(bytes);
-                            } else if(reg is NRegister<int> reg32) {
+                            } else if (reg is NRegister<int> reg32) {
                                 var bytes = BitConverter.GetBytes((int)reg32.Value);
                                 bitAr = new BitArray(bytes);
                             }
 
                             if (bitAr != null && bitIndex < bitAr.Length && bitIndex >= 0) {
-                                
+
                                 //set the specific bit index if needed
                                 prop.SetValue(collection, bitAr[bitIndex]);
                                 collection.TriggerPropertyChanged(prop.Name);
@@ -550,7 +544,7 @@ namespace MewtocolNet
                                 //set the specific bit array if needed
                                 prop.SetValue(collection, bitAr);
                                 collection.TriggerPropertyChanged(prop.Name);
-                            
+
                             }
 
                         }
@@ -558,7 +552,7 @@ namespace MewtocolNet
                     }
 
                 }
-                
+
                 //updating normal properties
                 var foundToUpdate = props.FirstOrDefault(x => x.Name == reg.Name);
 
@@ -576,13 +570,13 @@ namespace MewtocolNet
                     if (registerAttr.AssignedBitIndex == -1) {
 
                         HashSet<Type> NumericTypes = new HashSet<Type> {
-                            typeof(bool), 
-                            typeof(short), 
+                            typeof(bool),
+                            typeof(short),
                             typeof(ushort),
-                            typeof(int), 
-                            typeof(uint), 
-                            typeof(float), 
-                            typeof(TimeSpan), 
+                            typeof(int),
+                            typeof(uint),
+                            typeof(float),
+                            typeof(TimeSpan),
                             typeof(string)
                         };
 
@@ -625,7 +619,7 @@ namespace MewtocolNet
         /// </summary>
         /// <param name="registerName">The name the register was given to or a property name from the RegisterCollection class</param>
         /// <param name="value">The value to write to the register</param>
-        public void SetRegister (string registerName, object value) {
+        public void SetRegister(string registerName, object value) {
 
             var foundRegister = GetAllRegisters().FirstOrDefault(x => x.Name == registerName);
 
@@ -642,7 +636,7 @@ namespace MewtocolNet
         /// </summary>
         /// <param name="registerName">The name the register was given to or a property name from the RegisterCollection class</param>
         /// <param name="value">The value to write to the register</param>
-        public async Task<bool> SetRegisterAsync (string registerName, object value) {
+        public async Task<bool> SetRegisterAsync(string registerName, object value) {
 
             var foundRegister = GetAllRegisters().FirstOrDefault(x => x.Name == registerName);
 
@@ -711,7 +705,7 @@ namespace MewtocolNet
         /// </summary>
         /// <param name="_msg">MEWTOCOL Formatted request string ex: %01#RT</param>
         /// <returns>Returns the result</returns>
-        public async Task<CommandResult> SendCommandAsync (string _msg) {
+        public async Task<CommandResult> SendCommandAsync(string _msg) {
 
             _msg = _msg.BuildBCCFrame();
             _msg += "\r";
@@ -720,10 +714,10 @@ namespace MewtocolNet
             try {
 
                 queuedMessages++;
-                
+
                 var response = await queue.Enqueue(() => SendSingleBlock(_msg));
 
-                if (queuedMessages > 0) 
+                if (queuedMessages > 0)
                     queuedMessages--;
 
                 if (response == null) {
@@ -739,7 +733,7 @@ namespace MewtocolNet
                 Match m = errorcheck.Match(response.ToString());
                 if (m.Success) {
                     string eCode = m.Groups[1].Value;
-                    string eDes = Links.CodeDescriptions.Error[Convert.ToInt32(eCode)];
+                    string eDes = CodeDescriptions.Error[Convert.ToInt32(eCode)];
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine($"Response is: {response}");
                     Logger.Log($"Error on command {_msg.Replace("\r", "")} the PLC returned error code: {eCode}, {eDes}", LogLevel.Error);
@@ -767,9 +761,9 @@ namespace MewtocolNet
 
         }
 
-        private async Task<string> SendSingleBlock (string _blockString) {
+        private async Task<string> SendSingleBlock(string _blockString) {
 
-            if (client == null || !client.Connected ) {
+            if (client == null || !client.Connected) {
                 await ConnectTCP();
             }
 
@@ -779,11 +773,11 @@ namespace MewtocolNet
             var message = _blockString.ToHexASCIIBytes();
 
             //time measuring
-            if(speedStopwatchUpstr == null) {
+            if (speedStopwatchUpstr == null) {
                 speedStopwatchUpstr = Stopwatch.StartNew();
             }
 
-            if(speedStopwatchUpstr.Elapsed.TotalSeconds >= 1) {
+            if (speedStopwatchUpstr.Elapsed.TotalSeconds >= 1) {
                 speedStopwatchUpstr.Restart();
                 bytesTotalCountedUpstream = 0;
             }
@@ -846,15 +840,15 @@ namespace MewtocolNet
                 return null;
             }
 
-            if(!string.IsNullOrEmpty(response.ToString())) {
-                
+            if (!string.IsNullOrEmpty(response.ToString())) {
+
                 Logger.Log($"<-- IN MSG: {response}", LogLevel.Critical, this);
 
                 bytesTotalCountedDownstream += Encoding.ASCII.GetByteCount(response.ToString());
 
                 var perSecDownstream = (double)((bytesTotalCountedDownstream / speedStopwatchDownstr.Elapsed.TotalMilliseconds) * 1000);
 
-                if(perSecUpstream <= 10000) 
+                if (perSecUpstream <= 10000)
                     BytesPerSecondDownstream = (int)Math.Round(perSecUpstream, MidpointRounding.AwayFromZero);
 
                 return response.ToString();
@@ -872,7 +866,7 @@ namespace MewtocolNet
         /// <summary>
         /// Disposes the current interface and clears all its members
         /// </summary>
-        public void Dispose () {
+        public void Dispose() {
 
             if (Disposed) return;
 
@@ -891,7 +885,7 @@ namespace MewtocolNet
         /// <summary>
         /// Gets the connection info string
         /// </summary>
-        public string GetConnectionPortInfo () {
+        public string GetConnectionPortInfo() {
 
             return $"{IpAddress}:{Port}";
 
@@ -900,6 +894,5 @@ namespace MewtocolNet
         #endregion
 
     }
-
 
 }

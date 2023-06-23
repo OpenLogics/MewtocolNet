@@ -1,6 +1,7 @@
-﻿using System;
+﻿using MewtocolNet.PLCEnums;
+using System;
 
-namespace MewtocolNet.Registers {
+namespace MewtocolNet {
 
     /// <summary>
     /// Contains information about the plc and its cpu
@@ -22,7 +23,7 @@ namespace MewtocolNet.Registers {
         /// </summary>
         public string CpuVersion { get; set; }
 
-        internal static CpuInfo BuildFromHexString (string _cpuType, string _cpuVersion, string _progCapacity) {
+        internal static CpuInfo BuildFromHexString(string _cpuType, string _cpuVersion, string _progCapacity) {
 
             CpuInfo retInf = new CpuInfo();
 
@@ -61,7 +62,7 @@ namespace MewtocolNet.Registers {
             return retInf;
 
         }
-    
+
     }
 
 }

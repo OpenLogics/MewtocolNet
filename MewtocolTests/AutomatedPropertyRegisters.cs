@@ -1,14 +1,15 @@
 using Xunit;
 
 using MewtocolNet;
-using MewtocolNet.Registers;
 using System.Diagnostics;
 using Xunit.Abstractions;
 using System.Collections;
 using MewtocolNet.RegisterAttributes;
 using Microsoft.Win32;
+using MewtocolNet.Subregisters;
 
-namespace MewtocolTests {
+namespace MewtocolTests
+{
 
     public class AutomatedPropertyRegisters {
 

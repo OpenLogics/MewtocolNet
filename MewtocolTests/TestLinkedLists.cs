@@ -3,9 +3,9 @@ using Xunit;
 using MewtocolNet;
 using MewtocolNet.Registers;
 using Xunit.Abstractions;
-using MewtocolNet.Links;
 
-namespace MewtocolTests {
+namespace MewtocolTests
+{
 
     public class TestLinkedLists {
 

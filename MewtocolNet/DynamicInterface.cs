@@ -1,14 +1,10 @@
-﻿using System;
+﻿using MewtocolNet.Logging;
+using MewtocolNet.Subregisters;
+using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using MewtocolNet.Logging;
-using MewtocolNet.RegisterAttributes;
-using MewtocolNet.Registers;
 
 namespace MewtocolNet {
 
@@ -41,7 +37,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Kills the poller completely
         /// </summary>
-        internal void KillPoller () {
+        internal void KillPoller() {
 
             pollerTaskRunning = false;
             pollerTaskStopped = true;
@@ -54,7 +50,7 @@ namespace MewtocolNet {
         /// Pauses the polling and waits for the last message to be sent
         /// </summary>
         /// <returns></returns>
-        public async Task PausePollingAsync () {
+        public async Task PausePollingAsync() {
 
             if (!pollerTaskRunning)
                 return;
@@ -65,9 +61,9 @@ namespace MewtocolNet {
 
                 if (pollerIsPaused)
                     break;
-                
+
                 await Task.Delay(10);
-            
+
             }
 
             pollerTaskRunning = false;
@@ -77,7 +73,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Resumes the polling
         /// </summary>
-        public void ResumePolling () {
+        public void ResumePolling() {
 
             pollerTaskRunning = true;
 
@@ -86,7 +82,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Attaches a continous reader that reads back the Registers and Contacts
         /// </summary>
-        internal void AttachPoller () {
+        internal void AttachPoller() {
 
             if (pollerTaskRunning)
                 return;
@@ -196,9 +192,9 @@ namespace MewtocolNet {
 
         }
 
-        internal void PropertyRegisterWasSet (string propName, object value) {
+        internal void PropertyRegisterWasSet(string propName, object value) {
 
-            SetRegister(propName, value);      
+            SetRegister(propName, value);
 
         }
 
@@ -207,7 +203,7 @@ namespace MewtocolNet {
         #region Register Adding
 
         //Internal register adding for auto register collection building
-        internal void AddRegister<T> (Type _colType, int _address, PropertyInfo boundProp, int _length = 1, bool _isBitwise = false, Type _enumType = null) {
+        internal void AddRegister<T>(Type _colType, int _address, PropertyInfo boundProp, int _length = 1, bool _isBitwise = false, Type _enumType = null) {
 
             Type regType = typeof(T);
 
@@ -224,7 +220,7 @@ namespace MewtocolNet {
             string propName = boundProp.Name;
 
             //rename the property name to prevent duplicate names in case of a bitwise prop
-            if(_isBitwise && regType == typeof(short))
+            if (_isBitwise && regType == typeof(short))
                 propName = $"Auto_Bitwise_DT{_address}";
 
             if (_isBitwise && regType == typeof(int))
@@ -245,7 +241,7 @@ namespace MewtocolNet {
             } else if (regType == typeof(TimeSpan)) {
                 reg = new NRegister<TimeSpan>(_address, propName).WithCollectionType(_colType);
             } else if (regType == typeof(bool)) {
-                reg = new BRegister(IOType.R, 0x0, _address,propName).WithCollectionType(_colType);
+                reg = new BRegister(IOType.R, 0x0, _address, propName).WithCollectionType(_colType);
             }
 
             if (reg == null) {
@@ -270,7 +266,7 @@ namespace MewtocolNet {
         /// Gets a register that was added by its name
         /// </summary>
         /// <returns></returns>
-        public IRegister GetRegister (string name) {
+        public IRegister GetRegister(string name) {
 
             return Registers.FirstOrDefault(x => x.Name == name);
 
@@ -281,16 +277,16 @@ namespace MewtocolNet {
         /// </summary>
         /// <typeparam name="T">The type of register</typeparam>
         /// <returns>A casted register or the <code>default</code> value</returns>
-        public T GetRegister<T> (string name) where T : IRegister {
+        public T GetRegister<T>(string name) where T : IRegister {
             try {
-                
+
                 var reg = Registers.FirstOrDefault(x => x.Name == name);
                 return (T)reg;
 
             } catch (InvalidCastException) {
-            
+
                 return default(T);
-            
+
             }
 
         }
@@ -302,7 +298,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Gets a list of all added registers
         /// </summary>
-        public List<IRegister> GetAllRegisters () {
+        public List<IRegister> GetAllRegisters() {
 
             return Registers;
 
@@ -312,19 +308,20 @@ namespace MewtocolNet {
 
         #region Event Invoking 
 
-        internal void InvokeRegisterChanged (IRegister reg) {
+        internal void InvokeRegisterChanged(IRegister reg) {
 
-            RegisterChanged?.Invoke(reg);      
+            RegisterChanged?.Invoke(reg);
 
         }
 
-        internal void InvokePolledCycleDone () {
+        internal void InvokePolledCycleDone() {
 
-            PolledCycle?.Invoke();    
+            PolledCycle?.Invoke();
 
         }
 
         #endregion
 
     }
+
 }

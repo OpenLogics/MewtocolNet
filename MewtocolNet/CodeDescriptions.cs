@@ -1,7 +1,6 @@
-using System;
 using System.Collections.Generic;
 
-namespace MewtocolNet.Links {
+namespace MewtocolNet {
 
     internal class CodeDescriptions {
 
@@ -39,7 +38,6 @@ namespace MewtocolNet.Links {
             {73, "Timeout"},
 
         };
-
 
     }
 

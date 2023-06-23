@@ -1,24 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MewtocolNet.RegisterAttributes {
-
-    /// <summary>
-    /// The size of the bitwise register
-    /// </summary>
-    public enum BitCount {
-        /// <summary>
-        /// 16 bit
-        /// </summary>
-        B16,
-        /// <summary>
-        /// 32 bit
-        /// </summary>
-        B32
-    }
 
     /// <summary>
     /// Defines the behavior of a register property
@@ -38,10 +20,10 @@ namespace MewtocolNet.RegisterAttributes {
         /// </summary>
         /// <param name="memoryArea">The area in the plcs memory</param>
         /// <param name="stringLength">The max string length in the plc</param>
-        public RegisterAttribute (int memoryArea, int stringLength = 1) {
+        public RegisterAttribute(int memoryArea, int stringLength = 1) {
 
             MemoryArea = memoryArea;
-            StringLength = stringLength;   
+            StringLength = stringLength;
 
         }
 
@@ -59,11 +41,11 @@ namespace MewtocolNet.RegisterAttributes {
         /// <summary>
         /// Attribute for boolean registers
         /// </summary>
-        public RegisterAttribute (IOType type, int memoryArea, byte spAdress = 0x0) {
+        public RegisterAttribute(IOType type, int memoryArea, byte spAdress = 0x0) {
 
             MemoryArea = memoryArea;
             RegisterType = (RegisterType)(int)type;
-            SpecialAddress = spAdress;  
+            SpecialAddress = spAdress;
 
         }
 
@@ -72,7 +54,7 @@ namespace MewtocolNet.RegisterAttributes {
         /// </summary>
         /// <param name="memoryArea">The area in the plcs memory</param>
         /// <param name="bitcount">The number of bits to parse</param>
-        public RegisterAttribute (int memoryArea, BitCount bitcount) {
+        public RegisterAttribute(int memoryArea, BitCount bitcount) {
 
             MemoryArea = memoryArea;
             StringLength = 0;
@@ -86,9 +68,9 @@ namespace MewtocolNet.RegisterAttributes {
         /// <param name="memoryArea">The area in the plcs memory</param>
         /// <param name="bitcount">The number of bits to parse</param>
         /// <param name="assignBit">The index of the bit that gets linked to the bool</param>
-        public RegisterAttribute (int memoryArea, uint assignBit, BitCount bitcount) {
+        public RegisterAttribute(int memoryArea, uint assignBit, BitCount bitcount) {
 
-            if(assignBit > 15 && bitcount == BitCount.B16) {
+            if (assignBit > 15 && bitcount == BitCount.B16) {
                 throw new NotSupportedException("The assignBit parameter cannot be greater than 15 in a 16 bit var");
             }
 

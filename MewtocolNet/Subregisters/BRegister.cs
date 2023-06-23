@@ -1,10 +1,8 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Data;
 using System.Text;
-using MewtocolNet;
 
-namespace MewtocolNet.Registers {
+namespace MewtocolNet.Subregisters {
 
     /// <summary>
     /// Defines a register containing a boolean
@@ -21,7 +19,7 @@ namespace MewtocolNet.Registers {
         /// </summary>
         public event PropertyChangedEventHandler PropertyChanged;
 
-        internal RegisterType RegType { get; private set; }     
+        internal RegisterType RegType { get; private set; }
 
         internal Type collectionType;
 
@@ -64,12 +62,12 @@ namespace MewtocolNet.Registers {
         /// <param name="_name">The custom name</param>
         /// <exception cref="NotSupportedException"></exception>
         /// <exception cref="Exception"></exception>
-        public BRegister (IOType _io, byte _spAddress = 0x0, int _areaAdress = 0, string _name = null) {
+        public BRegister(IOType _io, byte _spAddress = 0x0, int _areaAdress = 0, string _name = null) {
 
             if (_areaAdress < 0)
                 throw new NotSupportedException("The area address cant be negative");
 
-            if(_io == IOType.R && _areaAdress >= 512)
+            if (_io == IOType.R && _areaAdress >= 512)
                 throw new NotSupportedException("R area addresses cant be greater than 511");
 
             if ((_io == IOType.X || _io == IOType.Y) && _areaAdress >= 110)
@@ -78,7 +76,7 @@ namespace MewtocolNet.Registers {
             if (_spAddress > 0xF)
                 throw new NotSupportedException("Special address cant be greater 15 or 0xF");
 
-            memoryAddress = (int)_areaAdress;
+            memoryAddress = _areaAdress;
             specialAddress = _spAddress;
             name = _name;
 
@@ -96,7 +94,7 @@ namespace MewtocolNet.Registers {
         /// <summary>
         /// Builds the register area name
         /// </summary>
-        public string BuildMewtocolQuery () {
+        public string BuildMewtocolQuery() {
 
             //build area code from register type
             StringBuilder asciistring = new StringBuilder(RegType.ToString());
@@ -111,12 +109,12 @@ namespace MewtocolNet.Registers {
 
         }
 
-        internal void SetValueFromPLC (bool val) {
+        internal void SetValueFromPLC(bool val) {
 
             lastValue = val;
             TriggerChangedEvnt(this);
             TriggerNotifyChange();
-        
+
         }
 
         public string GetStartingMemoryArea() {
@@ -149,7 +147,7 @@ namespace MewtocolNet.Registers {
 
             }
 
-            if(MemoryAddress > 0 && SpecialAddress != 0) {
+            if (MemoryAddress > 0 && SpecialAddress != 0) {
 
                 return $"{GetRegisterString()}{MemoryAddress}{spAdressEnd}";
 

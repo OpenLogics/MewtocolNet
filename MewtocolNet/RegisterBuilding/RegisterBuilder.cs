@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace MewtocolNet.RegisterBuilding {
 
-namespace MewtocolNet.Mewtocol {
-    
     /// <summary>
     /// Contains useful tools for register creation
     /// </summary>
@@ -15,12 +11,14 @@ namespace MewtocolNet.Mewtocol {
         /// <param name="name">The name, fe. DT100</param>
         /// <param name="reg">An <see cref="IRegister"/> or null if </param>
         /// <returns>True if successfully parsed</returns>
-        //public static bool TryBuildFromName (string name, out IRegister reg) {
+        public static bool TryBuildFromName(string name, out IRegister reg) {
 
+            reg = null;
 
+            return false;
 
-        //}
-    
+        }
+
     }
 
 }

@@ -2,7 +2,7 @@
 using System.ComponentModel;
 using System.Text;
 
-namespace MewtocolNet.Registers {
+namespace MewtocolNet.Subregisters {
     /// <summary>
     /// Defines a register containing a string
     /// </summary>
@@ -91,7 +91,7 @@ namespace MewtocolNet.Registers {
             return asciistring.ToString();
         }
 
-        internal string BuildCustomIdent (int overwriteWordLength) {
+        internal string BuildCustomIdent(int overwriteWordLength) {
 
             if (overwriteWordLength <= 0)
                 throw new Exception("overwriteWordLength cant be 0 or less");
@@ -108,16 +108,16 @@ namespace MewtocolNet.Registers {
 
         public bool IsUsedBitwise() => false;
 
-        internal void SetValueFromPLC (string val) {
+        internal void SetValueFromPLC(string val) {
 
             lastValue = val;
 
             TriggerChangedEvnt(this);
             TriggerNotifyChange();
-        
+
         }
 
-        public string GetStartingMemoryArea() => this.MemoryAddress.ToString();
+        public string GetStartingMemoryArea() => MemoryAddress.ToString();
 
         public string GetValueString() => Value?.ToString() ?? "";
 
@@ -135,7 +135,7 @@ namespace MewtocolNet.Registers {
 
         public void TriggerNotifyChange() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Value"));
 
-        public override string ToString () => $"{GetRegisterPLCName()} - Value: {GetValueString()}";
+        public override string ToString() => $"{GetRegisterPLCName()} - Value: {GetValueString()}";
 
     }
 

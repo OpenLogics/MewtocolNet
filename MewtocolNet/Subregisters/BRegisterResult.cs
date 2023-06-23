@@ -1,4 +1,4 @@
-﻿namespace MewtocolNet.Registers {
+﻿namespace MewtocolNet.Subregisters {
 
     /// <summary>
     /// Result for a boolean register

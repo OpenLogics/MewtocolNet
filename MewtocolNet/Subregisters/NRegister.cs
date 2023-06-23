@@ -2,16 +2,15 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Reflection;
 using System.Text;
 
-namespace MewtocolNet.Registers {
+namespace MewtocolNet.Subregisters {
 
     /// <summary>
     /// Defines a register containing a number
     /// </summary>
     /// <typeparam name="T">The type of the numeric value</typeparam>
-    public class NRegister<T> : IRegister  {
+    public class NRegister<T> : IRegister {
 
         /// <summary>
         /// Gets called whenever the value was changed
@@ -64,7 +63,7 @@ namespace MewtocolNet.Registers {
         /// </summary>
         /// <param name="_adress">Memory start adress max 99999</param>
         /// <param name="_name">Name of the register</param>
-        public NRegister (int _adress, string _name = null) {
+        public NRegister(int _adress, string _name = null) {
 
             if (_adress > 99999)
                 throw new NotSupportedException("Memory adresses cant be greater than 99999");
@@ -113,18 +112,18 @@ namespace MewtocolNet.Registers {
             }
 
             isUsedBitwise = isBitwise;
-            enumType = _enumType;    
+            enumType = _enumType;
 
         }
 
-        internal NRegister<T> WithCollectionType (Type colType) {
+        internal NRegister<T> WithCollectionType(Type colType) {
 
             collectionType = colType;
             return this;
 
         }
 
-        internal void SetValueFromPLC (object val) {
+        internal void SetValueFromPLC(object val) {
 
             lastValue = (T)val;
             TriggerChangedEvnt(this);
@@ -132,7 +131,7 @@ namespace MewtocolNet.Registers {
 
         }
 
-        public string GetStartingMemoryArea () => this.MemoryAddress.ToString();
+        public string GetStartingMemoryArea() => MemoryAddress.ToString();
 
         public Type GetCollectionType() => CollectionType;
 
@@ -141,10 +140,10 @@ namespace MewtocolNet.Registers {
         public string GetValueString() {
 
             //is number or bitwise
-            if(enumType == null) {
+            if (enumType == null) {
 
                 return $"{Value}{(isUsedBitwise ? $" [{GetBitwise().ToBitString()}]" : "")}";
-            
+
             }
 
             //is enum
@@ -164,11 +163,11 @@ namespace MewtocolNet.Registers {
                 if (dict.ContainsKey(shortVal)) {
 
                     return $"{Value} ({dict[shortVal]})";
-                
+
                 } else {
-                
+
                     return $"{Value} (Missing Enum)";
-                
+
                 }
 
             }
@@ -228,7 +227,7 @@ namespace MewtocolNet.Registers {
 
         public string GetRegisterString() {
 
-            if(Value is short) {
+            if (Value is short) {
                 return "DT";
             }
 

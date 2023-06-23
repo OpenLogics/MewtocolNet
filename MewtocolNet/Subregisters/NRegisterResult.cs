@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace MewtocolNet.Registers {
+﻿namespace MewtocolNet.Subregisters {
     /// <summary>
     /// Result for a read/write operation
     /// </summary>
@@ -20,15 +18,15 @@ namespace MewtocolNet.Registers {
         /// <summary>
         /// Trys to get the value of there is one
         /// </summary>
-        public bool TryGetValue (out T value) {
+        public bool TryGetValue(out T value) {
 
-            if(Result.Success) {
+            if (Result.Success) {
                 value = (T)Register.Value;
                 return true;
             }
-            value = default(T);
+            value = default;
             return false;
-        
+
         }
 
     }

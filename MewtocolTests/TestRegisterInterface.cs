@@ -61,6 +61,7 @@ namespace MewtocolTests {
                 
                 //boolean
                 new BRegister(IOType.R, 0, 100),
+                new BRegister(IOType.R, 0, 0),
                 new BRegister(IOType.X, 5),
                 new BRegister(IOType.X, 0xA),
                 new BRegister(IOType.X, 0xF, 109),
@@ -82,6 +83,7 @@ namespace MewtocolTests {
 
                 //boolean
                 "R100",
+                "R0",
                 "X5",
                 "XA",
                 "X109F",

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace MewtocolNet.Registers {
+namespace MewtocolNet {
 
     /// <summary>
     /// All modes
@@ -43,7 +43,7 @@ namespace MewtocolNet.Registers {
         /// <summary>
         /// Gets operation mode from 2 digit hex number
         /// </summary>
-        internal static PLCMode BuildFromHex (string _hexString) {
+        internal static PLCMode BuildFromHex(string _hexString) {
 
             string lower = Convert.ToString(Convert.ToInt32(_hexString.Substring(0, 1)), 2).PadLeft(4, '0');
             string higher = Convert.ToString(Convert.ToInt32(_hexString.Substring(1, 1)), 2).PadLeft(4, '0');
@@ -87,6 +87,7 @@ namespace MewtocolNet.Registers {
             return retMode;
 
         }
+
     }
 
 }

@@ -8,7 +8,7 @@ namespace MewtocolNet.Queue {
         readonly object _locker = new object();
         readonly WeakReference<Task> _lastTask = new WeakReference<Task>(null);
 
-        internal Task<T> Enqueue<T> (Func<Task<T>> asyncFunction) {
+        internal Task<T> Enqueue<T>(Func<Task<T>> asyncFunction) {
             lock (_locker) {
                 Task lastTask;
                 Task<T> resultTask;

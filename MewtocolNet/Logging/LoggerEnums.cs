@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace MewtocolNet.Logging {
+﻿namespace MewtocolNet.Logging {
 
     /// <summary>
     /// The loglevel of the logging module
