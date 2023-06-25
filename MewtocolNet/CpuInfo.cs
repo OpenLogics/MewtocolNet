@@ -1,5 +1,4 @@
-﻿using MewtocolNet.PLCEnums;
-using System;
+﻿using System;
 
 namespace MewtocolNet {
 

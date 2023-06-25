@@ -239,11 +239,20 @@ namespace MewtocolNet {
         }
 
         /// <summary>
-        /// Checks if the register type is non numeric
+        /// Checks if the register type is boolean
         /// </summary>
-        internal static bool IsBoolean(this RegisterType type) {
+        internal static bool IsBoolean (this RegisterType type) {
 
             return type == RegisterType.X || type == RegisterType.Y || type == RegisterType.R;
+
+        }
+
+        /// <summary>
+        /// Checks if the register type numeric
+        /// </summary>
+        internal static bool IsNumericDTDDT (this RegisterType type) {
+
+            return type == RegisterType.DT || type == RegisterType.DDT;
 
         }
 

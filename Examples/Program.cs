@@ -1,4 +1,6 @@
-﻿using System;
+﻿using MewtocolNet.RegisterBuilding;
+using MewtocolNet;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -11,6 +13,9 @@ class Program {
     static ExampleScenarios ExampleSzenarios = new ExampleScenarios();
 
     static void Main(string[] args) {
+
+        RegBuilder.FromPlcRegName("DT303").AsPlcType(PlcVarType.INT).Build();
+        var res = RegBuilder.FromPlcRegName("DT100").AsPlcType(PlcVarType.INT).Build();
 
         AppDomain.CurrentDomain.UnhandledException += (s,e) => {
             Console.WriteLine(e.ExceptionObject.ToString());

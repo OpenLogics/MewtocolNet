@@ -13,6 +13,11 @@ namespace MewtocolNet {
         event Action<object> ValueChanged;
 
         /// <summary>
+        /// Type of the underlying register
+        /// </summary>
+        RegisterType RegisterType { get; }  
+
+        /// <summary>
         /// The name of the register
         /// </summary>
         string Name { get; }
@@ -26,6 +31,12 @@ namespace MewtocolNet {
         /// The plc memory address of the register
         /// </summary>
         int MemoryAddress { get; }
+
+        /// <summary>
+        /// Gets the special address of the register or -1 if it has none
+        /// </summary>
+        /// <returns></returns>
+        byte? GetSpecialAddress();
 
         /// <summary>
         /// Indicates if the register is processed bitwise
@@ -92,6 +103,11 @@ namespace MewtocolNet {
         /// Builds a readable string with all important register informations
         /// </summary>
         string ToString();
+
+        /// <summary>
+        /// Builds a readable string with all important register informations and additional infos
+        /// </summary>
+        string ToString(bool detailed);
 
     }
 

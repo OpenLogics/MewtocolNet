@@ -18,27 +18,22 @@
         /// </summary>
         R = 2,
         /// <summary>
-        /// Data area as a short (Register)
+        /// Single word area (Register)
         /// </summary>
-        DT_short = 3,
+        DT = 3,
         /// <summary>
-        /// Data area as an unsigned short (Register)
+        /// Double word area (Register)
         /// </summary>
-        DT_ushort = 4,
+        DDT = 4,
         /// <summary>
-        /// Double data area as an integer  (Register)
+        /// Start area of a byte sequence longer than 2 words 
         /// </summary>
-        DDT_int = 5,
-        /// <summary>
-        /// Double data area as an unsigned integer (Register)
-        /// </summary>
-        DDT_uint = 6,
-        /// <summary>
-        /// Double data area as an floating point number (Register)
-        /// </summary>
-        DDT_float = 7,
+        DT_START = 5,
 
     }
+
+    // this is just used as syntactic sugar,
+    // when creating registers that are R/X/Y typed you dont need the DT types
 
     /// <summary>
     /// The type of an input/output register

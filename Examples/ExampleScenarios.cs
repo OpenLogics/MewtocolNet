@@ -4,6 +4,8 @@ using System;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Collections;
+using MewtocolNet.RegisterBuilding;
+using System.Collections.Generic;
 
 namespace Examples;
 

@@ -1,6 +1,5 @@
 ﻿using MewtocolNet;
 using MewtocolNet.Logging;
-using MewtocolNet.PLCEnums;
 using Xunit;
 using Xunit.Abstractions;
 

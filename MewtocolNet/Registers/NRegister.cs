@@ -22,6 +22,8 @@ namespace MewtocolNet.Registers {
         /// </summary>
         public event PropertyChangedEventHandler PropertyChanged;
 
+        public RegisterType RegisterType { get; private set; }
+
         internal Type collectionType;
 
         /// <summary>
@@ -63,7 +65,7 @@ namespace MewtocolNet.Registers {
         /// </summary>
         /// <param name="_adress">Memory start adress max 99999</param>
         /// <param name="_name">Name of the register</param>
-        public NRegister(int _adress, string _name = null) {
+        public NRegister (int _adress, string _name = null) {
 
             if (_adress > 99999)
                 throw new NotSupportedException("Memory adresses cant be greater than 99999");
@@ -87,9 +89,16 @@ namespace MewtocolNet.Registers {
                 throw new NotSupportedException($"The type {numType} is not allowed for Number Registers");
             }
 
+            //set register type
+            if(memoryLength == 1) {
+                RegisterType = RegisterType.DDT;
+            } else {
+                RegisterType = RegisterType.DT;
+            }
+
         }
 
-        internal NRegister(int _adress, string _name = null, bool isBitwise = false, Type _enumType = null) {
+        public NRegister (int _adress, string _name = null, bool isBitwise = false, Type _enumType = null) {
 
             if (_adress > 99999) throw new NotSupportedException("Memory adresses cant be greater than 99999");
             memoryAdress = _adress;
@@ -111,6 +120,13 @@ namespace MewtocolNet.Registers {
                 throw new NotSupportedException($"The type {numType} is not allowed for Number Registers");
             }
 
+            //set register type
+            if (memoryLength == 1) {
+                RegisterType = RegisterType.DDT;
+            } else {
+                RegisterType = RegisterType.DT;
+            }
+
             isUsedBitwise = isBitwise;
             enumType = _enumType;
 
@@ -130,6 +146,8 @@ namespace MewtocolNet.Registers {
             TriggerNotifyChange();
 
         }
+
+        public byte? GetSpecialAddress() => null;
 
         public string GetStartingMemoryArea() => MemoryAddress.ToString();
 
@@ -267,7 +285,11 @@ namespace MewtocolNet.Registers {
 
         public void TriggerNotifyChange() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Value"));
 
+        public RegisterType GetRegisterType() => RegisterType;
+
         public override string ToString() => $"{GetRegisterPLCName()} - Value: {GetValueString()}";
+
+        public string ToString(bool additional) => $"{GetRegisterPLCName()} - Value: {GetValueString()}";
 
     }
 

@@ -1,4 +1,4 @@
-﻿namespace MewtocolNet.PLCEnums {
+﻿namespace MewtocolNet {
 
     /// <summary>
     /// CPU type of the PLC

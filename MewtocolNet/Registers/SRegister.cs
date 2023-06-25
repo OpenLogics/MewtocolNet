@@ -19,6 +19,8 @@ namespace MewtocolNet.Registers {
         /// </summary>
         public event PropertyChangedEventHandler PropertyChanged;
 
+        public RegisterType RegisterType { get; private set; }
+
         internal Type collectionType;
 
         /// <summary>
@@ -69,10 +71,12 @@ namespace MewtocolNet.Registers {
                 wordsize++;
             }
 
+            RegisterType = RegisterType.DT_START;
+
             memoryLength = (int)Math.Round(wordsize + 1);
         }
 
-        internal SRegister WithCollectionType(Type colType) {
+        internal SRegister WithCollectionType (Type colType) {
 
             collectionType = colType;
             return this;
@@ -104,6 +108,8 @@ namespace MewtocolNet.Registers {
 
             return asciistring.ToString();
         }
+
+        public byte? GetSpecialAddress() => null;
 
         public Type GetCollectionType() => CollectionType;
 
@@ -137,6 +143,8 @@ namespace MewtocolNet.Registers {
         public void TriggerNotifyChange() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Value"));
 
         public override string ToString() => $"{GetRegisterPLCName()} - Value: {GetValueString()}";
+
+        public string ToString(bool additional) => $"{GetRegisterPLCName()} - Value: {GetValueString()}";
 
     }
 

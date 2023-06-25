@@ -19,7 +19,7 @@ namespace MewtocolNet.Registers {
         /// </summary>
         public event PropertyChangedEventHandler PropertyChanged;
 
-        internal RegisterType RegType { get; private set; }
+        public RegisterType RegisterType { get; private set; }
 
         internal Type collectionType;
 
@@ -80,7 +80,7 @@ namespace MewtocolNet.Registers {
             specialAddress = _spAddress;
             name = _name;
 
-            RegType = (RegisterType)(int)_io;
+            RegisterType = (RegisterType)(int)_io;
 
         }
 
@@ -91,13 +91,15 @@ namespace MewtocolNet.Registers {
 
         }
 
+        public byte? GetSpecialAddress() => SpecialAddress;
+
         /// <summary>
         /// Builds the register area name
         /// </summary>
         public string BuildMewtocolQuery() {
 
             //build area code from register type
-            StringBuilder asciistring = new StringBuilder(RegType.ToString());
+            StringBuilder asciistring = new StringBuilder(RegisterType.ToString());
 
             string memPadded = MemoryAddress.ToString().PadLeft(4, '0');
             string sp = SpecialAddress.ToString("X1");
@@ -127,11 +129,13 @@ namespace MewtocolNet.Registers {
 
         public Type GetCollectionType() => CollectionType;
 
+        public RegisterType GetRegisterType() => RegisterType;
+
         public string GetValueString() => Value.ToString();
 
         public void ClearValue() => SetValueFromPLC(false);
 
-        public string GetRegisterString() => RegType.ToString();
+        public string GetRegisterString() => RegisterType.ToString();
 
         public string GetCombinedName() => $"{(CollectionType != null ? $"{CollectionType.Name}." : "")}{Name ?? "Unnamed"}";
 
@@ -162,6 +166,22 @@ namespace MewtocolNet.Registers {
         public void TriggerNotifyChange() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Value"));
 
         public override string ToString() => $"{GetRegisterPLCName()} - Value: {GetValueString()}";
+
+        public string ToString(bool additional) {
+
+            if (!additional) return this.ToString();
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"PLC Naming: {GetRegisterPLCName()}");
+            sb.AppendLine($"Name: {Name ?? "Not named"}");
+            sb.AppendLine($"Value: {GetValueString()}");
+            sb.AppendLine($"Register Type: {RegisterType}");
+            sb.AppendLine($"Memory Address: {MemoryAddress}");
+            sb.AppendLine($"Special Address: {SpecialAddress:X1}");
+
+            return sb.ToString();
+
+        }
 
     }
 

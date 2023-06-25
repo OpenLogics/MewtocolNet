@@ -1,5 +1,4 @@
 using MewtocolNet.Logging;
-using MewtocolNet.PLCEnums;
 using MewtocolNet.Registers;
 using System;
 using System.Collections.Generic;
