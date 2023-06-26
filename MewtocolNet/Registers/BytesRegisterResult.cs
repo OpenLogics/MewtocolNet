@@ -3,7 +3,7 @@
     /// <summary>
     /// The results of a string register operation
     /// </summary>
-    public class SRegisterResult {
+    public class BytesRegisterResult<T> {
 
         /// <summary>
         /// The command result
@@ -12,7 +12,7 @@
         /// <summary>
         /// The register definition used
         /// </summary>
-        public SRegister Register { get; set; }
+        public BytesRegister<T> Register { get; set; }
 
     }
 

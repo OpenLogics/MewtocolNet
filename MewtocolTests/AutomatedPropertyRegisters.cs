@@ -19,7 +19,7 @@ namespace MewtocolTests {
 
             //corresponds to a R100 boolean register in the PLC
             //can also be written as R1000 because the last one is a special address
-            [Register(IOType.R, 100, spAdress: 0)]
+            [Register(IOType.R, memoryArea: 85, spAdress: 0)]
             public bool TestBool1 { get; private set; }
 
             //corresponds to a XD input of the PLC
@@ -60,10 +60,10 @@ namespace MewtocolTests {
             public BitArray TestBitRegister32 { get; private set; }
 
             //corresponds to a DT1204 as a 16bit word/int takes the bit at index 9 and writes it back as a boolean
-            [Register(1204, 9, BitCount.B16)]
+            [Register(1204, BitCount.B16, 9)]
             public bool BitValue { get; private set; }
 
-            [Register(1204, 5, BitCount.B16)]
+            [Register(1204, BitCount.B32, 5)]
             public bool FillTest { get; private set; }
 
             //corresponds to a DT7012 - DT7013 as a 32bit time value that gets parsed as a timespan (TIME)
@@ -115,7 +115,7 @@ namespace MewtocolTests {
             var register = interf.GetRegister(nameof(TestRegisterCollection.TestBool1));
 
             //test generic properties
-            TestBasicGeneration(register, nameof(TestRegisterCollection.TestBool1), false, 100, "R100");
+            TestBasicGeneration(register, nameof(TestRegisterCollection.TestBool1), false, 85, "R85");
 
         }
 
@@ -208,8 +208,8 @@ namespace MewtocolTests {
             //test generic properties
             TestBasicGeneration(register, nameof(TestRegisterCollection.TestString2), null!, 7005, "DT7005");
 
-            Assert.Equal(5, ((SRegister)register).ReservedSize);
-            Assert.Equal(4, ((SRegister)register).MemoryLength);
+            Assert.Equal(5, ((BytesRegister<string>)register).ReservedSize);
+            Assert.Equal(4, ((BytesRegister<string>)register).MemoryLength);
 
         }
 
@@ -224,8 +224,8 @@ namespace MewtocolTests {
             //test generic properties
             TestBasicGeneration(register, "Auto_Bitwise_DT7010", (short)0, 7010, "DT7010");
 
-            Assert.True(((NRegister<short>)register).isUsedBitwise);
-            Assert.Equal(0, ((NRegister<short>)register).MemoryLength);
+            Assert.True(((NumberRegister<short>)register).isUsedBitwise);
+            Assert.Equal(0, ((NumberRegister<short>)register).MemoryLength);
 
         }
 
@@ -240,8 +240,8 @@ namespace MewtocolTests {
             //test generic properties
             TestBasicGeneration(register, "Auto_Bitwise_DDT8010", (int)0, 8010, "DDT8010");
 
-            Assert.True(((NRegister<int>)register).isUsedBitwise);
-            Assert.Equal(1, ((NRegister<int>)register).MemoryLength);
+            Assert.True(((NumberRegister<int>)register).isUsedBitwise);
+            Assert.Equal(1, ((NumberRegister<int>)register).MemoryLength);
 
         }
 
@@ -256,7 +256,7 @@ namespace MewtocolTests {
             //test generic properties
             TestBasicGeneration(register, "Auto_Bitwise_DT1204", (short)0, 1204, "DT1204");
 
-            Assert.True(((NRegister<short>)register).isUsedBitwise);
+            Assert.True(((NumberRegister<short>)register).isUsedBitwise);
 
         }
 

@@ -9,7 +9,9 @@ namespace MewtocolNet.RegisterBuilding {
     /// <summary>
     /// Contains useful tools for register creation
     /// </summary>
-    public static class RegBuilder {
+    public class RegBuilder {
+
+        internal MewtocolInterface forInterface = null;
 
         //methods to test the input string on
         private static List<Func<string, ParseResult>> parseMethods = new List<Func<string, ParseResult>>() {
@@ -19,7 +21,18 @@ namespace MewtocolNet.RegisterBuilding {
 
         };
 
-        public static RegisterBuilderStep FromPlcRegName (string plcAddrName, string name = null) {
+        public static RegBuilder ForInterface (MewtocolInterface interf) {
+
+            var rb = new RegBuilder();
+            rb.forInterface = interf;
+            return rb;
+
+        }
+
+        public static RegBuilder Factory { get; private set; } = new RegBuilder();
+
+
+        public RegisterBuilderStep FromPlcRegName (string plcAddrName, string name = null) {
 
             foreach (var method in parseMethods) {
 
@@ -30,8 +43,8 @@ namespace MewtocolNet.RegisterBuilding {
                     if (!string.IsNullOrEmpty(name))
                         res.stepData.Name = name;
 
-                    res.stepData.OriginalInput = plcAddrName;   
-
+                    res.stepData.OriginalInput = plcAddrName;
+                    res.stepData.forInterface = forInterface;
                     return res.stepData;
 
                 } else if(res.state == ParseResultState.FailedHard) {

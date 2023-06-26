@@ -109,17 +109,17 @@ namespace MewtocolNet {
 
         }
 
-        internal static string BuildDTString(this string _inString, short _stringReservedSize) {
+        internal static string BuildDTString (this byte[] inBytes, short reservedSize) {
 
             StringBuilder sb = new StringBuilder();
 
             //clamp string lenght
-            if (_inString.Length > _stringReservedSize) {
-                _inString = _inString.Substring(0, _stringReservedSize);
+            if (inBytes.Length > reservedSize) {
+                inBytes = inBytes.Take(reservedSize).ToArray();
             }
 
             //actual string content
-            var hexstring = _inString.GetAsciiHexFromString();
+            var hexstring = inBytes.ToHexString();
 
             var sizeBytes = BitConverter.GetBytes((short)(hexstring.Length / 2)).ToHexString();
 
@@ -133,7 +133,7 @@ namespace MewtocolNet {
 
             }
 
-            var reservedSizeBytes = BitConverter.GetBytes(_stringReservedSize).ToHexString();
+            var reservedSizeBytes = BitConverter.GetBytes(reservedSize).ToHexString();
 
             //reserved string count bytes
             sb.Append(reservedSizeBytes);
@@ -159,8 +159,10 @@ namespace MewtocolNet {
         }
 
         internal static string GetAsciiHexFromString(this string input) {
+
             var bytes = new ASCIIEncoding().GetBytes(input);
             return bytes.ToHexString();
+        
         }
 
         internal static byte[] HexStringToByteArray(this string hex) {
@@ -262,6 +264,22 @@ namespace MewtocolNet {
         internal static bool IsPhysicalInOutType(this RegisterType type) {
 
             return type == RegisterType.X || type == RegisterType.Y;
+
+        }
+
+        internal static bool CompareIsDuplicate (this IRegister reg1, IRegister compare) {
+
+            bool valCompare = reg1.RegisterType == compare.RegisterType &&
+                              reg1.MemoryAddress == compare.MemoryAddress && 
+                              reg1.GetSpecialAddress() == compare.GetSpecialAddress();
+
+            return valCompare;
+
+        }
+
+        internal static bool CompareIsNameDuplicate(this IRegister reg1, IRegister compare) {
+
+            return ( reg1.Name != null || compare.Name != null) && reg1.Name == compare.Name;
 
         }
 

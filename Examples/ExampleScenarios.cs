@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Collections;
 using MewtocolNet.RegisterBuilding;
 using System.Collections.Generic;
+using MewtocolNet.Registers;
 
 namespace Examples;
 
@@ -46,7 +47,7 @@ public class ExampleScenarios {
             while (interf.IsConnected) {
 
                 //flip the bool register each tick and wait for it to be registered
-                await interf.SetRegisterAsync(nameof(registers.TestBool1), !registers.TestBool1);
+                //await interf.SetRegisterAsync(nameof(registers.TestBool1), !registers.TestBool1);
 
                 Console.Title = $"Polling Paused: {interf.PollingPaused}, " +
                 $"Poller active: {interf.PollerActive}, " +
@@ -167,7 +168,7 @@ public class ExampleScenarios {
         await interf.ConnectAsync();
 
         //use the async method to make sure the cycling is stopped
-        await interf.SetRegisterAsync(nameof(registers.StartCyclePLC), false);
+        //await interf.SetRegisterAsync(nameof(registers.StartCyclePLC), false);
 
         await Task.Delay(5000);
 
@@ -179,6 +180,51 @@ public class ExampleScenarios {
         registers.StartCyclePLC = false;
 
         await Task.Delay(2000);
+
+    }
+
+    [Scenario("Read register test")]
+    public async Task RunReadTest () {
+
+        Console.WriteLine("Starting auto enums and bitwise");
+
+        //setting up a new PLC interface and register collection
+        MewtocolInterface interf = new MewtocolInterface("192.168.115.210").WithPoller();
+
+        //auto add all built registers to the interface 
+        var builder = RegBuilder.ForInterface(interf);
+        var r0reg = builder.FromPlcRegName("R0").Build();
+        builder.FromPlcRegName("R1").Build();
+        builder.FromPlcRegName("R1F").Build();
+        builder.FromPlcRegName("R101A").Build();
+
+        var shortReg = builder.FromPlcRegName("DT35").AsPlcType(PlcVarType.INT).Build();
+        builder.FromPlcRegName("DDT36").AsPlcType(PlcVarType.DINT).Build();
+
+        //builder.FromPlcRegName("DDT38").AsPlcType(PlcVarType.TIME).Build();
+        //builder.FromPlcRegName("DT40").AsPlcType(PlcVarType.STRING).Build();
+
+        //connect
+        await interf.ConnectAsync();
+
+        //var res = await interf.SendCommandAsync("%01#RCSR000F");
+
+        while(true) {
+
+            await interf.SetRegisterAsync(r0reg, !(bool)r0reg.Value);
+            await interf.SetRegisterAsync(shortReg, (short)new Random().Next(0, 100));
+
+            foreach (var reg in interf.Registers) {
+
+                Console.WriteLine($"Register {reg.GetRegisterPLCName()} val: {reg.Value}");
+
+            }
+
+            Console.WriteLine();
+
+            await Task.Delay(1000);
+
+        }
 
     }
 

@@ -1,12 +1,16 @@
-﻿using MewtocolNet.Logging;
+﻿using MewtocolNet.Exceptions;
+using MewtocolNet.Logging;
+using MewtocolNet.RegisterAttributes;
 using MewtocolNet.Registers;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
-namespace MewtocolNet {
+namespace MewtocolNet
+{
 
     /// <summary>
     /// The PLC com interface class
@@ -118,61 +122,21 @@ namespace MewtocolNet {
 
                         var reg = Registers[iteration];
 
-                        if (reg is NRegister<short> shortReg) {
-                            var lastVal = shortReg.Value;
-                            var readout = (await ReadNumRegister(shortReg)).Register.Value;
+                        if(reg.IsAllowedRegisterGenericType()) {
+
+                            var lastVal = reg.Value;
+
+                            var rwReg = (IRegisterInternal)reg;
+
+                            var readout = await rwReg.ReadAsync(this);
+
                             if (lastVal != readout) {
-                                InvokeRegisterChanged(shortReg);
+
+                                rwReg.SetValueFromPLC(readout);
+                                InvokeRegisterChanged(reg);
+                           
                             }
-                        }
-                        if (reg is NRegister<ushort> ushortReg) {
-                            var lastVal = ushortReg.Value;
-                            var readout = (await ReadNumRegister(ushortReg)).Register.Value;
-                            if (lastVal != readout) {
-                                InvokeRegisterChanged(ushortReg);
-                            }
-                        }
-                        if (reg is NRegister<int> intReg) {
-                            var lastVal = intReg.Value;
-                            var readout = (await ReadNumRegister(intReg)).Register.Value;
-                            if (lastVal != readout) {
-                                InvokeRegisterChanged(intReg);
-                            }
-                        }
-                        if (reg is NRegister<uint> uintReg) {
-                            var lastVal = uintReg.Value;
-                            var readout = (await ReadNumRegister(uintReg)).Register.Value;
-                            if (lastVal != readout) {
-                                InvokeRegisterChanged(uintReg);
-                            }
-                        }
-                        if (reg is NRegister<float> floatReg) {
-                            var lastVal = floatReg.Value;
-                            var readout = (await ReadNumRegister(floatReg)).Register.Value;
-                            if (lastVal != readout) {
-                                InvokeRegisterChanged(floatReg);
-                            }
-                        }
-                        if (reg is NRegister<TimeSpan> tsReg) {
-                            var lastVal = tsReg.Value;
-                            var readout = (await ReadNumRegister(tsReg)).Register.Value;
-                            if (lastVal != readout) {
-                                InvokeRegisterChanged(tsReg);
-                            }
-                        }
-                        if (reg is BRegister boolReg) {
-                            var lastVal = boolReg.Value;
-                            var readout = (await ReadBoolRegister(boolReg)).Register.Value;
-                            if (lastVal != readout) {
-                                InvokeRegisterChanged(boolReg);
-                            }
-                        }
-                        if (reg is SRegister stringReg) {
-                            var lastVal = stringReg.Value;
-                            var readout = (await ReadStringRegister(stringReg)).Register.Value;
-                            if (lastVal != readout) {
-                                InvokeRegisterChanged(stringReg);
-                            }
+
                         }
 
                         iteration++;
@@ -194,67 +158,218 @@ namespace MewtocolNet {
 
         internal void PropertyRegisterWasSet(string propName, object value) {
 
-            SetRegister(propName, value);
+            _ = SetRegisterAsync(GetRegister(propName), value);
 
         }
 
         #endregion
 
+        #region Register Colleciton adding
+
+        #region Register Collection
+
+        /// <summary>
+        /// Attaches a register collection object to 
+        /// the interface that can be updated automatically.
+        /// <para/>
+        /// Just create a class inheriting from <see cref="RegisterCollectionBase"/>
+        /// and assert some propertys with the custom <see cref="RegisterAttribute"/>.
+        /// </summary>
+        /// <param name="collection">A collection inherting the <see cref="RegisterCollectionBase"/> class</param>
+        public MewtocolInterface WithRegisterCollection(RegisterCollectionBase collection) {
+
+            collection.PLCInterface = this;
+
+            var props = collection.GetType().GetProperties();
+
+            foreach (var prop in props) {
+
+                var attributes = prop.GetCustomAttributes(true);
+
+                string propName = prop.Name;
+                foreach (var attr in attributes) {
+
+                    if (attr is RegisterAttribute cAttribute && prop.PropertyType.IsAllowedPlcCastingType()) {
+
+                        var dotnetType = prop.PropertyType;
+
+                        AddRegister(new RegisterBuildInfo {
+                            memoryAddress = cAttribute.MemoryArea,
+                            specialAddress = cAttribute.SpecialAddress,
+                            memorySizeBytes = cAttribute.ByteLength,
+                            registerType = cAttribute.RegisterType,
+                            dotnetCastType = dotnetType,
+                            collectionType = collection.GetType(),
+                            name = prop.Name,
+                        });
+
+                    }
+
+                }
+
+            }
+
+            RegisterChanged += (reg) => {
+
+                //register is used bitwise
+                if (reg.IsUsedBitwise()) {
+
+                    for (int i = 0; i < props.Length; i++) {
+
+                        var prop = props[i];
+                        var bitWiseFound = prop.GetCustomAttributes(true)
+                        .FirstOrDefault(y => y.GetType() == typeof(RegisterAttribute) && ((RegisterAttribute)y).MemoryArea == reg.MemoryAddress);
+
+                        if (bitWiseFound != null) {
+
+                            var casted = (RegisterAttribute)bitWiseFound;
+                            var bitIndex = casted.AssignedBitIndex;
+
+                            BitArray bitAr = null;
+
+                            if (reg is NumberRegister<short> reg16) {
+                                var bytes = BitConverter.GetBytes((short)reg16.Value);
+                                bitAr = new BitArray(bytes);
+                            } else if (reg is NumberRegister<int> reg32) {
+                                var bytes = BitConverter.GetBytes((int)reg32.Value);
+                                bitAr = new BitArray(bytes);
+                            }
+
+                            if (bitAr != null && bitIndex < bitAr.Length && bitIndex >= 0) {
+
+                                //set the specific bit index if needed
+                                prop.SetValue(collection, bitAr[bitIndex]);
+                                collection.TriggerPropertyChanged(prop.Name);
+
+                            } else if (bitAr != null) {
+
+                                //set the specific bit array if needed
+                                prop.SetValue(collection, bitAr);
+                                collection.TriggerPropertyChanged(prop.Name);
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+                //updating normal properties
+                var foundToUpdate = props.FirstOrDefault(x => x.Name == reg.Name);
+
+                if (foundToUpdate != null) {
+
+                    var foundAttributes = foundToUpdate.GetCustomAttributes(true);
+                    var foundAttr = foundAttributes.FirstOrDefault(x => x.GetType() == typeof(RegisterAttribute));
+
+                    if (foundAttr == null)
+                        return;
+
+                    var registerAttr = (RegisterAttribute)foundAttr;
+
+                    //check if bit parse mode
+                    if (registerAttr.AssignedBitIndex == -1) {
+
+                        HashSet<Type> NumericTypes = new HashSet<Type> {
+                            typeof(bool),
+                            typeof(short),
+                            typeof(ushort),
+                            typeof(int),
+                            typeof(uint),
+                            typeof(float),
+                            typeof(TimeSpan),
+                            typeof(string)
+                        };
+
+                        var regValue = ((IRegister)reg).Value;
+
+                        if (NumericTypes.Any(x => foundToUpdate.PropertyType == x)) {
+                            foundToUpdate.SetValue(collection, regValue);
+                        }
+
+                        if (foundToUpdate.PropertyType.IsEnum) {
+                            foundToUpdate.SetValue(collection, regValue);
+                        }
+
+                    }
+
+                    collection.TriggerPropertyChanged(foundToUpdate.Name);
+
+                }
+
+            };
+
+            if (collection != null)
+                collection.OnInterfaceLinked(this);
+
+            Connected += (i) => {
+                if (collection != null)
+                    collection.OnInterfaceLinkedAndOnline(this);
+            };
+
+            return this;
+
+        }
+
+        #endregion
+
+        #endregion
+
         #region Register Adding
 
-        //Internal register adding for auto register collection building
-        internal void AddRegister<T>(Type _colType, int _address, PropertyInfo boundProp, int _length = 1, bool _isBitwise = false, Type _enumType = null) {
+        internal void AddRegister (RegisterBuildInfo buildInfo) {
 
-            Type regType = typeof(T);
+            var builtRegister = buildInfo.Build();
 
-            if (regType != typeof(string) && _length != 1) {
-                throw new NotSupportedException($"_lenght parameter only allowed for register of type string");
-            }
+            //is bitwise and the register list already contains that area register
+            if(builtRegister.IsUsedBitwise() && CheckDuplicateRegister(builtRegister, out var existing)) {
 
-            if (Registers.Any(x => x.MemoryAddress == _address) && _isBitwise) {
                 return;
+
             }
 
-            IRegister reg = null;
+            if (CheckDuplicateRegister(builtRegister))
+                throw MewtocolException.DupeRegister(builtRegister);
 
-            string propName = boundProp.Name;
+            if(CheckDuplicateNameRegister(builtRegister))
+                throw MewtocolException.DupeNameRegister(builtRegister);
 
-            //rename the property name to prevent duplicate names in case of a bitwise prop
-            if (_isBitwise && regType == typeof(short))
-                propName = $"Auto_Bitwise_DT{_address}";
+            Registers.Add(builtRegister);
 
-            if (_isBitwise && regType == typeof(int))
-                propName = $"Auto_Bitwise_DDT{_address}";
+        }
 
-            if (regType == typeof(short)) {
-                reg = new NRegister<short>(_address, propName, _isBitwise, _enumType).WithCollectionType(_colType);
-            } else if (regType == typeof(ushort)) {
-                reg = new NRegister<ushort>(_address, propName).WithCollectionType(_colType);
-            } else if (regType == typeof(int)) {
-                reg = new NRegister<int>(_address, propName, _isBitwise, _enumType).WithCollectionType(_colType);
-            } else if (regType == typeof(uint)) {
-                reg = new NRegister<uint>(_address, propName).WithCollectionType(_colType);
-            } else if (regType == typeof(float)) {
-                reg = new NRegister<float>(_address, propName).WithCollectionType(_colType);
-            } else if (regType == typeof(string)) {
-                reg = new SRegister(_address, _length, propName).WithCollectionType(_colType);
-            } else if (regType == typeof(TimeSpan)) {
-                reg = new NRegister<TimeSpan>(_address, propName).WithCollectionType(_colType);
-            } else if (regType == typeof(bool)) {
-                reg = new BRegister(IOType.R, 0x0, _address, propName).WithCollectionType(_colType);
-            }
+        public void AddRegister(IRegister register) {
 
-            if (reg == null) {
-                throw new NotSupportedException($"The type {regType} is not allowed for Registers \n" +
-                                                $"Allowed are: short, ushort, int, uint, float and string");
-            }
+            if (CheckDuplicateRegister(register))
+                throw MewtocolException.DupeRegister(register);
 
-            if (Registers.Any(x => x.GetRegisterPLCName() == reg.GetRegisterPLCName()) && !_isBitwise) {
-                throw new NotSupportedException($"Cannot add a register multiple times, " +
-                    $"make sure that all register attributes or AddRegister assignments have different adresses.");
-            }
+            if (CheckDuplicateNameRegister(register))
+                throw MewtocolException.DupeNameRegister(register);
 
-            Registers.Add(reg);
+            Registers.Add(register);
+
+        }
+
+        private bool CheckDuplicateRegister (IRegister instance, out IRegister foundDupe) {
+
+            foundDupe = Registers.FirstOrDefault(x => x.CompareIsDuplicate(instance));
+
+            return Registers.Contains(instance) || foundDupe != null;
+
+        }
+
+        private bool CheckDuplicateRegister(IRegister instance) {
+
+            var foundDupe = Registers.FirstOrDefault(x => x.CompareIsDuplicate(instance));
+
+            return Registers.Contains(instance) || foundDupe != null;
+
+        }
+
+        private bool CheckDuplicateNameRegister(IRegister instance) {
+
+            return Registers.Any(x => x.CompareIsNameDuplicate(instance));
 
         }
 

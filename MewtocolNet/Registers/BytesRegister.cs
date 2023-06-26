@@ -1,13 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace MewtocolNet.Registers {
 
     /// <summary>
     /// Defines a register containing a string
     /// </summary>
-    public class SRegister : IRegister {
+    public class BytesRegister<T> : IRegister, IRegisterInternal {
 
         /// <summary>
         /// Gets called whenever the value was changed
@@ -58,30 +60,25 @@ namespace MewtocolNet.Registers {
         /// <summary>
         /// Defines a register containing a string
         /// </summary>
-        public SRegister(int _adress, int _reservedStringSize, string _name = null) {
+        public BytesRegister(int _adress, int _reservedSize, string _name = null) {
 
             if (_adress > 99999) throw new NotSupportedException("Memory adresses cant be greater than 99999");
             name = _name;
             memoryAdress = _adress;
-            ReservedSize = (short)_reservedStringSize;
+            ReservedSize = (short)_reservedSize;
 
             //calc mem length
-            var wordsize = (double)_reservedStringSize / 2;
+            var wordsize = (double)_reservedSize / 2;
             if (wordsize % 2 != 0) {
                 wordsize++;
             }
 
-            RegisterType = RegisterType.DT_START;
+            RegisterType = RegisterType.DT_RANGE;
 
             memoryLength = (int)Math.Round(wordsize + 1);
         }
 
-        internal SRegister WithCollectionType (Type colType) {
-
-            collectionType = colType;
-            return this;
-
-        }
+        public void WithCollectionType(Type colType) => collectionType = colType;
 
         /// <summary>
         /// Builds the register identifier for the mewotocol protocol
@@ -115,9 +112,9 @@ namespace MewtocolNet.Registers {
 
         public bool IsUsedBitwise() => false;
 
-        internal void SetValueFromPLC(string val) {
+        public void SetValueFromPLC(object val) {
 
-            lastValue = val;
+            lastValue = (string)val;
 
             TriggerChangedEvnt(this);
             TriggerNotifyChange();
@@ -145,6 +142,19 @@ namespace MewtocolNet.Registers {
         public override string ToString() => $"{GetRegisterPLCName()} - Value: {GetValueString()}";
 
         public string ToString(bool additional) => $"{GetRegisterPLCName()} - Value: {GetValueString()}";
+
+        public async Task<object> ReadAsync(MewtocolInterface interf) {
+
+            var read = await interf.ReadRawRegisterAsync(this);
+            return PlcValueParser.Parse<T>(read);
+
+        }
+
+        public async Task<bool> WriteAsync(MewtocolInterface interf, object data) {
+
+            return await interf.WriteRawRegisterAsync(this, (byte[])data);
+
+        }
 
     }
 

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace MewtocolNet.Registers {
 
@@ -10,7 +11,7 @@ namespace MewtocolNet.Registers {
     /// Defines a register containing a number
     /// </summary>
     /// <typeparam name="T">The type of the numeric value</typeparam>
-    public class NRegister<T> : IRegister {
+    public class NumberRegister<T> : IRegister, IRegisterInternal {
 
         /// <summary>
         /// Gets called whenever the value was changed
@@ -65,7 +66,7 @@ namespace MewtocolNet.Registers {
         /// </summary>
         /// <param name="_adress">Memory start adress max 99999</param>
         /// <param name="_name">Name of the register</param>
-        public NRegister (int _adress, string _name = null) {
+        public NumberRegister (int _adress, string _name = null) {
 
             if (_adress > 99999)
                 throw new NotSupportedException("Memory adresses cant be greater than 99999");
@@ -98,7 +99,7 @@ namespace MewtocolNet.Registers {
 
         }
 
-        public NRegister (int _adress, string _name = null, bool isBitwise = false, Type _enumType = null) {
+        public NumberRegister (int _adress, string _name = null, bool isBitwise = false, Type _enumType = null) {
 
             if (_adress > 99999) throw new NotSupportedException("Memory adresses cant be greater than 99999");
             memoryAdress = _adress;
@@ -132,14 +133,9 @@ namespace MewtocolNet.Registers {
 
         }
 
-        internal NRegister<T> WithCollectionType(Type colType) {
+        public void WithCollectionType(Type colType) => collectionType = colType;
 
-            collectionType = colType;
-            return this;
-
-        }
-
-        internal void SetValueFromPLC(object val) {
+        public void SetValueFromPLC(object val) {
 
             lastValue = (T)val;
             TriggerChangedEvnt(this);
@@ -214,7 +210,7 @@ namespace MewtocolNet.Registers {
         /// <returns>A bitarray</returns>
         public BitArray GetBitwise() {
 
-            if (this is NRegister<short> shortReg) {
+            if (this is NumberRegister<short> shortReg) {
 
                 var bytes = BitConverter.GetBytes((short)Value);
                 BitArray bitAr = new BitArray(bytes);
@@ -222,7 +218,7 @@ namespace MewtocolNet.Registers {
 
             }
 
-            if (this is NRegister<int> intReg) {
+            if (this is NumberRegister<int> intReg) {
 
                 var bytes = BitConverter.GetBytes((int)Value);
                 BitArray bitAr = new BitArray(bytes);
@@ -290,6 +286,19 @@ namespace MewtocolNet.Registers {
         public override string ToString() => $"{GetRegisterPLCName()} - Value: {GetValueString()}";
 
         public string ToString(bool additional) => $"{GetRegisterPLCName()} - Value: {GetValueString()}";
+
+        public async Task<object> ReadAsync(MewtocolInterface interf) {
+
+            var read = await interf.ReadRawRegisterAsync(this);
+            return PlcValueParser.Parse<T>(read);
+
+        }
+
+        public async Task<bool> WriteAsync(MewtocolInterface interf, object data) {
+
+            return await interf.WriteRawRegisterAsync(this, PlcValueParser.Encode((T)data));
+
+        }
 
     }
 

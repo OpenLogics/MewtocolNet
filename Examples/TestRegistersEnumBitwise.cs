@@ -53,52 +53,52 @@ namespace Examples {
 
         //you can also extract single bits from DT503
 
-        [Register(503, 0, BitCount.B16)]
+        [Register(503, BitCount.B16, 0)]
         public bool BitValue0 { get; private set; }
 
-        [Register(503, 1, BitCount.B16)]
+        [Register(503, BitCount.B16, 1)]
         public bool BitValue1 { get; private set; }
 
-        [Register(503, 2, BitCount.B16)]
+        [Register(503, BitCount.B16, 2)]
         public bool BitValue2 { get; private set; }
 
-        [Register(503, 3, BitCount.B16)]
+        [Register(503, BitCount.B16, 3)]
         public bool BitValue3 { get; private set; }
 
-        [Register(503, 4, BitCount.B16)]
+        [Register(503, BitCount.B16, 4)]
         public bool BitValue4 { get; private set; }
 
-        [Register(503, 5, BitCount.B16)]
+        [Register(503, BitCount.B16, 5)]
         public bool BitValue5 { get; private set; }
 
-        [Register(503, 6, BitCount.B16)]
+        [Register(503, BitCount.B16, 6)]
         public bool BitValue6 { get; private set; }
 
-        [Register(503, 7, BitCount.B16)]
+        [Register(503, BitCount.B16, 7)]
         public bool BitValue7 { get; private set; }
 
-        [Register(503, 8, BitCount.B16)]
+        [Register(503, BitCount.B16, 8)]
         public bool BitValue8 { get; private set; }
 
-        [Register(503, 9, BitCount.B16)]
+        [Register(503, BitCount.B16, 9)]
         public bool BitValue9 { get; private set; }
 
-        [Register(503, 10, BitCount.B16)]
+        [Register(503, BitCount.B16, 10)]
         public bool BitValue10 { get; private set; }
 
-        [Register(503, 11, BitCount.B16)]
+        [Register(503, BitCount.B16, 11)]
         public bool BitValue11 { get; private set; }
 
-        [Register(503, 12, BitCount.B16)]
+        [Register(503, BitCount.B16, 12)]
         public bool BitValue12 { get; private set; }
 
-        [Register(503, 13, BitCount.B16)]
+        [Register(503, BitCount.B16, 13)]
         public bool BitValue13 { get; private set; }
 
-        [Register(503, 14, BitCount.B16)]
+        [Register(503, BitCount.B16, 14)]
         public bool BitValue14 { get; private set; }
 
-        [Register(503, 15, BitCount.B16)]
+        [Register(503, BitCount.B16, 15)]
         public bool BitValue15 { get; private set; }
 
     }

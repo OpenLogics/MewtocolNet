@@ -14,9 +14,6 @@ class Program {
 
     static void Main(string[] args) {
 
-        RegBuilder.FromPlcRegName("DT303").AsPlcType(PlcVarType.INT).Build();
-        var res = RegBuilder.FromPlcRegName("DT100").AsPlcType(PlcVarType.INT).Build();
-
         AppDomain.CurrentDomain.UnhandledException += (s,e) => {
             Console.WriteLine(e.ExceptionObject.ToString());
         };

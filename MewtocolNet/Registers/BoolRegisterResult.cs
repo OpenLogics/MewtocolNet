@@ -3,7 +3,7 @@
     /// <summary>
     /// Result for a boolean register
     /// </summary>
-    public class BRegisterResult {
+    public class BoolRegisterResult {
 
         /// <summary>
         /// The command result
@@ -13,7 +13,7 @@
         /// <summary>
         /// The used register
         /// </summary>
-        public BRegister Register { get; set; }
+        public BoolRegister Register { get; set; }
 
     }
 

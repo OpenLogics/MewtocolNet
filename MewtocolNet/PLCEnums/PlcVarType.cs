@@ -11,7 +11,9 @@ namespace MewtocolNet {
         UDINT,
         REAL,
         TIME,
-        STRING
+        STRING,
+        WORD,
+        DWORD
 
     }
 

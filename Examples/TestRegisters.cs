@@ -47,10 +47,10 @@ namespace Examples {
         public BitArray TestBitRegister { get; private set; }
 
         //corresponds to a DT1204 as a 16bit word/int takes the bit at index 9 and writes it back as a boolean
-        [Register(1204, 9, BitCount.B16)]
+        [Register(1204, BitCount.B16, 9)]
         public bool BitValue { get; private set; }
 
-        [Register(1204, 5, BitCount.B16)]
+        [Register(1204, BitCount.B16, 5)]
         public bool FillTest { get; private set; }
 
         //corresponds to a DT7012 - DT7013 as a 32bit time value that gets parsed as a timespan (TIME)

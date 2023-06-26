@@ -4,7 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MewtocolNet {
@@ -155,244 +157,110 @@ namespace MewtocolNet {
 
         #endregion
 
-        #region Bool register reading / writing
+        #region Raw register reading / writing
 
-        /// <summary>
-        /// Reads the given boolean register from the PLC
-        /// </summary>
-        /// <param name="_toRead">The register to read</param>
-        public async Task<BRegisterResult> ReadBoolRegister(BRegister _toRead) {
+        internal async Task<byte[]> ReadRawRegisterAsync (IRegister _toRead) {
 
-            string requeststring = $"%{GetStationNumber()}#RCS{_toRead.BuildMewtocolQuery()}";
-            var result = await SendCommandAsync(requeststring);
+            //returns a byte array 1 long and with the byte beeing 0 or 1
+            if (_toRead.GetType() == typeof(BoolRegister)) {
 
-            if (!result.Success) {
-                return new BRegisterResult {
-                    Result = result,
-                    Register = _toRead
-                };
+                string requeststring = $"%{GetStationNumber()}#RCS{_toRead.BuildMewtocolQuery()}";
+                var result = await SendCommandAsync(requeststring);
+
+                var resultBool = result.Response.ParseRCSingleBit();
+                if (resultBool != null) {
+
+                    return resultBool.Value ? new byte[] { 1 } : new byte[] { 0 };
+
+                }
+
             }
 
-            var resultBool = result.Response.ParseRCSingleBit();
-            if (resultBool != null) {
-                _toRead.SetValueFromPLC(resultBool.Value);
+            //returns a byte array 2 bytes or 4 bytes long depending on the data size
+            if (_toRead.GetType().GetGenericTypeDefinition() == typeof(NumberRegister<>)) {
+
+                string requeststring = $"%{GetStationNumber()}#RD{_toRead.BuildMewtocolQuery()}";
+                var result = await SendCommandAsync(requeststring);
+
+                if (!result.Success)
+                    throw new Exception($"Failed to load the byte data for: {_toRead}");
+
+                if(_toRead.RegisterType == RegisterType.DT) {
+
+                    return result.Response.ParseDTByteString(4).HexStringToByteArray();
+
+                } else {
+
+                    return result.Response.ParseDTByteString(8).HexStringToByteArray();
+
+                }
+
             }
 
-            var finalRes = new BRegisterResult {
-                Result = result,
-                Register = _toRead
-            };
+            //returns a byte array with variable size
+            if (_toRead.GetType() == typeof(BytesRegister<>)) {
 
-            return finalRes;
+                string requeststring = $"%{GetStationNumber()}#RD{_toRead.BuildMewtocolQuery()}";
+                var result = await SendCommandAsync(requeststring);
+
+                if (!result.Success)
+                    throw new Exception($"Failed to load the byte data for: {_toRead}");
+
+                return result.Response.ParseDTString().ReverseByteOrder().HexStringToByteArray();
+
+            }
+
+            throw new Exception($"Failed to load the byte data for: {_toRead}");
 
         }
 
-        /// <summary>
-        /// Writes to the given bool register on the PLC
-        /// </summary>
-        /// <param name="_toWrite">The register to write to</param>
-        /// <param name="value">The value to write</param>
-        /// <returns>The success state of the write operation</returns>
-        public async Task<bool> WriteBoolRegister(BRegister _toWrite, bool value) {
+        internal async Task<bool> WriteRawRegisterAsync (IRegister _toWrite, byte[] data) {
 
-            string requeststring = $"%{GetStationNumber()}#WCS{_toWrite.BuildMewtocolQuery()}{(value ? "1" : "0")}";
+            //returns a byte array 1 long and with the byte beeing 0 or 1
+            if (_toWrite.GetType() == typeof(BoolRegister)) {
 
-            var result = await SendCommandAsync(requeststring);
-
-            return result.Success && result.Response.StartsWith($"%{GetStationNumber()}$WC");
-
-        }
-
-        #endregion
-
-        #region Number register reading / writing
-
-        /// <summary>
-        /// Reads the given numeric register from the PLC
-        /// </summary>
-        /// <typeparam name="T">Type of number (short, ushort, int, uint, float)</typeparam>
-        /// <param name="_toRead">The register to read</param>
-        /// <returns>A result with the given NumberRegister containing the readback value and a result struct</returns>
-        public async Task<NRegisterResult<T>> ReadNumRegister<T>(NRegister<T> _toRead) {
-
-            Type numType = typeof(T);
-
-            string requeststring = $"%{GetStationNumber()}#RD{_toRead.BuildMewtocolQuery()}";
-            var result = await SendCommandAsync(requeststring);
-
-            var failedResult = new NRegisterResult<T> {
-                Result = result,
-                Register = _toRead
-            };
-
-            if (!result.Success || string.IsNullOrEmpty(result.Response)) {
-                return failedResult;
-            }
-
-            if (numType == typeof(short)) {
-
-                var resultBytes = result.Response.ParseDTByteString(4).ReverseByteOrder();
-                if (resultBytes == null) return failedResult;
-                var val = short.Parse(resultBytes, NumberStyles.HexNumber);
-                _toRead.SetValueFromPLC(val);
-
-            } else if (numType == typeof(ushort)) {
-
-                var resultBytes = result.Response.ParseDTByteString(4).ReverseByteOrder();
-                if (resultBytes == null) return failedResult;
-                var val = ushort.Parse(resultBytes, NumberStyles.HexNumber);
-                _toRead.SetValueFromPLC(val);
-
-            } else if (numType == typeof(int)) {
-
-                var resultBytes = result.Response.ParseDTByteString(8).ReverseByteOrder();
-                if (resultBytes == null) return failedResult;
-                var val = int.Parse(resultBytes, NumberStyles.HexNumber);
-                _toRead.SetValueFromPLC(val);
-
-            } else if (numType == typeof(uint)) {
-
-                var resultBytes = result.Response.ParseDTByteString(8).ReverseByteOrder();
-                if (resultBytes == null) return failedResult;
-                var val = uint.Parse(resultBytes, NumberStyles.HexNumber);
-                _toRead.SetValueFromPLC(val);
-
-            } else if (numType == typeof(float)) {
-
-                var resultBytes = result.Response.ParseDTByteString(8).ReverseByteOrder();
-                if (resultBytes == null) return failedResult;
-                //convert to unsigned int first
-                var val = uint.Parse(resultBytes, NumberStyles.HexNumber);
-
-                byte[] floatVals = BitConverter.GetBytes(val);
-                float finalFloat = BitConverter.ToSingle(floatVals, 0);
-
-                _toRead.SetValueFromPLC(finalFloat);
-
-            } else if (numType == typeof(TimeSpan)) {
-
-                var resultBytes = result.Response.ParseDTByteString(8).ReverseByteOrder();
-                if (resultBytes == null) return failedResult;
-                //convert to unsigned int first
-                var vallong = long.Parse(resultBytes, NumberStyles.HexNumber);
-                var valMillis = vallong * 10;
-                var ts = TimeSpan.FromMilliseconds(valMillis);
-
-                //minmax writable / readable value is 10ms
-                _toRead.SetValueFromPLC(ts);
+                string requeststring = $"%{GetStationNumber()}#WCS{_toWrite.BuildMewtocolQuery()}{(data[0] == 1 ? "1" : "0")}";
+                var result = await SendCommandAsync(requeststring);
+                return result.Success;
 
             }
 
-            var finalRes = new NRegisterResult<T> {
-                Result = result,
-                Register = _toRead
-            };
+            //returns a byte array 2 bytes or 4 bytes long depending on the data size
+            if (_toWrite.GetType().GetGenericTypeDefinition() == typeof(NumberRegister<>)) {
 
-            return finalRes;
-        }
+                string requeststring = $"%{GetStationNumber()}#WD{_toWrite.BuildMewtocolQuery()}{data.ToHexString()}";
+                var result = await SendCommandAsync(requeststring);
+                return result.Success;
 
-        /// <summary>
-        /// Reads the given numeric register from the PLC
-        /// </summary>
-        /// <typeparam name="T">Type of number (short, ushort, int, uint, float)</typeparam>
-        /// <param name="_toWrite">The register to write</param>
-        /// <param name="_value">The value to write</param>
-        /// <returns>The success state of the write operation</returns>
-        public async Task<bool> WriteNumRegister<T>(NRegister<T> _toWrite, T _value) {
-
-            byte[] toWriteVal;
-            Type numType = typeof(T);
-
-            if (numType == typeof(short)) {
-                toWriteVal = BitConverter.GetBytes(Convert.ToInt16(_value));
-            } else if (numType == typeof(ushort)) {
-                toWriteVal = BitConverter.GetBytes(Convert.ToUInt16(_value));
-            } else if (numType == typeof(int)) {
-                toWriteVal = BitConverter.GetBytes(Convert.ToInt32(_value));
-            } else if (numType == typeof(uint)) {
-                toWriteVal = BitConverter.GetBytes(Convert.ToUInt32(_value));
-            } else if (numType == typeof(float)) {
-
-                var fl = _value as float?;
-                if (fl == null)
-                    throw new NullReferenceException("Float cannot be null");
-
-                toWriteVal = BitConverter.GetBytes(fl.Value);
-
-            } else if (numType == typeof(TimeSpan)) {
-
-                var fl = _value as TimeSpan?;
-                if (fl == null)
-                    throw new NullReferenceException("Timespan cannot be null");
-
-                var tLong = (uint)(fl.Value.TotalMilliseconds / 10);
-                toWriteVal = BitConverter.GetBytes(tLong);
-
-            } else {
-                toWriteVal = null;
             }
 
-            string requeststring = $"%{GetStationNumber()}#WD{_toWrite.BuildMewtocolQuery()}{toWriteVal.ToHexString()}";
+            //returns a byte array with variable size
+            if (_toWrite.GetType() == typeof(BytesRegister<>)) {
 
-            var result = await SendCommandAsync(requeststring);
+                //string stationNum = GetStationNumber();
+                //string dataString = gotBytes.BuildDTString(_toWrite.ReservedSize);
+                //string dataArea = _toWrite.BuildCustomIdent(dataString.Length / 4);
 
-            return result.Success && result.Response.StartsWith($"%{GetStationNumber()}$WD");
+                //string requeststring = $"%{stationNum}#WD{dataArea}{dataString}";
+
+                //var result = await SendCommandAsync(requeststring);
+
+            }
+
+            return false;
 
         }
 
         #endregion
 
-        #region String register reading / writing
+        #region Register reading / writing
 
-        //string is build up like this
-        //04 00 04 00 53 50 33 35 13
-        //0, 1 = reserved size
-        //1, 2 = current size
-        //3,4,5,6 = ASCII encoded chars (SP35)
-        //7,8 = checksum
+        public async Task<bool> SetRegisterAsync (IRegister register, object value) {
 
-        /// <summary>
-        /// Reads back the value of a string register
-        /// </summary>
-        /// <param name="_toRead">The register to read</param>
-        /// <param name="_stationNumber">The station number of the PLC</param>
-        /// <returns></returns>
-        public async Task<SRegisterResult> ReadStringRegister(SRegister _toRead, int _stationNumber = 1) {
+            var internalReg = (IRegisterInternal)register;
 
-            string requeststring = $"%{GetStationNumber()}#RD{_toRead.BuildMewtocolQuery()}";
-            var result = await SendCommandAsync(requeststring);
-            if (result.Success)
-                _toRead.SetValueFromPLC(result.Response.ParseDTString());
-            return new SRegisterResult {
-                Result = result,
-                Register = _toRead
-            };
-        }
+            return await internalReg.WriteAsync(this, value);
 
-        /// <summary>
-        /// Writes a string to a string register
-        /// </summary>
-        /// <param name="_toWrite">The register to write</param>
-        /// <param name="_value">The value to write, if the strings length is longer than the cap size it gets trimmed to the max char length</param>
-        /// <param name="_stationNumber">The station number of the PLC</param>
-        /// <returns>The success state of the write operation</returns>
-        public async Task<bool> WriteStringRegister(SRegister _toWrite, string _value, int _stationNumber = 1) {
-
-            if (_value == null) _value = "";
-            if (_value.Length > _toWrite.ReservedSize) {
-                throw new ArgumentException("Write string size cannot be longer than reserved string size");
-            }
-
-            string stationNum = GetStationNumber();
-            string dataString = _value.BuildDTString(_toWrite.ReservedSize);
-            string dataArea = _toWrite.BuildCustomIdent(dataString.Length / 4);
-
-            string requeststring = $"%{stationNum}#WD{dataArea}{dataString}";
-
-            var result = await SendCommandAsync(requeststring);
-
-
-            return result.Success && result.Response.StartsWith($"%{GetStationNumber()}$WD");
         }
 
         #endregion

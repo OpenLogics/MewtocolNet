@@ -1,8 +1,10 @@
 ﻿using MewtocolNet.Registers;
 using System;
+using System.Linq;
 using System.Reflection;
 
-namespace MewtocolNet.RegisterBuilding {
+namespace MewtocolNet.RegisterBuilding
+{
 
     public static class FinalizerExtensions {
 
@@ -29,7 +31,7 @@ namespace MewtocolNet.RegisterBuilding {
 
                 step.dotnetVarType = typeof(bool);
 
-            } else if (isTypeNotDefined && step.RegType == RegisterType.DT_START) {
+            } else if (isTypeNotDefined && step.RegType == RegisterType.DT_RANGE) {
 
                 step.dotnetVarType = typeof(string);
 
@@ -37,58 +39,31 @@ namespace MewtocolNet.RegisterBuilding {
 
             if(step.plcVarType != null) {
 
-                step.dotnetVarType = step.plcVarType.Value.ToDotnetType();
+                step.dotnetVarType = step.plcVarType.Value.GetDefaultDotnetType();
 
             }
 
-            //as numeric register
-            if (step.RegType.IsNumericDTDDT()) {
+            var builtReg = new RegisterBuildInfo {
 
-                if(step.plcVarType == null && step.dotnetVarType != null) {
+                name = step.Name,
+                specialAddress = step.SpecialAddress,
+                memoryAddress = step.MemAddress,
+                registerType = step.RegType,
+                dotnetCastType = step.dotnetVarType,
 
-                    step.plcVarType = step.dotnetVarType.ToPlcVarType();
+            }.Build();
 
-                }
+            step.AddToRegisterList(builtReg);
 
-                var type = step.plcVarType.Value.ToRegisterType();
+            return builtReg;
 
-                var areaAddr = step.MemAddress;
-                var name = step.Name;
+        }
 
-                //create a new bregister instance
-                var flags = BindingFlags.Public | BindingFlags.Instance;
+        private static void AddToRegisterList (this RegisterBuilderStep step, IRegister instance) {
 
-                //int _adress, string _name = null, bool isBitwise = false, Type _enumType = null
-                var parameters = new object[] { areaAddr, name, false, null };
-                var instance = (IRegister)Activator.CreateInstance(type, flags, null, parameters, null);
+            if (step.forInterface == null) return;
 
-                return instance;
-
-            }
-
-            if (step.RegType.IsBoolean()) {
-
-                var io = (IOType)(int)step.RegType;
-                var spAddr = step.SpecialAddress;
-                var areaAddr = step.MemAddress;
-                var name = step.Name;
-
-                //create a new bregister instance
-                var flags = BindingFlags.Public | BindingFlags.Instance;
-                var parameters = new object[] { io, spAddr.Value, areaAddr, name };
-                var instance = (BRegister)Activator.CreateInstance(typeof(BRegister), flags, null, parameters, null);
-
-                return instance;
-
-            }
-
-            if (step.dotnetVarType != null) {
-
-
-
-            }
-
-            throw new Exception("Failed to build register");
+            step.forInterface.AddRegister(instance);
 
         }
 

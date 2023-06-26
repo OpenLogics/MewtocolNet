@@ -17,12 +17,12 @@ namespace MewtocolTests {
         public void NumericRegisterMewtocolIdentifiers() {
 
             List<IRegister> registers = new List<IRegister> {
-                new NRegister<short>(50, _name: null),
-                new NRegister<ushort>(50, _name: null),
-                new NRegister<int>(50, _name : null),
-                new NRegister<uint>(50, _name : null),
-                new NRegister<float>(50, _name : null),
-                new NRegister<TimeSpan>(50, _name : null),
+                new NumberRegister<short>(50, _name: null),
+                new NumberRegister<ushort>(50, _name: null),
+                new NumberRegister<int>(50, _name : null),
+                new NumberRegister<uint>(50, _name : null),
+                new NumberRegister<float>(50, _name : null),
+                new NumberRegister<TimeSpan>(50, _name : null),
             };
 
             List<string> expectedIdents = new List<string> {
@@ -51,23 +51,23 @@ namespace MewtocolTests {
 
             List<IRegister> registers = new List<IRegister> {
                 //numeric ones
-                new NRegister<short>(50, _name: null),
-                new NRegister<ushort>(60, _name : null),
-                new NRegister<int>(70, _name : null),
-                new NRegister<uint>(80, _name : null),
-                new NRegister<float>(90, _name : null),
-                new NRegister<TimeSpan>(100, _name : null),
+                new NumberRegister<short>(50, _name: null),
+                new NumberRegister<ushort>(60, _name : null),
+                new NumberRegister<int>(70, _name : null),
+                new NumberRegister<uint>(80, _name : null),
+                new NumberRegister<float>(90, _name : null),
+                new NumberRegister<TimeSpan>(100, _name : null),
                 
                 //boolean
-                new BRegister(IOType.R, 0, 100),
-                new BRegister(IOType.R, 0, 0),
-                new BRegister(IOType.X, 5),
-                new BRegister(IOType.X, 0xA),
-                new BRegister(IOType.X, 0xF, 109),
-                new BRegister(IOType.Y, 0xC, 75),
+                new BoolRegister(IOType.R, 0, 100),
+                new BoolRegister(IOType.R, 0, 0),
+                new BoolRegister(IOType.X, 5),
+                new BoolRegister(IOType.X, 0xA),
+                new BoolRegister(IOType.X, 0xF, 109),
+                new BoolRegister(IOType.Y, 0xC, 75),
 
                 //string
-                new SRegister(999, 5),
+                new BytesRegister<string>(999, 5),
             };
 
             List<string> expcectedIdents = new List<string> {
@@ -110,7 +110,7 @@ namespace MewtocolTests {
 
             var ex = Assert.Throws<NotSupportedException>(() => {
 
-                new NRegister<short>(100000, _name: null);
+                new NumberRegister<short>(100000, _name: null);
 
             });
 
@@ -118,7 +118,7 @@ namespace MewtocolTests {
 
             var ex1 = Assert.Throws<NotSupportedException>(() => {
 
-                new BRegister(IOType.R, _areaAdress: 512);
+                new BoolRegister(IOType.R, _areaAdress: 512);
 
             });
 
@@ -126,7 +126,7 @@ namespace MewtocolTests {
 
             var ex2 = Assert.Throws<NotSupportedException>(() => {
 
-                new BRegister(IOType.X, _areaAdress: 110);
+                new BoolRegister(IOType.X, _areaAdress: 110);
 
             });
 
@@ -134,7 +134,7 @@ namespace MewtocolTests {
 
             var ex3 = Assert.Throws<NotSupportedException>(() => {
 
-                new SRegister(100000, 5);
+                new BytesRegister<string>(100000, 5);
 
             });
 
@@ -147,7 +147,7 @@ namespace MewtocolTests {
 
             var ex = Assert.Throws<NotSupportedException>(() => {
 
-                new NRegister<double>(100, _name: null);
+                new NumberRegister<double>(100, _name: null);
 
             });
 

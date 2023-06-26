@@ -1,13 +1,14 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace MewtocolNet.Registers {
 
     /// <summary>
     /// Defines a register containing a boolean
     /// </summary>
-    public class BRegister : IRegister, INotifyPropertyChanged {
+    public class BoolRegister : IRegister, IRegisterInternal, INotifyPropertyChanged {
 
         /// <summary>
         /// Gets called whenever the value was changed
@@ -62,7 +63,7 @@ namespace MewtocolNet.Registers {
         /// <param name="_name">The custom name</param>
         /// <exception cref="NotSupportedException"></exception>
         /// <exception cref="Exception"></exception>
-        public BRegister(IOType _io, byte _spAddress = 0x0, int _areaAdress = 0, string _name = null) {
+        public BoolRegister(IOType _io, byte _spAddress = 0x0, int _areaAdress = 0, string _name = null) {
 
             if (_areaAdress < 0)
                 throw new NotSupportedException("The area address cant be negative");
@@ -84,36 +85,33 @@ namespace MewtocolNet.Registers {
 
         }
 
-        internal BRegister WithCollectionType(Type colType) {
-
-            collectionType = colType;
-            return this;
-
-        }
+        public void WithCollectionType (Type colType) => collectionType = colType;
 
         public byte? GetSpecialAddress() => SpecialAddress;
 
         /// <summary>
-        /// Builds the register area name
+        /// Builds the register area name for the mewtocol protocol
         /// </summary>
         public string BuildMewtocolQuery() {
 
-            //build area code from register type
-            StringBuilder asciistring = new StringBuilder(RegisterType.ToString());
+            //(R|X|Y)(area add [3] + special add [1])
+            StringBuilder asciistring = new StringBuilder();
 
-            string memPadded = MemoryAddress.ToString().PadLeft(4, '0');
+            string prefix = RegisterType.ToString();
+            string mem = MemoryAddress.ToString();
             string sp = SpecialAddress.ToString("X1");
 
-            asciistring.Append(memPadded);
+            asciistring.Append(prefix);
+            asciistring.Append(mem.PadLeft(3, '0'));
             asciistring.Append(sp);
 
             return asciistring.ToString();
 
         }
 
-        internal void SetValueFromPLC(bool val) {
+        public void SetValueFromPLC(object val) {
 
-            lastValue = val;
+            lastValue = (bool)val;
             TriggerChangedEvnt(this);
             TriggerNotifyChange();
 
@@ -180,6 +178,19 @@ namespace MewtocolNet.Registers {
             sb.AppendLine($"Special Address: {SpecialAddress:X1}");
 
             return sb.ToString();
+
+        }
+
+        public async Task<object> ReadAsync (MewtocolInterface interf) {
+
+            var read = await interf.ReadRawRegisterAsync(this);
+            return PlcValueParser.Parse<bool>(read);
+
+        }
+
+        public async Task<bool> WriteAsync (MewtocolInterface interf, object data) {
+
+            return await interf.WriteRawRegisterAsync(this, PlcValueParser.Encode((bool)data));
 
         }
 

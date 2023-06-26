@@ -1,4 +1,6 @@
-﻿namespace MewtocolNet {
+﻿using System;
+
+namespace MewtocolNet {
 
     /// <summary>
     /// The register prefixed type
@@ -26,9 +28,9 @@
         /// </summary>
         DDT = 4,
         /// <summary>
-        /// Start area of a byte sequence longer than 2 words 
+        /// Area of a byte sequence longer than 2 words 
         /// </summary>
-        DT_START = 5,
+        DT_RANGE = 5,
 
     }
 

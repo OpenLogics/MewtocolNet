@@ -1,7 +1,10 @@
 ﻿using System;
 
 namespace MewtocolNet.RegisterBuilding {
+
     public class RegisterBuilderStep {
+
+        internal MewtocolInterface forInterface;
 
         internal bool wasCasted = false;
 
@@ -15,12 +18,12 @@ namespace MewtocolNet.RegisterBuilding {
         internal PlcVarType? plcVarType;
         internal Type dotnetVarType;
 
-        public RegisterBuilderStep () => throw new NotSupportedException("Cant make a new instance of RegisterBuilderStep, use the builder pattern");
-        
-        internal RegisterBuilderStep (RegisterType regType, int memAddr) { 
-        
-            RegType = regType;  
-            MemAddress = memAddr;        
+        public RegisterBuilderStep() => throw new NotSupportedException("Cant make a new instance of RegisterBuilderStep, use the builder pattern");
+
+        internal RegisterBuilderStep(RegisterType regType, int memAddr) {
+
+            RegType = regType;
+            MemAddress = memAddr;
 
         }
 
@@ -28,11 +31,11 @@ namespace MewtocolNet.RegisterBuilding {
 
             RegType = regType;
             MemAddress = memAddr;
-            SpecialAddress = specialAddr;   
+            SpecialAddress = specialAddr;
 
         }
 
-        public RegisterBuilderStep AsPlcType (PlcVarType varType) {
+        public RegisterBuilderStep AsPlcType(PlcVarType varType) {
 
             dotnetVarType = null;
             plcVarType = varType;
@@ -43,9 +46,9 @@ namespace MewtocolNet.RegisterBuilding {
 
         }
 
-        public RegisterBuilderStep AsType<T> () {
+        public RegisterBuilderStep AsType<T>() {
 
-            if(!typeof(T).IsAllowedPlcCastingType()) {
+            if (!typeof(T).IsAllowedPlcCastingType()) {
 
                 throw new NotSupportedException($"The dotnet type {typeof(T)}, is not supported for PLC type casting");
 
@@ -60,7 +63,7 @@ namespace MewtocolNet.RegisterBuilding {
 
         }
 
-        internal RegisterBuilderStep AutoType () {
+        internal RegisterBuilderStep AutoType() {
 
             switch (RegType) {
                 case RegisterType.X:
@@ -74,7 +77,7 @@ namespace MewtocolNet.RegisterBuilding {
                 case RegisterType.DDT:
                 dotnetVarType = typeof(int);
                 break;
-                case RegisterType.DT_START:
+                case RegisterType.DT_RANGE:
                 dotnetVarType = typeof(string);
                 break;
             }
