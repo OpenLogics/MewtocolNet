@@ -12,15 +12,15 @@ namespace MewtocolNet.Logging {
         /// </summary>
         public static LogLevel LogLevel { get; set; }
 
-        internal static Action<DateTime, string> LogInvoked;
+        internal static Action<DateTime, LogLevel, string> LogInvoked;
 
         /// <summary>
         /// Gets invoked whenever a new log message is ready
         /// </summary>
-        public static void OnNewLogMessage(Action<DateTime, string> onMsg) {
+        public static void OnNewLogMessage(Action<DateTime, LogLevel, string> onMsg) {
 
-            LogInvoked += (t, m) => {
-                onMsg(t, m);
+            LogInvoked += (t, l, m) => {
+                onMsg(t, l, m);
             };
 
         }
@@ -29,9 +29,9 @@ namespace MewtocolNet.Logging {
 
             if ((int)loglevel <= (int)LogLevel) {
                 if (sender == null) {
-                    LogInvoked?.Invoke(DateTime.Now, message);
+                    LogInvoked?.Invoke(DateTime.Now, loglevel, message);
                 } else {
-                    LogInvoked?.Invoke(DateTime.Now, $"[{sender.GetConnectionPortInfo()}] {message}");
+                    LogInvoked?.Invoke(DateTime.Now, loglevel, $"[{sender.GetConnectionPortInfo()}] {message}");
                 }
             }
 

@@ -1,3 +1,4 @@
+using MewtocolNet.Exceptions;
 using MewtocolNet.Logging;
 using MewtocolNet.Queue;
 using MewtocolNet.RegisterAttributes;
@@ -113,7 +114,9 @@ namespace MewtocolNet {
         /// <summary>
         /// The registered data registers of the PLC
         /// </summary>
-        public List<IRegister> Registers { get; set; } = new List<IRegister>();
+        public List<BaseRegister> Registers { get; private set; } = new List<BaseRegister>();
+
+        internal IEnumerable<IRegisterInternal> RegistersInternal => Registers.Cast<IRegisterInternal>();
 
         private string ip;
         private int port;
@@ -208,11 +211,13 @@ namespace MewtocolNet {
 
             RegisterChanged += (o) => {
 
-                string address = $"{o.GetRegisterString()}{o.GetStartingMemoryArea()}".PadRight(5, (char)32);
+                var asInternal = (IRegisterInternal)o;
+
+                string address = $"{asInternal.GetRegisterString()}{asInternal.GetStartingMemoryArea()}".PadRight(5, (char)32);
 
                 Logger.Log($"{address} " +
                            $"{(o.Name != null ? $"({o.Name}) " : "")}" +
-                           $"changed to \"{o.GetValueString()}\"", LogLevel.Change, this);
+                           $"changed to \"{asInternal.GetValueString()}\"", LogLevel.Change, this);
             };
 
         }
@@ -305,9 +310,10 @@ namespace MewtocolNet {
         /// Attaches a poller to the interface that continously 
         /// polls the registered data registers and writes the values to them
         /// </summary>
-        public MewtocolInterface WithPoller() {
+        public MewtocolInterface WithPoller(bool useMultiFrame = false) {
 
             usePoller = true;
+            pollerUseMultiFrame = useMultiFrame;
             return this;
 
         }
@@ -397,7 +403,7 @@ namespace MewtocolNet {
 
             for (int i = 0; i < Registers.Count; i++) {
 
-                var reg = Registers[i];
+                var reg = (IRegisterInternal)Registers[i];
                 reg.ClearValue();
 
             }
@@ -423,22 +429,38 @@ namespace MewtocolNet {
 
                 queuedMessages++;
 
-                var response = await queue.Enqueue(() => SendSingleBlock(_msg));
+                TCPMessageResult tcpResult = TCPMessageResult.Waiting;
+                string response = "";
 
-                if (queuedMessages > 0)
-                    queuedMessages--;
+                int lineFeedFails = 0;
 
-                if (response == null) {
-                    return new CommandResult {
-                        Success = false,
-                        Error = "0000",
-                        ErrorDescription = "null result"
-                    };
+                //recursively try to get a response on failed line feeds
+                while (tcpResult == TCPMessageResult.Waiting || tcpResult == TCPMessageResult.FailedLineFeed) {
+
+                    if (lineFeedFails >= 5)
+                        throw new MewtocolException($"The message ${_msg} had {lineFeedFails} linefeed fails");
+
+                    var tempResponse = await queue.Enqueue(() => SendSingleBlock(_msg));
+                    tcpResult = tempResponse.Item1;
+                    response = tempResponse.Item2;
+
+                    if(tcpResult == TCPMessageResult.FailedLineFeed) {
+                        lineFeedFails++;
+                        Logger.Log($"Linefeed fail, retrying...", LogLevel.Error);
+                    }
+
+                    if (queuedMessages > 0)
+                        queuedMessages--;
+
+                    if (tcpResult == TCPMessageResult.FailedWithException)
+                        throw new MewtocolException("The connection to the device was terminated");
+
                 }
 
                 //error catching
                 Regex errorcheck = new Regex(@"\%[0-9]{2}\!([0-9]{2})", RegexOptions.IgnoreCase);
-                Match m = errorcheck.Match(response.ToString());
+                Match m = errorcheck.Match(response);
+
                 if (m.Success) {
                     string eCode = m.Groups[1].Value;
                     string eDes = CodeDescriptions.Error[Convert.ToInt32(eCode)];
@@ -456,7 +478,7 @@ namespace MewtocolNet {
                 return new CommandResult {
                     Success = true,
                     Error = "0000",
-                    Response = response.ToString()
+                    Response = response,
                 };
 
             } catch {
@@ -469,16 +491,16 @@ namespace MewtocolNet {
 
         }
 
-        private async Task<string> SendSingleBlock(string _blockString) {
+        private async Task<(TCPMessageResult, string)> SendSingleBlock(string _blockString) {
 
             if (client == null || !client.Connected) {
                 await ConnectTCP();
             }
 
             if (client == null || !client.Connected)
-                return null;
+                return (TCPMessageResult.NotConnected, null);
 
-            var message = _blockString.ToHexASCIIBytes();
+            var message = _blockString.BytesFromHexASCIIString();
 
             //time measuring
             if (speedStopwatchUpstr == null) {
@@ -542,13 +564,16 @@ namespace MewtocolNet {
 
             } catch (IOException) {
                 OnMajorSocketExceptionWhileConnected();
-                return null;
+                return (TCPMessageResult.FailedWithException, null);
             } catch (SocketException) {
                 OnMajorSocketExceptionWhileConnected();
-                return null;
+                return (TCPMessageResult.FailedWithException, null);
             }
 
-            if (!string.IsNullOrEmpty(response.ToString())) {
+
+            string resString = response.ToString();
+
+            if (!string.IsNullOrEmpty(resString) && resString != "\r" ) {
 
                 Logger.Log($"<-- IN MSG: {response}", LogLevel.Critical, this);
 
@@ -559,10 +584,12 @@ namespace MewtocolNet {
                 if (perSecUpstream <= 10000)
                     BytesPerSecondDownstream = (int)Math.Round(perSecUpstream, MidpointRounding.AwayFromZero);
 
-                return response.ToString();
+                return (TCPMessageResult.Success, resString);
 
             } else {
-                return null;
+
+                return (TCPMessageResult.FailedLineFeed, null);
+
             }
 
         }

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -11,131 +12,64 @@ namespace MewtocolNet.Registers {
     /// Defines a register containing a number
     /// </summary>
     /// <typeparam name="T">The type of the numeric value</typeparam>
-    public class NumberRegister<T> : IRegister, IRegisterInternal {
-
-        /// <summary>
-        /// Gets called whenever the value was changed
-        /// </summary>
-        public event Action<object> ValueChanged;
-
-        /// <summary>
-        /// Triggers when a property on the register changes
-        /// </summary>
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        public RegisterType RegisterType { get; private set; }
-
-        internal Type collectionType;
-
-        /// <summary>
-        /// The type of collection the register is in or null of added manually
-        /// </summary>
-        public Type CollectionType => collectionType;
-
-        internal T lastValue;
-
-        /// <summary>
-        /// The value of the register
-        /// </summary>
-        public object Value => lastValue;
-
-        internal string name;
-        /// <summary>
-        /// The register name or null of not defined
-        /// </summary>
-        public string Name => name;
-
-        internal int memoryAdress;
-        /// <summary>
-        /// The registers memory adress if not a special register
-        /// </summary>
-        public int MemoryAddress => memoryAdress;
-
-        internal int memoryLength;
-        /// <summary>
-        /// The rgisters memory length
-        /// </summary>
-        public int MemoryLength => memoryLength;
-
-        internal bool isUsedBitwise { get; set; }
+    public class NumberRegister<T> : BaseRegister {
 
         internal Type enumType { get; set; }
 
         /// <summary>
         /// Defines a register containing a number
         /// </summary>
-        /// <param name="_adress">Memory start adress max 99999</param>
+        /// <param name="_address">Memory start adress max 99999</param>
         /// <param name="_name">Name of the register</param>
-        public NumberRegister (int _adress, string _name = null) {
+        public NumberRegister (int _address, string _name = null) {
 
-            if (_adress > 99999)
-                throw new NotSupportedException("Memory adresses cant be greater than 99999");
+            if (_address > 99999) throw new NotSupportedException("Memory adresses cant be greater than 99999");
 
-            memoryAdress = _adress;
+            memoryAddress = _address;
             name = _name;
-            Type numType = typeof(T);
-            if (numType == typeof(short)) {
-                memoryLength = 0;
-            } else if (numType == typeof(ushort)) {
-                memoryLength = 0;
-            } else if (numType == typeof(int)) {
-                memoryLength = 1;
-            } else if (numType == typeof(uint)) {
-                memoryLength = 1;
-            } else if (numType == typeof(float)) {
-                memoryLength = 1;
-            } else if (numType == typeof(TimeSpan)) {
-                memoryLength = 1;
-            } else {
-                throw new NotSupportedException($"The type {numType} is not allowed for Number Registers");
-            }
 
-            //set register type
-            if(memoryLength == 1) {
-                RegisterType = RegisterType.DDT;
-            } else {
-                RegisterType = RegisterType.DT;
-            }
+            Type numType = typeof(T);
+
+            var allowedTypes = PlcValueParser.GetAllowDotnetTypes();
+            if (!allowedTypes.Contains(numType))
+                throw new NotSupportedException($"The type {numType} is not allowed for Number Registers");
+
+            var areaLen = (Marshal.SizeOf(numType) / 2) - 1;
+            RegisterType = areaLen >= 1 ? RegisterType.DDT : RegisterType.DT;
+
+            lastValue = default(T);
 
         }
 
-        public NumberRegister (int _adress, string _name = null, bool isBitwise = false, Type _enumType = null) {
+        /// <summary>
+        /// Defines a register containing a number
+        /// </summary>
+        /// <param name="_address">Memory start adress max 99999</param>
+        /// <param name="_enumType">Enum type to parse as</param>
+        /// <param name="_name">Name of the register</param>
+        public NumberRegister(int _address, Type _enumType, string _name = null) {
 
-            if (_adress > 99999) throw new NotSupportedException("Memory adresses cant be greater than 99999");
-            memoryAdress = _adress;
+            if (_address > 99999) throw new NotSupportedException("Memory adresses cant be greater than 99999");
+
+            memoryAddress = _address;
             name = _name;
+
             Type numType = typeof(T);
-            if (numType == typeof(short)) {
-                memoryLength = 0;
-            } else if (numType == typeof(ushort)) {
-                memoryLength = 0;
-            } else if (numType == typeof(int)) {
-                memoryLength = 1;
-            } else if (numType == typeof(uint)) {
-                memoryLength = 1;
-            } else if (numType == typeof(float)) {
-                memoryLength = 1;
-            } else if (numType == typeof(TimeSpan)) {
-                memoryLength = 1;
-            } else {
+
+            var allowedTypes = PlcValueParser.GetAllowDotnetTypes();
+            if (!allowedTypes.Contains(numType))
                 throw new NotSupportedException($"The type {numType} is not allowed for Number Registers");
-            }
 
-            //set register type
-            if (memoryLength == 1) {
-                RegisterType = RegisterType.DDT;
-            } else {
-                RegisterType = RegisterType.DT;
-            }
+            var areaLen = (Marshal.SizeOf(numType) / 2) - 1;
+            RegisterType = areaLen >= 1 ? RegisterType.DDT : RegisterType.DT;
 
-            isUsedBitwise = isBitwise;
             enumType = _enumType;
+            lastValue = default(T);
 
         }
 
-        public void WithCollectionType(Type colType) => collectionType = colType;
-
-        public void SetValueFromPLC(object val) {
+        /// <inheritdoc/>
+        public override void SetValueFromPLC(object val) {
 
             lastValue = (T)val;
             TriggerChangedEvnt(this);
@@ -143,20 +77,34 @@ namespace MewtocolNet.Registers {
 
         }
 
-        public byte? GetSpecialAddress() => null;
+        /// <inheritdoc/>
+        public override string BuildMewtocolQuery() {
 
-        public string GetStartingMemoryArea() => MemoryAddress.ToString();
+            StringBuilder asciistring = new StringBuilder("D");
+            asciistring.Append(MemoryAddress.ToString().PadLeft(5, '0'));
 
-        public Type GetCollectionType() => CollectionType;
+            int offsetAddress = 0;
+            if(RegisterType == RegisterType.DDT)
+                offsetAddress = 1;
 
-        public bool IsUsedBitwise() => isUsedBitwise;
+            asciistring.Append((MemoryAddress + offsetAddress).ToString().PadLeft(5, '0'));
+            return asciistring.ToString();
 
-        public string GetValueString() {
+        }
+
+        /// <inheritdoc/>
+        public override string GetValueString() {
+
+            if(typeof(T) == typeof(TimeSpan)) {
+
+                return $"{Value} [{((TimeSpan)Value).AsPLC()}]";
+
+            } 
 
             //is number or bitwise
             if (enumType == null) {
 
-                return $"{Value}{(isUsedBitwise ? $" [{GetBitwise().ToBitString()}]" : "")}";
+                return $"{Value}";
 
             }
 
@@ -204,6 +152,27 @@ namespace MewtocolNet.Registers {
 
         }
 
+        /// <inheritdoc/>
+        public override void ClearValue() => SetValueFromPLC(default(T));
+
+        /// <inheritdoc/>
+        public override async Task<object> ReadAsync() {
+
+            var read = await attachedInterface.ReadRawRegisterAsync(this);
+            var parsed = PlcValueParser.Parse<T>(read);
+
+            SetValueFromPLC(parsed);
+            return parsed;
+
+        }
+
+        /// <inheritdoc/>
+        public override async Task<bool> WriteAsync(object data) {
+
+            return await attachedInterface.WriteRawRegisterAsync(this, PlcValueParser.Encode((T)data));
+
+        }
+
         /// <summary>
         /// Gets the register bitwise if its a 16 or 32 bit int
         /// </summary>
@@ -227,76 +196,6 @@ namespace MewtocolNet.Registers {
             }
 
             return null;
-
-        }
-
-        public string BuildMewtocolQuery() {
-
-            StringBuilder asciistring = new StringBuilder("D");
-            asciistring.Append(MemoryAddress.ToString().PadLeft(5, '0'));
-            asciistring.Append((MemoryAddress + MemoryLength).ToString().PadLeft(5, '0'));
-            return asciistring.ToString();
-
-        }
-
-        public string GetRegisterString() {
-
-            if (Value is short) {
-                return "DT";
-            }
-
-            if (Value is ushort) {
-                return "DT";
-            }
-
-            if (Value is int) {
-                return "DDT";
-            }
-
-            if (Value is uint) {
-                return "DDT";
-            }
-
-            if (Value is float) {
-                return "DDT";
-            }
-
-            if (Value is TimeSpan) {
-                return "DDT";
-            }
-
-            throw new NotSupportedException("Numeric type is not supported");
-
-        }
-
-        public string GetCombinedName() => $"{(CollectionType != null ? $"{CollectionType.Name}." : "")}{Name ?? "Unnamed"}";
-
-        public string GetContainerName() => $"{(CollectionType != null ? $"{CollectionType.Name}" : "")}";
-
-        public string GetRegisterPLCName() => $"{GetRegisterString()}{MemoryAddress}";
-
-        public void ClearValue() => SetValueFromPLC(default(T));
-
-        internal void TriggerChangedEvnt(object changed) => ValueChanged?.Invoke(changed);
-
-        public void TriggerNotifyChange() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Value"));
-
-        public RegisterType GetRegisterType() => RegisterType;
-
-        public override string ToString() => $"{GetRegisterPLCName()} - Value: {GetValueString()}";
-
-        public string ToString(bool additional) => $"{GetRegisterPLCName()} - Value: {GetValueString()}";
-
-        public async Task<object> ReadAsync(MewtocolInterface interf) {
-
-            var read = await interf.ReadRawRegisterAsync(this);
-            return PlcValueParser.Parse<T>(read);
-
-        }
-
-        public async Task<bool> WriteAsync(MewtocolInterface interf, object data) {
-
-            return await interf.WriteRawRegisterAsync(this, PlcValueParser.Encode((T)data));
 
         }
 

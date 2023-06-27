@@ -16,13 +16,15 @@ namespace MewtocolTests {
         [Fact(DisplayName = "Numeric mewtocol query building")]
         public void NumericRegisterMewtocolIdentifiers() {
 
-            List<IRegister> registers = new List<IRegister> {
-                new NumberRegister<short>(50, _name: null),
-                new NumberRegister<ushort>(50, _name: null),
-                new NumberRegister<int>(50, _name : null),
-                new NumberRegister<uint>(50, _name : null),
-                new NumberRegister<float>(50, _name : null),
-                new NumberRegister<TimeSpan>(50, _name : null),
+            List<IRegisterInternal> registers = new List<IRegisterInternal> {
+                new NumberRegister<short>(50),
+                new NumberRegister<ushort>(50),
+                new NumberRegister<int>(50),
+                new NumberRegister<uint>(50),
+                new NumberRegister<float>(50),
+                new NumberRegister<TimeSpan>(50),
+                new BytesRegister(50, 30),
+                new BytesRegister(50, 31),
             };
 
             List<string> expectedIdents = new List<string> {
@@ -32,12 +34,14 @@ namespace MewtocolTests {
                 "D0005000051", //double word register
                 "D0005000051", //double word register
                 "D0005000051", //double word register
+                "D0005000065", //variable len register even bytes
+                "D0005000066", //variable len register odd bytes
             };
 
             //test mewtocol idents
             for (int i = 0; i < registers.Count; i++) {
 
-                IRegister? reg = registers[i];
+                IRegisterInternal? reg = registers[i];
                 string expect = expectedIdents[i];
 
                 Assert.Equal(expect, reg.BuildMewtocolQuery());
@@ -49,7 +53,7 @@ namespace MewtocolTests {
         [Fact(DisplayName = "PLC register naming convention test")]
         public void PLCRegisterIdentifiers() {
 
-            List<IRegister> registers = new List<IRegister> {
+            List<IRegisterInternal> registers = new List<IRegisterInternal> {
                 //numeric ones
                 new NumberRegister<short>(50, _name: null),
                 new NumberRegister<ushort>(60, _name : null),
@@ -67,7 +71,7 @@ namespace MewtocolTests {
                 new BoolRegister(IOType.Y, 0xC, 75),
 
                 //string
-                new BytesRegister<string>(999, 5),
+                new BytesRegister(999, 5),
             };
 
             List<string> expcectedIdents = new List<string> {
@@ -96,7 +100,7 @@ namespace MewtocolTests {
             //test mewtocol idents
             for (int i = 0; i < registers.Count; i++) {
 
-                IRegister? reg = registers[i];
+                IRegisterInternal? reg = registers[i];
                 string expect = expcectedIdents[i];
 
                 Assert.Equal(expect, reg.GetRegisterPLCName());
@@ -134,7 +138,7 @@ namespace MewtocolTests {
 
             var ex3 = Assert.Throws<NotSupportedException>(() => {
 
-                new BytesRegister<string>(100000, 5);
+                new BytesRegister(100000, 5);
 
             });
 

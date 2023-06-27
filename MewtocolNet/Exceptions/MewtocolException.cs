@@ -17,15 +17,15 @@ namespace MewtocolNet.Exceptions {
           System.Runtime.Serialization.SerializationInfo info,
           System.Runtime.Serialization.StreamingContext context) : base(info, context) { }
 
-        public static MewtocolException DupeRegister (IRegister register) {
+        internal static MewtocolException DupeRegister (IRegisterInternal register) {
 
             return new MewtocolException($"The mewtocol interface already contains this register: {register.GetRegisterPLCName()}");
 
         }
 
-        public static MewtocolException DupeNameRegister (IRegister register) {
+        internal static MewtocolException DupeNameRegister (IRegisterInternal register) {
 
-            return new MewtocolException($"The mewtocol interface registers already contains a register with the name: {register.Name}");
+            return new MewtocolException($"The mewtocol interface registers already contains a register with the name: {register.GetRegisterPLCName()}");
 
         }
 

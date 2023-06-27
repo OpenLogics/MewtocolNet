@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using MewtocolNet.Logging;
+using System.Text.RegularExpressions;
 
 namespace Examples;
 
@@ -55,20 +57,23 @@ class Program {
         Console.WriteLine("\nEnter a number to excecute a example");
         Console.ResetColor();
 
-        Console.WriteLine("\nOther possible commands: \n\n" +
-                          "'toggle logger' - toggle the built in mewtocol logger on/off\n" +
-                          "'exit' - to close this program \n" +
-                          "'clear' - to clear the output \n");
+        Console.WriteLine("\nOther possible commands: \n");
+        Console.WriteLine($"'logger <level>' - set loglevel to one of: {string.Join(", ", Enum.GetNames(typeof(LogLevel)).ToList())}");
+        Console.WriteLine("'exit' - to close this program");
+        Console.WriteLine("'clear' - to clear the output");
+
 
         Console.Write("> ");
 
         var line = Console.ReadLine();
 
-        if (line == "toggle logger") {
+        var loggerMatch = Regex.Match(line, @"logger (?<level>[a-zA-Z]{0,})");
 
-            ExampleScenarios.MewtocolLoggerEnabled = !ExampleScenarios.MewtocolLoggerEnabled;
+        if (loggerMatch.Success && Enum.TryParse<LogLevel>(loggerMatch.Groups["level"].Value, out var loglevel)) {
 
-            Console.WriteLine(ExampleScenarios.MewtocolLoggerEnabled ? "Logger enabled" : "Logger disabled");
+            Logger.LogLevel = loglevel;
+
+            Console.WriteLine($"Loglevel changed to: {loglevel}");
 
         } else if (line == "exit") {
 

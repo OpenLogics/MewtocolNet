@@ -1,5 +1,6 @@
 ﻿using MewtocolNet.Registers;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
@@ -19,10 +20,13 @@ namespace MewtocolNet.TypeConversion {
             { PlcVarType.TIME, RegisterType.DDT },
             { PlcVarType.WORD, RegisterType.DT },
             { PlcVarType.DWORD, RegisterType.DDT },
-            { PlcVarType.STRING, RegisterType.DT_RANGE },
+            { PlcVarType.STRING, RegisterType.DT_BYTE_RANGE },
 
         };
 
+        /// <summary>
+        /// All conversions for reading dataf from and to the plc
+        /// </summary>
         internal static List<IPlcTypeConverter> items = new List<IPlcTypeConverter> {
 
             new PlcTypeConversion<bool>(RegisterType.R) {
@@ -113,6 +117,64 @@ namespace MewtocolNet.TypeConversion {
                 ToRaw = value => {
 
                     return BitConverter.GetBytes(value);
+
+                },
+            },
+            new PlcTypeConversion<float>(RegisterType.DDT) {
+                HoldingRegisterType = typeof(NumberRegister<float>),
+                PlcVarType = PlcVarType.REAL,
+                FromRaw = bytes => {
+
+                    var val = BitConverter.ToUInt32(bytes, 0);
+                    byte[] floatVals = BitConverter.GetBytes(val);
+                    float finalFloat = BitConverter.ToSingle(floatVals, 0);
+
+                    return finalFloat;
+
+                },
+                ToRaw = value => {
+
+                    return BitConverter.GetBytes(value);
+
+                },
+            },
+            new PlcTypeConversion<TimeSpan>(RegisterType.DDT) {
+                HoldingRegisterType = typeof(NumberRegister<TimeSpan>),
+                PlcVarType = PlcVarType.TIME,
+                FromRaw = bytes => {
+
+                    var vallong = BitConverter.ToUInt32(bytes, 0);
+                    var valMillis = vallong * 10;
+                    var ts = TimeSpan.FromMilliseconds(valMillis);
+                    return ts;
+
+                },
+                ToRaw = value => {
+
+                    var tLong = (uint)(value.TotalMilliseconds / 10);
+                    return BitConverter.GetBytes(tLong);
+
+                },
+            },
+            new PlcTypeConversion<byte[]>(RegisterType.DT) {
+                HoldingRegisterType = typeof(BytesRegister),
+                FromRaw = bytes => bytes,
+                ToRaw = value => value,
+            },
+            new PlcTypeConversion<BitArray>(RegisterType.DT) {
+                HoldingRegisterType = typeof(BytesRegister),
+                PlcVarType = PlcVarType.WORD,
+                FromRaw = bytes => {
+
+                    BitArray bitAr = new BitArray(bytes);
+                    return bitAr;
+
+                },
+                ToRaw = value => {
+
+                    byte[] ret = new byte[(value.Length - 1) / 8 + 1];
+                    value.CopyTo(ret, 0);
+                    return ret;
 
                 },
             },

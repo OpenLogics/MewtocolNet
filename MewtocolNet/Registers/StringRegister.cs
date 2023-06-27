@@ -9,7 +9,7 @@ namespace MewtocolNet.Registers {
     /// <summary>
     /// Defines a register containing a string
     /// </summary>
-    public class BytesRegister : BaseRegister {
+    public class StringRegister : BaseRegister {
 
         internal int addressLength;
         /// <summary>
@@ -22,24 +22,23 @@ namespace MewtocolNet.Registers {
         /// <summary>
         /// Defines a register containing a string
         /// </summary>
-        public BytesRegister(int _address, int _reservedByteSize, string _name = null) {
+        public StringRegister (int _adress, int _reservedByteSize, string _name = null) {
 
-            if (_address > 99999) throw new NotSupportedException("Memory adresses cant be greater than 99999");
+            if (_adress > 99999) throw new NotSupportedException("Memory adresses cant be greater than 99999");
             name = _name;
-            memoryAddress = _address;
+            memoryAddress = _adress;
             ReservedSize = (short)_reservedByteSize;
 
-            //calc mem length 
-            //because one register is always 1 word (2 bytes) long, if the bytecount is uneven we get the trailing word too
-            var byteSize = _reservedByteSize;
-            if (_reservedByteSize % 2 != 0) byteSize++;
+            //calc mem length
+            var wordsize = (double)_reservedByteSize / 2;
+            if (wordsize % 2 != 0) {
+                wordsize++;
+            }
 
             RegisterType = RegisterType.DT_BYTE_RANGE;
-            addressLength = (byteSize / 2) - 1;
+            addressLength = (int)Math.Round(wordsize + 1);
 
         }
-
-        public override string GetValueString() => Value == null ? "null" : ((byte[])Value).ToHexString("-");
 
         /// <inheritdoc/>
         public override string BuildMewtocolQuery() {
@@ -72,10 +71,7 @@ namespace MewtocolNet.Registers {
         public override async Task<object> ReadAsync() {
 
             var read = await attachedInterface.ReadRawRegisterAsync(this);
-            var parsed = PlcValueParser.Parse<byte[]>(read);
-
-            SetValueFromPLC(parsed);
-            return parsed;
+            return PlcValueParser.Parse<byte[]>(read);
 
         }
 

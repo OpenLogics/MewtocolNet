@@ -17,52 +17,64 @@ namespace MewtocolNet
         internal Type dotnetCastType;
         internal Type collectionType;
 
-        internal IRegister Build () {
+        internal BaseRegister Build () {
 
             RegisterType regType = registerType ?? dotnetCastType.ToRegisterTypeDefault();
 
-            PlcVarType plcType = dotnetCastType.ToPlcVarType();
-            Type registerClassType = plcType.GetDefaultPlcVarType();
+            Type registerClassType = dotnetCastType.GetDefaultRegisterHoldingType();
 
-            if (regType.IsNumericDTDDT() && (dotnetCastType == typeof(bool) || dotnetCastType == typeof(BitArray))) {
+            bool isBytesRegister = !registerClassType.IsGenericType && registerClassType == typeof(BytesRegister);
+
+            if (regType.IsNumericDTDDT() && (dotnetCastType == typeof(bool))) {
 
                 //-------------------------------------------
                 //as numeric register with boolean bit target
-
-                var type = typeof(NumberRegister<BitArray>);
-
-                var areaAddr = memoryAddress;
-
                 //create a new bregister instance
                 var flags = BindingFlags.Public | BindingFlags.Instance;
 
-                //int _adress, string _name = null, bool isBitwise = false, Type _enumType = null
-                var parameters = new object[] { areaAddr, name, true, null };
-                var instance = (IRegister)Activator.CreateInstance(type, flags, null, parameters, null);
+                //int _adress, int _reservedByteSize, string _name = null
+                var parameters = new object[] { memoryAddress, memorySizeBytes, name };
+                var instance = (BaseRegister)Activator.CreateInstance(typeof(BytesRegister), flags, null, parameters, null);
 
                 if (collectionType != null)
-                    ((IRegisterInternal)instance).WithCollectionType(collectionType);
+                    instance.WithCollectionType(collectionType);
 
                 return instance;
 
-            } else if (regType.IsNumericDTDDT()) {
+            } else if (regType.IsNumericDTDDT() && !isBytesRegister) {
 
                 //-------------------------------------------
                 //as numeric register
 
-                var type = plcType.GetDefaultPlcVarType();
-
                 var areaAddr = memoryAddress;
 
                 //create a new bregister instance
                 var flags = BindingFlags.Public | BindingFlags.Instance;
 
-                //int _adress, string _name = null, bool isBitwise = false, Type _enumType = null
-                var parameters = new object[] { areaAddr, name, false, null };
-                var instance = (IRegister)Activator.CreateInstance(type, flags, null, parameters, null);
+                //int _adress, Type _enumType = null, string _name = null
+                var parameters = new object[] { areaAddr, null, name };
+                var instance = (BaseRegister)Activator.CreateInstance(registerClassType, flags, null, parameters, null);
 
                 if(collectionType != null)
-                    ((IRegisterInternal)instance).WithCollectionType(collectionType);
+                    instance.WithCollectionType(collectionType);
+
+                return instance;
+
+            }
+
+            if(isBytesRegister) {
+
+                //-------------------------------------------
+                //as byte range register
+
+                //create a new bregister instance
+                var flags = BindingFlags.Public | BindingFlags.Instance;
+                //int _adress, int _reservedSize, string _name = null
+                var parameters = new object[] { memoryAddress, memorySizeBytes, name };
+                var instance = (BaseRegister)Activator.CreateInstance(typeof(BytesRegister), flags, null, parameters, null);
+
+                if (collectionType != null)
+                    instance.WithCollectionType(collectionType);
 
                 return instance;
 
@@ -81,26 +93,6 @@ namespace MewtocolNet
                 var flags = BindingFlags.Public | BindingFlags.Instance;
                 var parameters = new object[] { io, spAddr.Value, areaAddr, name };
                 var instance = (BoolRegister)Activator.CreateInstance(typeof(BoolRegister), flags, null, parameters, null);
-
-                if (collectionType != null)
-                    ((IRegisterInternal)instance).WithCollectionType(collectionType);
-
-                return instance;
-
-            }
-
-            if(regType == RegisterType.DT_RANGE) {
-
-                //-------------------------------------------
-                //as byte range register
-
-                var type = plcType.GetDefaultPlcVarType();
-
-                //create a new bregister instance
-                var flags = BindingFlags.Public | BindingFlags.Instance;
-                //int _adress, int _reservedSize, string _name = null
-                var parameters = new object[] { memoryAddress, memorySizeBytes, name };
-                var instance = (IRegister)Activator.CreateInstance(type, flags, null, parameters, null);
 
                 if (collectionType != null)
                     ((IRegisterInternal)instance).WithCollectionType(collectionType);

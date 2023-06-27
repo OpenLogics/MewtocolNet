@@ -8,45 +8,7 @@ namespace MewtocolNet.Registers {
     /// <summary>
     /// Defines a register containing a boolean
     /// </summary>
-    public class BoolRegister : IRegister, IRegisterInternal, INotifyPropertyChanged {
-
-        /// <summary>
-        /// Gets called whenever the value was changed
-        /// </summary>
-        public event Action<object> ValueChanged;
-
-        /// <summary>
-        /// Triggers when a property on the register changes
-        /// </summary>
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        public RegisterType RegisterType { get; private set; }
-
-        internal Type collectionType;
-
-        /// <summary>
-        /// The type of collection the register is in or null of added manually
-        /// </summary>
-        public Type CollectionType => collectionType;
-
-        internal bool lastValue;
-
-        /// <summary>
-        /// The value of the register
-        /// </summary>
-        public object Value => lastValue;
-
-        internal string name;
-        /// <summary>
-        /// The register name or null of not defined
-        /// </summary>
-        public string Name => name;
-
-        internal int memoryAddress;
-        /// <summary>
-        /// The registers memory adress if not a special register
-        /// </summary>
-        public int MemoryAddress => memoryAddress;
+    public class BoolRegister : BaseRegister {
 
         internal byte specialAddress;
         /// <summary>
@@ -77,6 +39,8 @@ namespace MewtocolNet.Registers {
             if (_spAddress > 0xF)
                 throw new NotSupportedException("Special address cant be greater 15 or 0xF");
 
+            lastValue = false;
+
             memoryAddress = _areaAdress;
             specialAddress = _spAddress;
             name = _name;
@@ -85,14 +49,41 @@ namespace MewtocolNet.Registers {
 
         }
 
-        public void WithCollectionType (Type colType) => collectionType = colType;
+        #region Read / Write
 
-        public byte? GetSpecialAddress() => SpecialAddress;
+        public override void SetValueFromPLC(object val) {
 
-        /// <summary>
-        /// Builds the register area name for the mewtocol protocol
-        /// </summary>
-        public string BuildMewtocolQuery() {
+            lastValue = (bool)val;
+            TriggerChangedEvnt(this);
+            TriggerNotifyChange();
+
+        }
+
+        /// <inheritdoc/>
+        public override async Task<object> ReadAsync() {
+
+            var read = await attachedInterface.ReadRawRegisterAsync(this);
+            var parsed = PlcValueParser.Parse<bool>(read);
+
+            SetValueFromPLC(parsed);
+            return parsed;
+
+        }
+
+        /// <inheritdoc/>
+        public override async Task<bool> WriteAsync(object data) {
+
+            return await attachedInterface.WriteRawRegisterAsync(this, PlcValueParser.Encode((bool)data));
+
+        }
+
+        #endregion
+
+        /// <inheritdoc/>
+        public override byte? GetSpecialAddress() => SpecialAddress;
+
+        /// <inheritdoc/>
+        public override string BuildMewtocolQuery() {
 
             //(R|X|Y)(area add [3] + special add [1])
             StringBuilder asciistring = new StringBuilder();
@@ -109,37 +100,11 @@ namespace MewtocolNet.Registers {
 
         }
 
-        public void SetValueFromPLC(object val) {
+        /// <inheritdoc/>
+        public override void ClearValue() => SetValueFromPLC(false);
 
-            lastValue = (bool)val;
-            TriggerChangedEvnt(this);
-            TriggerNotifyChange();
-
-        }
-
-        public string GetStartingMemoryArea() {
-
-            return MemoryAddress.ToString();
-
-        }
-
-        public bool IsUsedBitwise() => false;
-
-        public Type GetCollectionType() => CollectionType;
-
-        public RegisterType GetRegisterType() => RegisterType;
-
-        public string GetValueString() => Value.ToString();
-
-        public void ClearValue() => SetValueFromPLC(false);
-
-        public string GetRegisterString() => RegisterType.ToString();
-
-        public string GetCombinedName() => $"{(CollectionType != null ? $"{CollectionType.Name}." : "")}{Name ?? "Unnamed"}";
-
-        public string GetContainerName() => $"{(CollectionType != null ? $"{CollectionType.Name}" : "")}";
-
-        public string GetRegisterPLCName() {
+        /// <inheritdoc/>
+        public override string GetRegisterPLCName() {
 
             var spAdressEnd = SpecialAddress.ToString("X1");
 
@@ -159,13 +124,8 @@ namespace MewtocolNet.Registers {
 
         }
 
-        internal void TriggerChangedEvnt(object changed) => ValueChanged?.Invoke(changed);
-
-        public void TriggerNotifyChange() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Value"));
-
-        public override string ToString() => $"{GetRegisterPLCName()} - Value: {GetValueString()}";
-
-        public string ToString(bool additional) {
+        /// <inheritdoc/>
+        public override string ToString(bool additional) {
 
             if (!additional) return this.ToString();
 
@@ -178,19 +138,6 @@ namespace MewtocolNet.Registers {
             sb.AppendLine($"Special Address: {SpecialAddress:X1}");
 
             return sb.ToString();
-
-        }
-
-        public async Task<object> ReadAsync (MewtocolInterface interf) {
-
-            var read = await interf.ReadRawRegisterAsync(this);
-            return PlcValueParser.Parse<bool>(read);
-
-        }
-
-        public async Task<bool> WriteAsync (MewtocolInterface interf, object data) {
-
-            return await interf.WriteRawRegisterAsync(this, PlcValueParser.Encode((bool)data));
 
         }
 

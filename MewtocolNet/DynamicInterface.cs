@@ -7,6 +7,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MewtocolNet
@@ -35,6 +37,7 @@ namespace MewtocolNet
         internal volatile bool pollerFirstCycle = false;
 
         internal bool usePoller = false;
+        internal bool pollerUseMultiFrame = false;
 
         #region Register Polling
 
@@ -93,66 +96,140 @@ namespace MewtocolNet
 
             pollerFirstCycle = true;
 
-            Task.Factory.StartNew(async () => {
+            Task.Run(Poll);
 
-                Logger.Log("Poller is attaching", LogLevel.Info, this);
+        }
 
-                int iteration = 0;
+        /// <summary>
+        /// Runs a single poller cycle manually,
+        /// useful if you want to use a custom update frequency
+        /// </summary>
+        /// <returns></returns>
+        public async Task RunPollerCylceManual (bool useMultiFrame = false) {
 
-                pollerTaskStopped = false;
-                pollerTaskRunning = true;
-                pollerIsPaused = false;
+            if (useMultiFrame) {
+                await OnMultiFrameCycle();
+            } else {
+                await OnSingleFrameCycle();
+            }
 
-                while (!pollerTaskStopped) {
+        }
 
-                    while (pollerTaskRunning) {
+        //polls all registers one by one (slow)
+        internal async Task Poll () {
 
-                        if (iteration >= Registers.Count + 1) {
-                            iteration = 0;
-                            //invoke cycle polled event
-                            InvokePolledCycleDone();
-                            continue;
-                        }
+            Logger.Log("Poller is attaching", LogLevel.Info, this);
 
-                        if (iteration >= Registers.Count) {
-                            await GetPLCInfoAsync();
-                            iteration++;
-                            continue;
-                        }
+            int iteration = 0;
 
-                        var reg = Registers[iteration];
+            pollerTaskStopped = false;
+            pollerTaskRunning = true;
+            pollerIsPaused = false;
 
-                        if(reg.IsAllowedRegisterGenericType()) {
+            while (!pollerTaskStopped) {
 
-                            var lastVal = reg.Value;
+                if (iteration >= Registers.Count + 1) {
+                    iteration = 0;
+                    //invoke cycle polled event
+                    InvokePolledCycleDone();
+                    continue;
+                }
 
-                            var rwReg = (IRegisterInternal)reg;
+                if(pollerUseMultiFrame) {
+                    await OnMultiFrameCycle();
+                } else {
+                    await OnSingleFrameCycle();
+                }
 
-                            var readout = await rwReg.ReadAsync(this);
+                pollerFirstCycle = false;
 
-                            if (lastVal != readout) {
+                iteration++;
 
-                                rwReg.SetValueFromPLC(readout);
-                                InvokeRegisterChanged(reg);
-                           
-                            }
+                pollerIsPaused = !pollerTaskRunning;
 
-                        }
+            }
 
-                        iteration++;
-                        pollerFirstCycle = false;
+            pollerIsPaused = false;
 
-                        await Task.Delay(pollerDelayMs);
+        }
+
+        private async Task OnSingleFrameCycle () {
+
+            foreach (var reg in Registers) {
+
+                if (reg.IsAllowedRegisterGenericType()) {
+
+                    var lastVal = reg.Value;
+
+                    var rwReg = (IRegisterInternal)reg;
+
+                    var readout = await rwReg.ReadAsync();
+
+                    if (lastVal != readout) {
+
+                        rwReg.SetValueFromPLC(readout);
+                        InvokeRegisterChanged(reg);
 
                     }
 
-                    pollerIsPaused = !pollerTaskRunning;
+                }
+
+            }
+
+            await GetPLCInfoAsync();
+
+        }
+
+        private async Task OnMultiFrameCycle () {
+
+            await UpdateRCPRegisters();
+
+            await GetPLCInfoAsync();
+
+        }
+
+        private async Task UpdateRCPRegisters () {
+
+            //build booleans
+            var rcpList = Registers.Where(x => x.GetType() == typeof(BoolRegister))
+                                   .Select(x => (BoolRegister)x)
+                                   .ToArray();
+
+            //one frame can only read 8 registers at a time
+            int rcpFrameCount = (int)Math.Ceiling((double)rcpList.Length / 8);
+            int rcpLastFrameRemainder = rcpList.Length <= 8 ? rcpList.Length : rcpList.Length % 8;
+
+            for (int i = 0; i < rcpFrameCount; i++) {
+
+                int toReadRegistersCount = 8;
+
+                if(i == rcpFrameCount - 1) toReadRegistersCount = rcpLastFrameRemainder;
+
+                var rcpString = new StringBuilder($"%{GetStationNumber()}#RCP{toReadRegistersCount}");
+
+                for (int j = 0; j < toReadRegistersCount; j++) {
+
+                    BoolRegister register = rcpList[i + j];
+                    rcpString.Append(register.BuildMewtocolQuery());
 
                 }
 
-                pollerIsPaused = false;
+                string rcpRequest = rcpString.ToString();
+                var result = await SendCommandAsync(rcpRequest);
+                var resultBitArray = result.Response.ParseRCMultiBit();
 
-            });
+                for (int k = 0; k < resultBitArray.Length; k++) {
+
+                    var register = rcpList[i + k];
+
+                    if((bool)register.Value != resultBitArray[k]) {
+                        register.SetValueFromPLC(resultBitArray[k]);
+                        InvokeRegisterChanged(register);
+                    }
+
+                }
+                    
+            }
 
         }
 
@@ -165,8 +242,6 @@ namespace MewtocolNet
         #endregion
 
         #region Register Colleciton adding
-
-        #region Register Collection
 
         /// <summary>
         /// Attaches a register collection object to 
@@ -212,7 +287,7 @@ namespace MewtocolNet
             RegisterChanged += (reg) => {
 
                 //register is used bitwise
-                if (reg.IsUsedBitwise()) {
+                if (reg.GetType() == typeof(BytesRegister)) {
 
                     for (int i = 0; i < props.Length; i++) {
 
@@ -314,8 +389,6 @@ namespace MewtocolNet
 
         #endregion
 
-        #endregion
-
         #region Register Adding
 
         internal void AddRegister (RegisterBuildInfo buildInfo) {
@@ -323,7 +396,7 @@ namespace MewtocolNet
             var builtRegister = buildInfo.Build();
 
             //is bitwise and the register list already contains that area register
-            if(builtRegister.IsUsedBitwise() && CheckDuplicateRegister(builtRegister, out var existing)) {
+            if(builtRegister.GetType() == typeof(BytesRegister) && CheckDuplicateRegister(builtRegister, out var existing)) {
 
                 return;
 
@@ -335,11 +408,12 @@ namespace MewtocolNet
             if(CheckDuplicateNameRegister(builtRegister))
                 throw MewtocolException.DupeNameRegister(builtRegister);
 
+            builtRegister.attachedInterface = this;
             Registers.Add(builtRegister);
 
         }
 
-        public void AddRegister(IRegister register) {
+        public void AddRegister (BaseRegister register) {
 
             if (CheckDuplicateRegister(register))
                 throw MewtocolException.DupeRegister(register);
@@ -347,29 +421,30 @@ namespace MewtocolNet
             if (CheckDuplicateNameRegister(register))
                 throw MewtocolException.DupeNameRegister(register);
 
+            register.attachedInterface = this;
             Registers.Add(register);
 
         }
 
-        private bool CheckDuplicateRegister (IRegister instance, out IRegister foundDupe) {
+        private bool CheckDuplicateRegister (IRegisterInternal instance, out IRegisterInternal foundDupe) {
 
-            foundDupe = Registers.FirstOrDefault(x => x.CompareIsDuplicate(instance));
+            foundDupe = RegistersInternal.FirstOrDefault(x => x.CompareIsDuplicate(instance));
 
-            return Registers.Contains(instance) || foundDupe != null;
-
-        }
-
-        private bool CheckDuplicateRegister(IRegister instance) {
-
-            var foundDupe = Registers.FirstOrDefault(x => x.CompareIsDuplicate(instance));
-
-            return Registers.Contains(instance) || foundDupe != null;
+            return RegistersInternal.Contains(instance) || foundDupe != null;
 
         }
 
-        private bool CheckDuplicateNameRegister(IRegister instance) {
+        private bool CheckDuplicateRegister(IRegisterInternal instance) {
 
-            return Registers.Any(x => x.CompareIsNameDuplicate(instance));
+            var foundDupe = RegistersInternal.FirstOrDefault(x => x.CompareIsDuplicate(instance));
+
+            return RegistersInternal.Contains(instance) || foundDupe != null;
+
+        }
+
+        private bool CheckDuplicateNameRegister(IRegisterInternal instance) {
+
+            return RegistersInternal.Any(x => x.CompareIsNameDuplicate(instance));
 
         }
 
@@ -387,25 +462,6 @@ namespace MewtocolNet
 
         }
 
-        /// <summary>
-        /// Gets a register that was added by its name
-        /// </summary>
-        /// <typeparam name="T">The type of register</typeparam>
-        /// <returns>A casted register or the <code>default</code> value</returns>
-        public T GetRegister<T>(string name) where T : IRegister {
-            try {
-
-                var reg = Registers.FirstOrDefault(x => x.Name == name);
-                return (T)reg;
-
-            } catch (InvalidCastException) {
-
-                return default(T);
-
-            }
-
-        }
-
         #endregion
 
         #region Register Reading
@@ -413,9 +469,9 @@ namespace MewtocolNet
         /// <summary>
         /// Gets a list of all added registers
         /// </summary>
-        public List<IRegister> GetAllRegisters() {
+        public IEnumerable<IRegister> GetAllRegisters() {
 
-            return Registers;
+            return Registers.Cast<IRegister>();
 
         }
 

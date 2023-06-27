@@ -159,10 +159,12 @@ namespace MewtocolNet {
 
         #region Raw register reading / writing
 
-        internal async Task<byte[]> ReadRawRegisterAsync (IRegister _toRead) {
+        internal async Task<byte[]> ReadRawRegisterAsync (IRegisterInternal _toRead) {
+
+            var toreadType = _toRead.GetType();
 
             //returns a byte array 1 long and with the byte beeing 0 or 1
-            if (_toRead.GetType() == typeof(BoolRegister)) {
+            if (toreadType == typeof(BoolRegister)) {
 
                 string requeststring = $"%{GetStationNumber()}#RCS{_toRead.BuildMewtocolQuery()}";
                 var result = await SendCommandAsync(requeststring);
@@ -177,7 +179,7 @@ namespace MewtocolNet {
             }
 
             //returns a byte array 2 bytes or 4 bytes long depending on the data size
-            if (_toRead.GetType().GetGenericTypeDefinition() == typeof(NumberRegister<>)) {
+            if (toreadType.IsGenericType && _toRead.GetType().GetGenericTypeDefinition() == typeof(NumberRegister<>)) {
 
                 string requeststring = $"%{GetStationNumber()}#RD{_toRead.BuildMewtocolQuery()}";
                 var result = await SendCommandAsync(requeststring);
@@ -198,7 +200,7 @@ namespace MewtocolNet {
             }
 
             //returns a byte array with variable size
-            if (_toRead.GetType() == typeof(BytesRegister<>)) {
+            if (toreadType == typeof(BytesRegister)) {
 
                 string requeststring = $"%{GetStationNumber()}#RD{_toRead.BuildMewtocolQuery()}";
                 var result = await SendCommandAsync(requeststring);
@@ -206,7 +208,9 @@ namespace MewtocolNet {
                 if (!result.Success)
                     throw new Exception($"Failed to load the byte data for: {_toRead}");
 
-                return result.Response.ParseDTString().ReverseByteOrder().HexStringToByteArray();
+                var resBytes = result.Response.ParseDTRawStringAsBytes();
+
+                return resBytes;
 
             }
 
@@ -214,7 +218,7 @@ namespace MewtocolNet {
 
         }
 
-        internal async Task<bool> WriteRawRegisterAsync (IRegister _toWrite, byte[] data) {
+        internal async Task<bool> WriteRawRegisterAsync (IRegisterInternal _toWrite, byte[] data) {
 
             //returns a byte array 1 long and with the byte beeing 0 or 1
             if (_toWrite.GetType() == typeof(BoolRegister)) {
@@ -235,7 +239,7 @@ namespace MewtocolNet {
             }
 
             //returns a byte array with variable size
-            if (_toWrite.GetType() == typeof(BytesRegister<>)) {
+            if (_toWrite.GetType() == typeof(BytesRegister)) {
 
                 //string stationNum = GetStationNumber();
                 //string dataString = gotBytes.BuildDTString(_toWrite.ReservedSize);
@@ -259,7 +263,7 @@ namespace MewtocolNet {
 
             var internalReg = (IRegisterInternal)register;
 
-            return await internalReg.WriteAsync(this, value);
+            return await internalReg.WriteAsync(value);
 
         }
 

@@ -30,7 +30,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Area of a byte sequence longer than 2 words 
         /// </summary>
-        DT_RANGE = 5,
+        DT_BYTE_RANGE = 5,
 
     }
 

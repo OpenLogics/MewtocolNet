@@ -14,10 +14,31 @@ namespace MewtocolNet.RegisterBuilding
             if (!step.wasCasted)
                 step.AutoType();
 
+            //fallbacks if no casting builder was given
+            step.GetFallbackDotnetType();
+
+            var builtReg = new RegisterBuildInfo {
+
+                name = step.Name,
+                specialAddress = step.SpecialAddress,
+                memoryAddress = step.MemAddress,
+                memorySizeBytes = step.MemByteSize,
+                registerType = step.RegType,
+                dotnetCastType = step.dotnetVarType,
+
+            }.Build();
+
+            step.AddToRegisterList(builtReg);
+
+            return builtReg;
+
+        }
+
+        private static void GetFallbackDotnetType (this RegisterBuilderStep step) {
+
             bool isBoolean = step.RegType.IsBoolean();
             bool isTypeNotDefined = step.plcVarType == null && step.dotnetVarType == null;
 
-            //fallbacks if no casting builder was given
             if (isTypeNotDefined && step.RegType == RegisterType.DT) {
 
                 step.dotnetVarType = typeof(short);
@@ -31,35 +52,21 @@ namespace MewtocolNet.RegisterBuilding
 
                 step.dotnetVarType = typeof(bool);
 
-            } else if (isTypeNotDefined && step.RegType == RegisterType.DT_RANGE) {
+            } else if (isTypeNotDefined && step.RegType == RegisterType.DT_BYTE_RANGE) {
 
                 step.dotnetVarType = typeof(string);
 
             }
 
-            if(step.plcVarType != null) {
+            if (step.plcVarType != null) {
 
                 step.dotnetVarType = step.plcVarType.Value.GetDefaultDotnetType();
 
             }
 
-            var builtReg = new RegisterBuildInfo {
-
-                name = step.Name,
-                specialAddress = step.SpecialAddress,
-                memoryAddress = step.MemAddress,
-                registerType = step.RegType,
-                dotnetCastType = step.dotnetVarType,
-
-            }.Build();
-
-            step.AddToRegisterList(builtReg);
-
-            return builtReg;
-
         }
 
-        private static void AddToRegisterList (this RegisterBuilderStep step, IRegister instance) {
+        private static void AddToRegisterList (this RegisterBuilderStep step, BaseRegister instance) {
 
             if (step.forInterface == null) return;
 

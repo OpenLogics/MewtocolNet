@@ -122,20 +122,12 @@ public class TestRegisterBuilder {
 
         foreach (var item in dict) {
 
-            try {
+            output.WriteLine($"Expected: {item.Key}");
 
-                output.WriteLine($"Expected: {item.Key}");
+            var built = RegBuilder.Factory.FromPlcRegName(item.Key).AsPlcType(PlcVarType.BOOL).Build();
 
-                var built = RegBuilder.Factory.FromPlcRegName(item.Key).AsPlcType(PlcVarType.BOOL).Build();
-
-                output.WriteLine($"{(built?.ToString(true) ?? "null")}\n");
-                Assert.Equivalent(item.Value, built);
-
-            } catch (Exception ex) {
-
-                output.WriteLine(ex.Message.ToString());
-
-            }
+            output.WriteLine($"{(built?.ToString(true) ?? "null")}\n");
+            Assert.Equivalent(item.Value, built);
 
         }
 
@@ -204,11 +196,9 @@ public class TestRegisterBuilder {
     [Fact(DisplayName = "Parsing as Bytes Register (Casted)")]
     public void TestRegisterBuildingByteRangeCasted() {
 
-        var expect = new BytesRegister<byte[]>(303, 5);
+        var expect = new BytesRegister(303, 5);
 
-
-        Assert.Equivalent(expect, RegBuilder.Factory.FromPlcRegName("DT303").AsPlcType(PlcVarType.INT).Build());
-        Assert.Equivalent(expect, RegBuilder.Factory.FromPlcRegName("DT303").AsType<short>().Build());
+        Assert.Equivalent(expect, RegBuilder.Factory.FromPlcRegName("DT303").AsBytes(5).Build());
 
 
     }

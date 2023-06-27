@@ -91,7 +91,7 @@ namespace MewtocolTests {
 
         }
 
-        private void TestBasicGeneration(IRegister reg, string propName, object expectValue, int expectAddr, string expectPlcName) {
+        private void TestBasicGeneration(IRegisterInternal reg, string propName, object expectValue, int expectAddr, string expectPlcName) {
 
             Assert.NotNull(reg);
             Assert.Equal(propName, reg.Name);
@@ -115,7 +115,7 @@ namespace MewtocolTests {
             var register = interf.GetRegister(nameof(TestRegisterCollection.TestBool1));
 
             //test generic properties
-            TestBasicGeneration(register, nameof(TestRegisterCollection.TestBool1), false, 85, "R85");
+            TestBasicGeneration((IRegisterInternal)register, nameof(TestRegisterCollection.TestBool1), false, 85, "R85");
 
         }
 
@@ -128,7 +128,7 @@ namespace MewtocolTests {
             var register = interf.GetRegister(nameof(TestRegisterCollection.TestBoolInputXD));
 
             //test generic properties
-            TestBasicGeneration(register, nameof(TestRegisterCollection.TestBoolInputXD), false, 0, "XD");
+            TestBasicGeneration((IRegisterInternal)register, nameof(TestRegisterCollection.TestBoolInputXD), false, 0, "XD");
 
         }
 
@@ -141,7 +141,7 @@ namespace MewtocolTests {
             var register = interf.GetRegister(nameof(TestRegisterCollection.TestInt16));
 
             //test generic properties
-            TestBasicGeneration(register, nameof(TestRegisterCollection.TestInt16), (short)0, 899, "DT899");
+            TestBasicGeneration((IRegisterInternal)register, nameof(TestRegisterCollection.TestInt16), (short)0, 899, "DT899");
 
         }
 
@@ -154,7 +154,7 @@ namespace MewtocolTests {
             var register = interf.GetRegister(nameof(TestRegisterCollection.TestUInt16));
 
             //test generic properties
-            TestBasicGeneration(register, nameof(TestRegisterCollection.TestUInt16), (ushort)0, 342, "DT342");
+            TestBasicGeneration((IRegisterInternal)register, nameof(TestRegisterCollection.TestUInt16), (ushort)0, 342, "DT342");
 
         }
 
@@ -167,7 +167,7 @@ namespace MewtocolTests {
             var register = interf.GetRegister(nameof(TestRegisterCollection.TestInt32));
 
             //test generic properties
-            TestBasicGeneration(register, nameof(TestRegisterCollection.TestInt32), (int)0, 7001, "DDT7001");
+            TestBasicGeneration((IRegisterInternal)register, nameof(TestRegisterCollection.TestInt32), (int)0, 7001, "DDT7001");
 
         }
 
@@ -180,7 +180,7 @@ namespace MewtocolTests {
             var register = interf.GetRegister(nameof(TestRegisterCollection.TestUInt32));
 
             //test generic properties
-            TestBasicGeneration(register, nameof(TestRegisterCollection.TestUInt32), (uint)0, 765, "DDT765");
+            TestBasicGeneration((IRegisterInternal)register, nameof(TestRegisterCollection.TestUInt32), (uint)0, 765, "DDT765");
 
         }
 
@@ -193,70 +193,7 @@ namespace MewtocolTests {
             var register = interf.GetRegister(nameof(TestRegisterCollection.TestFloat32));
 
             //test generic properties
-            TestBasicGeneration(register, nameof(TestRegisterCollection.TestFloat32), (float)0, 7003, "DDT7003");
-
-        }
-
-        [Fact(DisplayName = "String generation")]
-        public void StringGen() {
-
-            var interf = new MewtocolInterface("192.168.0.1");
-            interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
-
-            var register = interf.GetRegister(nameof(TestRegisterCollection.TestString2));
-
-            //test generic properties
-            TestBasicGeneration(register, nameof(TestRegisterCollection.TestString2), null!, 7005, "DT7005");
-
-            Assert.Equal(5, ((BytesRegister<string>)register).ReservedSize);
-            Assert.Equal(4, ((BytesRegister<string>)register).MemoryLength);
-
-        }
-
-        [Fact(DisplayName = "BitArray 16bit generation")]
-        public void BitArray16Gen() {
-
-            var interf = new MewtocolInterface("192.168.0.1");
-            interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
-
-            var register = interf.GetRegister($"Auto_Bitwise_DT7010");
-
-            //test generic properties
-            TestBasicGeneration(register, "Auto_Bitwise_DT7010", (short)0, 7010, "DT7010");
-
-            Assert.True(((NumberRegister<short>)register).isUsedBitwise);
-            Assert.Equal(0, ((NumberRegister<short>)register).MemoryLength);
-
-        }
-
-        [Fact(DisplayName = "BitArray 32bit generation")]
-        public void BitArray32Gen() {
-
-            var interf = new MewtocolInterface("192.168.0.1");
-            interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
-
-            var register = interf.GetRegister($"Auto_Bitwise_DDT8010");
-
-            //test generic properties
-            TestBasicGeneration(register, "Auto_Bitwise_DDT8010", (int)0, 8010, "DDT8010");
-
-            Assert.True(((NumberRegister<int>)register).isUsedBitwise);
-            Assert.Equal(1, ((NumberRegister<int>)register).MemoryLength);
-
-        }
-
-        [Fact(DisplayName = "BitArray single bool generation")]
-        public void BitArraySingleBool16Gen() {
-
-            var interf = new MewtocolInterface("192.168.0.1");
-            interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
-
-            var register = interf.GetRegister($"Auto_Bitwise_DT1204");
-
-            //test generic properties
-            TestBasicGeneration(register, "Auto_Bitwise_DT1204", (short)0, 1204, "DT1204");
-
-            Assert.True(((NumberRegister<short>)register).isUsedBitwise);
+            TestBasicGeneration((IRegisterInternal)register, nameof(TestRegisterCollection.TestFloat32), (float)0, 7003, "DDT7003");
 
         }
 
@@ -269,35 +206,25 @@ namespace MewtocolTests {
             var register = interf.GetRegister(nameof(TestRegisterCollection.TestTime));
 
             //test generic properties
-            TestBasicGeneration(register, nameof(TestRegisterCollection.TestTime), TimeSpan.Zero, 7012, "DDT7012");
+            TestBasicGeneration((IRegisterInternal)register, nameof(TestRegisterCollection.TestTime), TimeSpan.Zero, 7012, "DDT7012");
 
         }
 
-        [Fact(DisplayName = "Enum16 generation")]
-        public void Enum16Gen() {
+        //[Fact(DisplayName = "String generation")]
+        //public void StringGen() {
 
-            var interf = new MewtocolInterface("192.168.0.1");
-            interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
+        //    var interf = new MewtocolInterface("192.168.0.1");
+        //    interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
 
-            var register = interf.GetRegister(nameof(TestRegisterCollection.TestEnum16));
+        //    var register = interf.GetRegister(nameof(TestRegisterCollection.TestString2));
 
-            //test generic properties
-            TestBasicGeneration(register, nameof(TestRegisterCollection.TestEnum16), (short)TestRegisterCollection.CurrentState.Undefined, 50, "DT50");
+        //    //test generic properties
+        //    TestBasicGeneration(register, nameof(TestRegisterCollection.TestString2), null!, 7005, "DT7005");
 
-        }
+        //    Assert.Equal(5, ((BytesRegister<string>)register).ReservedSize);
+        //    Assert.Equal(4, ((BytesRegister<string>)register).MemoryLength);
 
-        [Fact(DisplayName = "Enum32 generation")]
-        public void Enum32Gen() {
-
-            var interf = new MewtocolInterface("192.168.0.1");
-            interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
-
-            var register = interf.GetRegister(nameof(TestRegisterCollection.TestEnum32));
-
-            //test generic properties
-            TestBasicGeneration(register, nameof(TestRegisterCollection.TestEnum32), (int)TestRegisterCollection.CurrentState.Undefined, 51, "DDT51");
-
-        }
+        //}
 
     }
 

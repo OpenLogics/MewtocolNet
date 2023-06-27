@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -26,7 +27,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Converts a string (after converting to upper case) to ascii bytes 
         /// </summary>
-        internal static byte[] ToHexASCIIBytes(this string _str) {
+        internal static byte[] BytesFromHexASCIIString(this string _str) {
 
             ASCIIEncoding ascii = new ASCIIEncoding();
             byte[] bytes = ascii.GetBytes(_str.ToUpper());
@@ -73,31 +74,59 @@ namespace MewtocolNet {
 
         }
 
-        internal static string ParseDTString(this string _onString) {
+        internal static BitArray ParseRCMultiBit(this string _onString) {
 
-            var res = new Regex(@"\%([0-9]{2})\$RD.{8}(.*)...").Match(_onString);
+            var res = new Regex(@"\%([0-9]{2})\$RC(?<bits>(?:0|1){0,8})(..)").Match(_onString);
             if (res.Success) {
-                string val = res.Groups[2].Value;
-                return val.GetStringFromAsciiHex()?.Trim();
+                
+                string val = res.Groups["bits"].Value;
+
+                return new BitArray(val.Select(c => c == '1').ToArray());
+
             }
             return null;
 
         }
 
-        internal static string ReverseByteOrder(this string _onString) {
+        /// <summary>
+        /// Parses a return string from the PLC as a raw byte array <br/>
+        /// Example:
+        /// <code>
+        ///       ↓Start ↓end
+        /// %01$RD0100020010\r
+        /// </code>
+        /// This will return the byte array:
+        /// <code>
+        /// [0x01, 0x00, 0x02, 0x00]
+        /// </code>
+        /// </summary>
+        /// <param name="_onString"></param>
+        /// <returns>A <see cref="T:byte[]"/> or null of failed</returns>
+        internal static byte[] ParseDTRawStringAsBytes (this string _onString) {
 
-            if (_onString == null) return null;
+            var res = new Regex(@"\%([0-9]{2})\$RD(?<data>.*)(?<csum>..)..").Match(_onString);
+            if (res.Success) {
 
-            //split into 2 chars
-            var stringBytes = _onString.SplitInParts(2).ToList();
+                string val = res.Groups["data"].Value;
+                var parts = val.SplitInParts(2).ToArray();
+                var bytes = new byte[parts.Length];
 
-            stringBytes.Reverse();
+                for (int i = 0; i < bytes.Length; i++) {
 
-            return string.Join("", stringBytes);
+                    bytes[i] = byte.Parse(parts[i], NumberStyles.HexNumber);
+
+                }
+
+                return bytes;
+            }
+            return null;
 
         }
 
-        internal static IEnumerable<String> SplitInParts(this string s, int partLength) {
+        /// <summary>
+        /// Splits a string in even parts
+        /// </summary>
+        internal static IEnumerable<string> SplitInParts(this string s, int partLength) {
 
             if (s == null)
                 throw new ArgumentNullException(nameof(s));
@@ -109,63 +138,7 @@ namespace MewtocolNet {
 
         }
 
-        internal static string BuildDTString (this byte[] inBytes, short reservedSize) {
-
-            StringBuilder sb = new StringBuilder();
-
-            //clamp string lenght
-            if (inBytes.Length > reservedSize) {
-                inBytes = inBytes.Take(reservedSize).ToArray();
-            }
-
-            //actual string content
-            var hexstring = inBytes.ToHexString();
-
-            var sizeBytes = BitConverter.GetBytes((short)(hexstring.Length / 2)).ToHexString();
-
-            if (hexstring.Length >= 2) {
-
-                var remainderBytes = (hexstring.Length / 2) % 2;
-
-                if (remainderBytes != 0) {
-                    hexstring += "20";
-                }
-
-            }
-
-            var reservedSizeBytes = BitConverter.GetBytes(reservedSize).ToHexString();
-
-            //reserved string count bytes
-            sb.Append(reservedSizeBytes);
-            //string count actual bytes
-            sb.Append(sizeBytes);
-
-
-            sb.Append(hexstring);
-
-            return sb.ToString();
-        }
-
-
-        internal static string GetStringFromAsciiHex(this string input) {
-            if (input.Length % 2 != 0)
-                return null;
-            byte[] bytes = new byte[input.Length / 2];
-            for (int i = 0; i < input.Length; i += 2) {
-                String hex = input.Substring(i, 2);
-                bytes[i / 2] = Convert.ToByte(hex, 16);
-            }
-            return Encoding.ASCII.GetString(bytes);
-        }
-
-        internal static string GetAsciiHexFromString(this string input) {
-
-            var bytes = new ASCIIEncoding().GetBytes(input);
-            return bytes.ToHexString();
-        
-        }
-
-        internal static byte[] HexStringToByteArray(this string hex) {
+        internal static byte[] HexStringToByteArray (this string hex) {
             if (hex == null)
                 return null;
             return Enumerable.Range(0, hex.Length)
@@ -174,13 +147,39 @@ namespace MewtocolNet {
                              .ToArray();
         }
 
-        internal static string ToHexString(this byte[] arr) {
+        /// <summary>
+        /// Converts a byte array to a hexadecimal string
+        /// </summary>
+        /// <param name="seperator">Seperator between the hex numbers</param>
+        /// <param name="arr">The byte array</param>
+        internal static string ToHexString (this byte[] arr, string seperator = "") {
 
             StringBuilder sb = new StringBuilder();
+
             for (int i = 0; i < arr.Length; i++) {
                 byte b = arr[i];
                 sb.Append(b.ToString("X2"));
+                if(i < arr.Length - 1) sb.Append(seperator);
             }
+
+            return sb.ToString();
+
+        }
+
+        internal static string AsPLC (this TimeSpan timespan) {
+
+            StringBuilder sb = new StringBuilder("T#");
+
+            int millis = timespan.Milliseconds;
+            int seconds = timespan.Seconds;
+            int minutes = timespan.Minutes;
+            int hours = timespan.Hours;
+
+            if (hours > 0) sb.Append($"{hours}h");
+            if (minutes > 0) sb.Append($"{minutes}m");
+            if (seconds > 0) sb.Append($"{seconds}s");
+            if (millis > 0) sb.Append($"{millis}ms");
+
             return sb.ToString();
 
         }
@@ -204,39 +203,6 @@ namespace MewtocolNet {
             }
 
             return tempL.ToArray();
-
-        }
-
-        internal static bool IsDoubleNumericRegisterType(this Type type) {
-
-            //Type[] singles = new Type[] {
-            //    typeof(short),
-            //    typeof(ushort),
-            //};
-
-            Type[] doubles = new Type[] {
-                typeof(int),
-                typeof(uint),
-                typeof(float),
-                typeof(TimeSpan),
-            };
-
-            return doubles.Contains(type);
-
-        }
-
-        internal static bool IsNumericSupportedType(this Type type) {
-
-            Type[] supported = new Type[] {
-                typeof(short),
-                typeof(ushort),
-                typeof(int),
-                typeof(uint),
-                typeof(float),
-                typeof(TimeSpan),
-            };
-
-            return supported.Contains(type);
 
         }
 
@@ -267,7 +233,7 @@ namespace MewtocolNet {
 
         }
 
-        internal static bool CompareIsDuplicate (this IRegister reg1, IRegister compare) {
+        internal static bool CompareIsDuplicate (this IRegisterInternal reg1, IRegisterInternal compare) {
 
             bool valCompare = reg1.RegisterType == compare.RegisterType &&
                               reg1.MemoryAddress == compare.MemoryAddress && 
@@ -277,7 +243,7 @@ namespace MewtocolNet {
 
         }
 
-        internal static bool CompareIsNameDuplicate(this IRegister reg1, IRegister compare) {
+        internal static bool CompareIsNameDuplicate(this IRegisterInternal reg1, IRegisterInternal compare) {
 
             return ( reg1.Name != null || compare.Name != null) && reg1.Name == compare.Name;
 

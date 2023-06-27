@@ -43,7 +43,7 @@ namespace MewtocolTests {
 
         }
 
-        [Fact(DisplayName = nameof(MewtocolHelpers.ToHexASCIIBytes))]
+        [Fact(DisplayName = nameof(MewtocolHelpers.BytesFromHexASCIIString))]
         public void ToHexASCIIBytesGeneration() {
 
             string test = "Hello, world!";
@@ -62,7 +62,7 @@ namespace MewtocolTests {
                 0x4C,
                 0x44,
                 0x21
-            }, test.ToHexASCIIBytes());
+            }, test.BytesFromHexASCIIString());
 
         }
 

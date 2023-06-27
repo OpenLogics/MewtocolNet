@@ -13,6 +13,7 @@ namespace MewtocolNet.RegisterBuilding {
         internal string Name;
         internal RegisterType RegType;
         internal int MemAddress;
+        internal int MemByteSize;   
         internal byte? SpecialAddress;
 
         internal PlcVarType? plcVarType;
@@ -63,6 +64,24 @@ namespace MewtocolNet.RegisterBuilding {
 
         }
 
+        public RegisterBuilderStep AsBytes (int byteLength) {
+
+            if (RegType != RegisterType.DT) {
+
+                throw new NotSupportedException($"Cant use the AsByte converter on a non DT register");
+
+            }
+
+            MemByteSize = byteLength;
+            dotnetVarType = typeof(byte[]);
+            plcVarType = null;
+
+            wasCasted = true;
+
+            return this;
+
+        }
+
         internal RegisterBuilderStep AutoType() {
 
             switch (RegType) {
@@ -77,7 +96,7 @@ namespace MewtocolNet.RegisterBuilding {
                 case RegisterType.DDT:
                 dotnetVarType = typeof(int);
                 break;
-                case RegisterType.DT_RANGE:
+                case RegisterType.DT_BYTE_RANGE:
                 dotnetVarType = typeof(string);
                 break;
             }
