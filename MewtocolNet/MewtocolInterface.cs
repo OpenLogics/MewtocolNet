@@ -7,11 +7,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -50,18 +52,6 @@ namespace MewtocolNet {
         public int ConnectTimeout {
             get { return connectTimeout; }
             set { connectTimeout = value; }
-        }
-
-        private volatile int pollerDelayMs = 0;
-        /// <summary>
-        /// Delay for each poller cycle in milliseconds, default = 0
-        /// </summary>
-        public int PollerDelayMs {
-            get => pollerDelayMs;
-            set {
-                pollerDelayMs = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PollerDelayMs)));
-            }
         }
 
         private volatile int queuedMessages;
@@ -114,9 +104,11 @@ namespace MewtocolNet {
         /// <summary>
         /// The registered data registers of the PLC
         /// </summary>
-        public List<BaseRegister> Registers { get; private set; } = new List<BaseRegister>();
+        internal List<BaseRegister> RegistersUnderlying { get; private set; } = new List<BaseRegister>();
 
-        internal IEnumerable<IRegisterInternal> RegistersInternal => Registers.Cast<IRegisterInternal>();
+        public IEnumerable<IRegister> Registers => RegistersUnderlying.Cast<IRegister>();
+
+        internal IEnumerable<IRegisterInternal> RegistersInternal => RegistersUnderlying.Cast<IRegisterInternal>();
 
         private string ip;
         private int port;
@@ -184,6 +176,8 @@ namespace MewtocolNet {
         private Stopwatch speedStopwatchUpstr;
         private Stopwatch speedStopwatchDownstr;
 
+        private Task firstPollTask = new Task(() => { });
+
         #region Initialization
 
         /// <summary>
@@ -238,6 +232,8 @@ namespace MewtocolNet {
         /// <returns></returns>
         public async Task<MewtocolInterface> ConnectAsync(Action<PLCInfo> OnConnected = null, Action OnFailed = null) {
 
+            firstPollTask = new Task(() => { });
+
             Logger.Log("Connecting to PLC...", LogLevel.Info, this);
 
             var plcinf = await GetPLCInfoAsync();
@@ -249,18 +245,19 @@ namespace MewtocolNet {
 
                 Connected?.Invoke(plcinf);
 
-                if (OnConnected != null) {
+                if (!usePoller) {
+                    if (OnConnected != null) OnConnected(plcinf);
+                    firstPollTask.RunSynchronously();
+                    return this;
+                }
 
-                    if (!usePoller) {
-                        OnConnected(plcinf);
-                        return this;
-                    }
+                PolledCycle += OnPollCycleDone;
+                void OnPollCycleDone() {
 
-                    PolledCycle += OnPollCycleDone;
-                    void OnPollCycleDone() {
-                        OnConnected(plcinf);
-                        PolledCycle -= OnPollCycleDone;
-                    }
+                    if (OnConnected != null) OnConnected(plcinf);
+                    firstPollTask.RunSynchronously();
+                    PolledCycle -= OnPollCycleDone;
+
                 }
 
             } else {
@@ -268,6 +265,7 @@ namespace MewtocolNet {
                 if (OnFailed != null) {
                     OnFailed();
                     Disconnected?.Invoke();
+                    firstPollTask.RunSynchronously();
                     Logger.Log("Initial connection failed", LogLevel.Info, this);
                 }
 
@@ -276,6 +274,12 @@ namespace MewtocolNet {
             return this;
 
         }
+
+        /// <summary>
+        /// Use this to await the first poll iteration after connecting,
+        /// This also completes if the initial connection fails
+        /// </summary>
+        public async Task AwaitFirstDataAsync () => await firstPollTask;
 
         /// <summary>
         /// Changes the connections parameters of the PLC, only applyable when the connection is offline
@@ -310,10 +314,9 @@ namespace MewtocolNet {
         /// Attaches a poller to the interface that continously 
         /// polls the registered data registers and writes the values to them
         /// </summary>
-        public MewtocolInterface WithPoller(bool useMultiFrame = false) {
+        public MewtocolInterface WithPoller() {
 
             usePoller = true;
-            pollerUseMultiFrame = useMultiFrame;
             return this;
 
         }
@@ -375,41 +378,6 @@ namespace MewtocolNet {
 
         }
 
-        private void OnMajorSocketExceptionWhileConnecting() {
-
-            Logger.Log("The PLC connection timed out", LogLevel.Error, this);
-            CycleTimeMs = 0;
-            IsConnected = false;
-            KillPoller();
-
-        }
-
-        private void OnMajorSocketExceptionWhileConnected() {
-
-            if (IsConnected) {
-
-                Logger.Log("The PLC connection was closed", LogLevel.Error, this);
-                CycleTimeMs = 0;
-                IsConnected = false;
-                Disconnected?.Invoke();
-                KillPoller();
-                client.Close();
-
-            }
-
-        }
-
-        private void ClearRegisterVals() {
-
-            for (int i = 0; i < Registers.Count; i++) {
-
-                var reg = (IRegisterInternal)Registers[i];
-                reg.ClearValue();
-
-            }
-
-        }
-
         #endregion
 
         #region Low level command handling
@@ -418,185 +386,220 @@ namespace MewtocolNet {
         /// Calculates the checksum automatically and sends a command to the PLC then awaits results
         /// </summary>
         /// <param name="_msg">MEWTOCOL Formatted request string ex: %01#RT</param>
+        /// <param name="withTerminator">Append the checksum and bcc automatically</param>
         /// <returns>Returns the result</returns>
-        public async Task<CommandResult> SendCommandAsync(string _msg) {
-
-            _msg = _msg.BuildBCCFrame();
-            _msg += "\r";
+        public async Task<MewtocolFrameResponse> SendCommandAsync(string _msg, bool withTerminator = true) {
 
             //send request
-            try {
+            queuedMessages++;
+            var tempResponse = await queue.Enqueue(() => SendFrameAsync(_msg, withTerminator, withTerminator));
 
-                queuedMessages++;
+            tcpMessagesSentThisCycle++;
+            queuedMessages--;
 
-                TCPMessageResult tcpResult = TCPMessageResult.Waiting;
-                string response = "";
-
-                int lineFeedFails = 0;
-
-                //recursively try to get a response on failed line feeds
-                while (tcpResult == TCPMessageResult.Waiting || tcpResult == TCPMessageResult.FailedLineFeed) {
-
-                    if (lineFeedFails >= 5)
-                        throw new MewtocolException($"The message ${_msg} had {lineFeedFails} linefeed fails");
-
-                    var tempResponse = await queue.Enqueue(() => SendSingleBlock(_msg));
-                    tcpResult = tempResponse.Item1;
-                    response = tempResponse.Item2;
-
-                    if(tcpResult == TCPMessageResult.FailedLineFeed) {
-                        lineFeedFails++;
-                        Logger.Log($"Linefeed fail, retrying...", LogLevel.Error);
-                    }
-
-                    if (queuedMessages > 0)
-                        queuedMessages--;
-
-                    if (tcpResult == TCPMessageResult.FailedWithException)
-                        throw new MewtocolException("The connection to the device was terminated");
-
-                }
-
-                //error catching
-                Regex errorcheck = new Regex(@"\%[0-9]{2}\!([0-9]{2})", RegexOptions.IgnoreCase);
-                Match m = errorcheck.Match(response);
-
-                if (m.Success) {
-                    string eCode = m.Groups[1].Value;
-                    string eDes = CodeDescriptions.Error[Convert.ToInt32(eCode)];
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"Response is: {response}");
-                    Logger.Log($"Error on command {_msg.Replace("\r", "")} the PLC returned error code: {eCode}, {eDes}", LogLevel.Error);
-                    Console.ResetColor();
-                    return new CommandResult {
-                        Success = false,
-                        Error = eCode,
-                        ErrorDescription = eDes
-                    };
-                }
-
-                return new CommandResult {
-                    Success = true,
-                    Error = "0000",
-                    Response = response,
-                };
-
-            } catch {
-                return new CommandResult {
-                    Success = false,
-                    Error = "0000",
-                    ErrorDescription = "null result"
-                };
-            }
+            return tempResponse;
 
         }
 
-        private async Task<(TCPMessageResult, string)> SendSingleBlock(string _blockString) {
+        private async Task<MewtocolFrameResponse> SendFrameAsync (string frame, bool useBcc = true, bool useCr = true) {
 
-            if (client == null || !client.Connected) {
-                await ConnectTCP();
-            }
-
-            if (client == null || !client.Connected)
-                return (TCPMessageResult.NotConnected, null);
-
-            var message = _blockString.BytesFromHexASCIIString();
-
-            //time measuring
-            if (speedStopwatchUpstr == null) {
-                speedStopwatchUpstr = Stopwatch.StartNew();
-            }
-
-            if (speedStopwatchUpstr.Elapsed.TotalSeconds >= 1) {
-                speedStopwatchUpstr.Restart();
-                bytesTotalCountedUpstream = 0;
-            }
-
-            //send request
-            using (var sendStream = new MemoryStream(message)) {
-                await sendStream.CopyToAsync(stream);
-                Logger.Log($"[--------------------------------]", LogLevel.Critical, this);
-                Logger.Log($"--> OUT MSG: {_blockString}", LogLevel.Critical, this);
-            }
-
-            //calc upstream speed
-            bytesTotalCountedUpstream += message.Length;
-
-            var perSecUpstream = (double)((bytesTotalCountedUpstream / speedStopwatchUpstr.Elapsed.TotalMilliseconds) * 1000);
-            if (perSecUpstream <= 10000)
-                BytesPerSecondUpstream = (int)Math.Round(perSecUpstream, MidpointRounding.AwayFromZero);
-
-            //await result
-            StringBuilder response = new StringBuilder();
             try {
 
-                byte[] responseBuffer = new byte[128 * 16];
+                //stop time
+                if (speedStopwatchUpstr == null) {
+                    speedStopwatchUpstr = Stopwatch.StartNew();
+                }
 
-                bool endLineCode = false;
-                bool startMsgCode = false;
+                if (speedStopwatchUpstr.Elapsed.TotalSeconds >= 1) {
+                    speedStopwatchUpstr.Restart();
+                    bytesTotalCountedUpstream = 0;
+                }
 
-                while (!endLineCode && !startMsgCode) {
+                const char CR = '\r';
+                const char DELIMITER = '&';
 
-                    do {
+                if (client == null || !client.Connected) await ConnectTCP();
 
-                        //time measuring
-                        if (speedStopwatchDownstr == null) {
-                            speedStopwatchDownstr = Stopwatch.StartNew();
-                        }
+                if (useBcc)
+                    frame = $"{frame.BuildBCCFrame()}";
 
-                        if (speedStopwatchDownstr.Elapsed.TotalSeconds >= 1) {
-                            speedStopwatchDownstr.Restart();
-                            bytesTotalCountedDownstream = 0;
-                        }
+                if (useCr)
+                    frame = $"{frame}\r";
 
-                        int bytes = await stream.ReadAsync(responseBuffer, 0, responseBuffer.Length);
+                //write inital command
+                byte[] writeBuffer = Encoding.UTF8.GetBytes(frame);
+                await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length);
 
-                        endLineCode = responseBuffer.Any(x => x == 0x0D);
-                        startMsgCode = responseBuffer.Count(x => x == 0x25) > 1;
+                //calc upstream speed
+                bytesTotalCountedUpstream += writeBuffer.Length;
 
-                        if (!endLineCode && !startMsgCode) break;
+                var perSecUpstream = (double)((bytesTotalCountedUpstream / speedStopwatchUpstr.Elapsed.TotalMilliseconds) * 1000);
+                if (perSecUpstream <= 10000)
+                    BytesPerSecondUpstream = (int)Math.Round(perSecUpstream, MidpointRounding.AwayFromZero);
 
-                        response.Append(Encoding.UTF8.GetString(responseBuffer, 0, bytes));
+
+                Logger.Log($"[---------CMD START--------]", LogLevel.Critical, this);
+                Logger.Log($"--> OUT MSG: {frame.Replace("\r", "(CR)")}", LogLevel.Critical, this);
+
+                //read
+                List<byte> totalResponse = new List<byte>();
+                byte[] responseBuffer = new byte[512];
+
+                bool wasMultiFramedResponse = false;
+                CommandState cmdState = CommandState.Intial;
+
+                //read until command complete
+                while (cmdState != CommandState.Complete) {
+
+                    //time measuring
+                    if (speedStopwatchDownstr == null) {
+                        speedStopwatchDownstr = Stopwatch.StartNew();
                     }
-                    while (stream.DataAvailable);
+
+                    if (speedStopwatchDownstr.Elapsed.TotalSeconds >= 1) {
+                        speedStopwatchDownstr.Restart();
+                        bytesTotalCountedDownstream = 0;
+                    }
+
+                    responseBuffer = new byte[128];
+
+                    await stream.ReadAsync(responseBuffer, 0, responseBuffer.Length);
+
+                    bool terminatorReceived = responseBuffer.Any(x => x == (byte)CR);
+                    var delimiterTerminatorIdx = SearchBytePattern(responseBuffer, new byte[] { (byte)DELIMITER, (byte)CR });
+
+                    if (terminatorReceived && delimiterTerminatorIdx == -1) {
+                        cmdState = CommandState.Complete;
+                    } else if (delimiterTerminatorIdx != -1) {
+                        cmdState = CommandState.RequestedNextFrame;
+                    } else {
+                        cmdState = CommandState.LineFeed;
+                    }
+
+                    //log message parts
+                    var tempMsg = Encoding.UTF8.GetString(responseBuffer).Replace("\r", "(CR)");
+                    Logger.Log($">> IN PART: {tempMsg}, Command state: {cmdState}", LogLevel.Critical, this);
+
+                    //error response
+                    int errorCode = CheckForErrorMsg(tempMsg);
+                    if (errorCode != 0) return new MewtocolFrameResponse(errorCode);
+
+                    //add complete response to collector without empty bytes
+                    totalResponse.AddRange(responseBuffer.Where(x => x != (byte)0x0));
+
+                    //request next part of the command if the delimiter was received
+                    if (cmdState == CommandState.RequestedNextFrame) {
+
+                        Logger.Log($"Requesting next frame...", LogLevel.Critical, this);
+
+                        wasMultiFramedResponse = true;
+                        writeBuffer = Encoding.UTF8.GetBytes("%01**&\r");
+                        await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length);
+
+                    }
 
                 }
 
-            } catch (IOException) {
-                OnMajorSocketExceptionWhileConnected();
-                return (TCPMessageResult.FailedWithException, null);
-            } catch (SocketException) {
-                OnMajorSocketExceptionWhileConnected();
-                return (TCPMessageResult.FailedWithException, null);
-            }
+                //build final result
+                string resString = Encoding.UTF8.GetString(totalResponse.ToArray());
 
+                if (wasMultiFramedResponse) {
 
-            string resString = response.ToString();
+                    var split = resString.Split('&');
 
-            if (!string.IsNullOrEmpty(resString) && resString != "\r" ) {
+                    for (int j = 0; j < split.Length; j++) {
 
-                Logger.Log($"<-- IN MSG: {response}", LogLevel.Critical, this);
+                        split[j] = split[j].Replace("\r", "");
+                        split[j] = split[j].Substring(0, split[j].Length - 2);
+                        if (j > 0) split[j] = split[j].Replace($"%{GetStationNumber()}", "");
 
-                bytesTotalCountedDownstream += Encoding.ASCII.GetByteCount(response.ToString());
+                    }
+
+                    resString = string.Join("", split);
+
+                }
+
+                bytesTotalCountedDownstream += Encoding.ASCII.GetByteCount(resString);
 
                 var perSecDownstream = (double)((bytesTotalCountedDownstream / speedStopwatchDownstr.Elapsed.TotalMilliseconds) * 1000);
 
                 if (perSecUpstream <= 10000)
                     BytesPerSecondDownstream = (int)Math.Round(perSecUpstream, MidpointRounding.AwayFromZero);
 
-                return (TCPMessageResult.Success, resString);
+                Logger.Log($"<-- IN MSG: {resString.Replace("\r", "(CR)")}", LogLevel.Critical, this);
+                Logger.Log($"Total bytes parsed: {resString.Length}", LogLevel.Critical, this);
+                Logger.Log($"[---------CMD END----------]", LogLevel.Critical, this);
 
-            } else {
+                return new MewtocolFrameResponse(resString);
 
-                return (TCPMessageResult.FailedLineFeed, null);
+            } catch (Exception ex) {
+
+                return new MewtocolFrameResponse(400, ex.Message.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
             }
 
         }
 
+        private int CheckForErrorMsg (string msg) {
+
+            //error catching
+            Regex errorcheck = new Regex(@"\%[0-9]{2}\!([0-9]{2})", RegexOptions.IgnoreCase);
+            Match m = errorcheck.Match(msg);
+
+            if (m.Success) {
+
+                string eCode = m.Groups[1].Value;
+                return Convert.ToInt32(eCode);
+
+            }
+
+            return 0;
+
+        }
+
+        private int SearchBytePattern (byte[] src, byte[] pattern) {
+
+            int maxFirstCharSlot = src.Length - pattern.Length + 1;
+            for (int i = 0; i < maxFirstCharSlot; i++) {
+                if (src[i] != pattern[0]) // compare only first byte
+                    continue;
+
+                // found a match on first byte, now try to match rest of the pattern
+                for (int j = pattern.Length - 1; j >= 1; j--) {
+                    if (src[i + j] != pattern[j]) break;
+                    if (j == 1) return i;
+                }
+            }
+            return -1;
+        
+        }
+
         #endregion
 
         #region Disposing
+
+        private void OnMajorSocketExceptionWhileConnecting() {
+
+            if (IsConnected) {
+
+                Logger.Log("The PLC connection timed out", LogLevel.Error, this);
+                OnDisconnect();
+
+            }
+
+        }
+
+        private void OnMajorSocketExceptionWhileConnected() {
+
+            if (IsConnected) {
+
+                Logger.Log("The PLC connection was closed", LogLevel.Error, this);
+                OnDisconnect();
+
+            }
+
+        }
+
 
         /// <summary>
         /// Disposes the current interface and clears all its members
@@ -607,9 +610,40 @@ namespace MewtocolNet {
 
             Disconnect();
 
-            GC.SuppressFinalize(this);
+            //GC.SuppressFinalize(this);
 
             Disposed = true;
+
+        }
+
+        private void OnDisconnect () {
+
+            if (IsConnected) {
+
+                BytesPerSecondDownstream = 0;
+                BytesPerSecondUpstream = 0;
+                CycleTimeMs = 0;
+
+                IsConnected = false;
+                ClearRegisterVals();
+
+                Disconnected?.Invoke();
+                KillPoller();
+                client.Close();
+
+            }
+
+        }
+
+
+        private void ClearRegisterVals() {
+
+            for (int i = 0; i < RegistersUnderlying.Count; i++) {
+
+                var reg = (IRegisterInternal)RegistersUnderlying[i];
+                reg.ClearValue();
+
+            }
 
         }
 
@@ -623,6 +657,20 @@ namespace MewtocolNet {
         public string GetConnectionPortInfo() {
 
             return $"{IpAddress}:{Port}";
+
+        }
+
+        #endregion
+
+        #region Property change evnts
+
+        /// <summary>
+        /// Triggers a property changed event
+        /// </summary>
+        /// <param name="propertyName">Name of the property to trigger for</param>
+        private void OnPropChange ([CallerMemberName]string propertyName = null) {
+
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
         }
 

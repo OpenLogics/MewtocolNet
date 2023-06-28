@@ -13,9 +13,9 @@ namespace MewtocolNet {
 
         public Type HoldingRegisterType { get; set; }
 
-        public Func<byte[], T> FromRaw { get; set; }
+        public Func<IRegister, byte[], T> FromRaw { get; set; }
 
-        public Func<T, byte[]> ToRaw { get; set; }
+        public Func<IRegister, T, byte[]> ToRaw { get; set; }
 
         public PlcTypeConversion(RegisterType plcType) {
 
@@ -32,9 +32,9 @@ namespace MewtocolNet {
 
         public PlcVarType GetPlcVarType() => PlcVarType;
 
-        public object FromRawData(byte[] data) => FromRaw.Invoke(data);
+        public object FromRawData(IRegister register, byte[] data) => FromRaw.Invoke(register, data);
 
-        public byte[] ToRawData(object value) => ToRaw.Invoke((T)value);  
+        public byte[] ToRawData(IRegister register, object value) => ToRaw.Invoke(register, (T)value);  
 
 
     }

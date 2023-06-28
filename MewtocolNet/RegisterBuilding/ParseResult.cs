@@ -1,4 +1,5 @@
 ﻿namespace MewtocolNet.RegisterBuilding {
+
     internal struct ParseResult {
 
         public ParseResultState state;

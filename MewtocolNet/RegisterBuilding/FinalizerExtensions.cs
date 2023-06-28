@@ -3,12 +3,11 @@ using System;
 using System.Linq;
 using System.Reflection;
 
-namespace MewtocolNet.RegisterBuilding
-{
+namespace MewtocolNet.RegisterBuilding {
 
     public static class FinalizerExtensions {
 
-        public static IRegister Build (this RegisterBuilderStep step) {
+        public static IRegister Build(this RegisterBuilderStep step) {
 
             //if no casting method in builder was called => autocast the type from the RegisterType
             if (!step.wasCasted)
@@ -34,7 +33,7 @@ namespace MewtocolNet.RegisterBuilding
 
         }
 
-        private static void GetFallbackDotnetType (this RegisterBuilderStep step) {
+        private static void GetFallbackDotnetType(this RegisterBuilderStep step) {
 
             bool isBoolean = step.RegType.IsBoolean();
             bool isTypeNotDefined = step.plcVarType == null && step.dotnetVarType == null;
@@ -66,7 +65,7 @@ namespace MewtocolNet.RegisterBuilding
 
         }
 
-        private static void AddToRegisterList (this RegisterBuilderStep step, BaseRegister instance) {
+        private static void AddToRegisterList(this RegisterBuilderStep step, BaseRegister instance) {
 
             if (step.forInterface == null) return;
 

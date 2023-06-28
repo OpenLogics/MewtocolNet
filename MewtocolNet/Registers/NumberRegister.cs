@@ -93,11 +93,14 @@ namespace MewtocolNet.Registers {
         }
 
         /// <inheritdoc/>
+        public override string GetAsPLC() => ((TimeSpan)Value).AsPLCTime();
+
+        /// <inheritdoc/>
         public override string GetValueString() {
 
             if(typeof(T) == typeof(TimeSpan)) {
 
-                return $"{Value} [{((TimeSpan)Value).AsPLC()}]";
+                return $"{Value} [{((TimeSpan)Value).AsPLCTime()}]";
 
             } 
 
@@ -158,8 +161,12 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public override async Task<object> ReadAsync() {
 
+            if (!attachedInterface.IsConnected) return null;
+
             var read = await attachedInterface.ReadRawRegisterAsync(this);
-            var parsed = PlcValueParser.Parse<T>(read);
+            if (read == null) return null;
+
+            var parsed = PlcValueParser.Parse<T>(this, read);
 
             SetValueFromPLC(parsed);
             return parsed;
@@ -169,7 +176,9 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public override async Task<bool> WriteAsync(object data) {
 
-            return await attachedInterface.WriteRawRegisterAsync(this, PlcValueParser.Encode((T)data));
+            if (!attachedInterface.IsConnected) return false;
+
+            return await attachedInterface.WriteRawRegisterAsync(this, PlcValueParser.Encode(this, (T)data));
 
         }
 

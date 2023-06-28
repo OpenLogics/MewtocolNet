@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -11,32 +12,23 @@ namespace MewtocolNet.Registers {
     /// </summary>
     public class StringRegister : BaseRegister {
 
-        internal int addressLength;
-        /// <summary>
-        /// The rgisters memory length
-        /// </summary>
-        public int AddressLength => addressLength;
-
         internal short ReservedSize { get; set; }
+
+        internal short UsedSize { get; set; }   
+
+        internal int WordsSize { get; set; }  
+
+        private bool isCalibrated = false;
 
         /// <summary>
         /// Defines a register containing a string
         /// </summary>
-        public StringRegister (int _adress, int _reservedByteSize, string _name = null) {
+        public StringRegister (int _address, string _name = null) {
 
-            if (_adress > 99999) throw new NotSupportedException("Memory adresses cant be greater than 99999");
+            if (_address > 99999) throw new NotSupportedException("Memory adresses cant be greater than 99999");
             name = _name;
-            memoryAddress = _adress;
-            ReservedSize = (short)_reservedByteSize;
-
-            //calc mem length
-            var wordsize = (double)_reservedByteSize / 2;
-            if (wordsize % 2 != 0) {
-                wordsize++;
-            }
-
+            memoryAddress = _address;
             RegisterType = RegisterType.DT_BYTE_RANGE;
-            addressLength = (int)Math.Round(wordsize + 1);
 
         }
 
@@ -46,15 +38,18 @@ namespace MewtocolNet.Registers {
             StringBuilder asciistring = new StringBuilder("D");
 
             asciistring.Append(MemoryAddress.ToString().PadLeft(5, '0'));
-            asciistring.Append((MemoryAddress + AddressLength).ToString().PadLeft(5, '0'));
+            asciistring.Append((MemoryAddress + WordsSize - 1).ToString().PadLeft(5, '0'));
 
             return asciistring.ToString();
         }
 
         /// <inheritdoc/>
+        public override string GetValueString() => $"'{Value}'";
+
+        /// <inheritdoc/>
         public override void SetValueFromPLC (object val) {
 
-            lastValue = (byte[])val;
+            lastValue = (string)val;
 
             TriggerChangedEvnt(this);
             TriggerNotifyChange();
@@ -65,20 +60,47 @@ namespace MewtocolNet.Registers {
         public override string GetRegisterString() => "DT";
 
         /// <inheritdoc/>
-        public override void ClearValue() => SetValueFromPLC(null);
+        public override void ClearValue() => SetValueFromPLC("");
 
         /// <inheritdoc/>
         public override async Task<object> ReadAsync() {
 
+            if (!attachedInterface.IsConnected) return null;
+
+            //get the string params first
+
+            if(!isCalibrated) await Calibrate();
+
             var read = await attachedInterface.ReadRawRegisterAsync(this);
-            return PlcValueParser.Parse<byte[]>(read);
+            if (read == null) return null;
+
+            return PlcValueParser.Parse<string>(this, read);
+
+        }
+
+        private async Task Calibrate () {
+
+            //get the string describer bytes
+            var bytes = await attachedInterface.ReadByteRange(MemoryAddress, 4, false);
+
+            ReservedSize = BitConverter.ToInt16(bytes, 0);
+            UsedSize = BitConverter.ToInt16(bytes, 2);
+            WordsSize = 2 + (ReservedSize + 1) / 2;
+
+            isCalibrated = true;
 
         }
 
         /// <inheritdoc/>
         public override async Task<bool> WriteAsync(object data) {
 
-            return await attachedInterface.WriteRawRegisterAsync(this, (byte[])data);
+            if (!attachedInterface.IsConnected) return false;
+
+            var res = await attachedInterface.WriteRawRegisterAsync(this, PlcValueParser.Encode(this, (string)data));
+
+            if (res) UsedSize = (short)((string)Value).Length;
+
+            return res;
 
         }
 

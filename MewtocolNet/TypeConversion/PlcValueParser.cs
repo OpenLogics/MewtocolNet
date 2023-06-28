@@ -12,25 +12,25 @@ namespace MewtocolNet {
 
         private static List<IPlcTypeConverter> conversions => Conversions.items;
 
-        public static T Parse<T>(byte[] bytes) {
+        public static T Parse<T>(IRegister register, byte[] bytes) {
 
             var converter = conversions.FirstOrDefault(x => x.GetDotnetType() == typeof(T));
 
             if (converter == null)
                 throw new MewtocolException($"A converter for the dotnet type {typeof(T)} doesn't exist");
 
-            return (T)converter.FromRawData(bytes);
+            return (T)converter.FromRawData(register, bytes);
 
         }
 
-        public static byte[] Encode <T>(T value) {
+        public static byte[] Encode <T>(IRegister register, T value) {
 
             var converter = conversions.FirstOrDefault(x => x.GetDotnetType() == typeof(T));
 
             if (converter == null)
                 throw new MewtocolException($"A converter for the dotnet type {typeof(T)} doesn't exist");
 
-            return converter.ToRawData(value);
+            return converter.ToRawData(register, value);
 
         }
 

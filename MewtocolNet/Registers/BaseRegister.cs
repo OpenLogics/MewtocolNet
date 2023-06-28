@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
 using System.Threading.Tasks;
@@ -83,6 +82,8 @@ namespace MewtocolNet.Registers {
 
         public virtual string GetValueString() => Value?.ToString() ?? "null";
 
+        public virtual string GetAsPLC () => Value?.ToString() ?? "null";     
+
         public virtual string GetRegisterString() => RegisterType.ToString();
 
         public virtual string GetCombinedName() => $"{(CollectionType != null ? $"{CollectionType.Name}." : "")}{Name ?? "Unnamed"}";
@@ -99,13 +100,9 @@ namespace MewtocolNet.Registers {
 
         public virtual async Task<bool> WriteAsync(object data) => throw new NotImplementedException();
 
-        public virtual Task<bool> SetValueAsync() => throw new NotImplementedException();
-
-        public virtual Task<object> GetValueAsync() => throw new NotImplementedException();
-
         #endregion
 
-        public override string ToString() => $"{GetRegisterPLCName()} - Value: {GetValueString()}";
+        public override string ToString() => $"{GetRegisterPLCName()}{(Name != null ? $" ({Name})" : "")} - Value: {GetValueString()}";
 
         public virtual string ToString(bool additional) {
 

@@ -5,6 +5,7 @@ using MewtocolNet.Registers;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -19,25 +20,32 @@ namespace MewtocolNet
     /// </summary>
     public partial class MewtocolInterface {
 
-        /// <summary>
-        /// True if the auto poller is currently paused
-        /// </summary>
-        public bool PollingPaused => pollerIsPaused;
+        internal event Action PolledCycle;
+
+        internal volatile bool pollerTaskStopped = true;
+        internal volatile bool pollerFirstCycle;
+
+        internal bool usePoller = false;
+
+        private int tcpMessagesSentThisCycle = 0;
+
+        private int pollerCycleDurationMs;
 
         /// <summary>
         /// True if the poller is actvice (can be paused)
         /// </summary>
         public bool PollerActive => !pollerTaskStopped;
 
-        internal event Action PolledCycle;
-
-        internal volatile bool pollerTaskRunning;
-        internal volatile bool pollerTaskStopped;
-        internal volatile bool pollerIsPaused;
-        internal volatile bool pollerFirstCycle = false;
-
-        internal bool usePoller = false;
-        internal bool pollerUseMultiFrame = false;
+        /// <summary>
+        /// Current poller cycle duration
+        /// </summary>
+        public int PollerCycleDurationMs { 
+            get => pollerCycleDurationMs; 
+            private set {
+                pollerCycleDurationMs = value;
+                OnPropChange();
+            }
+        }
 
         #region Register Polling
 
@@ -46,43 +54,8 @@ namespace MewtocolNet
         /// </summary>
         internal void KillPoller() {
 
-            pollerTaskRunning = false;
             pollerTaskStopped = true;
-
             ClearRegisterVals();
-
-        }
-
-        /// <summary>
-        /// Pauses the polling and waits for the last message to be sent
-        /// </summary>
-        /// <returns></returns>
-        public async Task PausePollingAsync() {
-
-            if (!pollerTaskRunning)
-                return;
-
-            pollerTaskRunning = false;
-
-            while (!pollerIsPaused) {
-
-                if (pollerIsPaused)
-                    break;
-
-                await Task.Delay(10);
-
-            }
-
-            pollerTaskRunning = false;
-
-        }
-
-        /// <summary>
-        /// Resumes the polling
-        /// </summary>
-        public void ResumePolling() {
-
-            pollerTaskRunning = true;
 
         }
 
@@ -91,9 +64,10 @@ namespace MewtocolNet
         /// </summary>
         internal void AttachPoller() {
 
-            if (pollerTaskRunning)
+            if (!pollerTaskStopped)
                 return;
 
+            PollerCycleDurationMs = 0;
             pollerFirstCycle = true;
 
             Task.Run(Poll);
@@ -104,14 +78,18 @@ namespace MewtocolNet
         /// Runs a single poller cycle manually,
         /// useful if you want to use a custom update frequency
         /// </summary>
-        /// <returns></returns>
-        public async Task RunPollerCylceManual (bool useMultiFrame = false) {
+        /// <returns>The number of inidvidual mewtocol commands sent</returns>
+        public async Task<int> RunPollerCylceManual () {
 
-            if (useMultiFrame) {
-                await OnMultiFrameCycle();
-            } else {
-                await OnSingleFrameCycle();
-            }
+            if (!pollerTaskStopped)
+                throw new NotSupportedException($"The poller is already running, " +
+                $"please make sure there is no polling active before calling {nameof(RunPollerCylceManual)}");
+
+            tcpMessagesSentThisCycle = 0;
+
+            await OnMultiFrameCycle();
+
+            return tcpMessagesSentThisCycle;
 
         }
 
@@ -120,78 +98,49 @@ namespace MewtocolNet
 
             Logger.Log("Poller is attaching", LogLevel.Info, this);
 
-            int iteration = 0;
-
             pollerTaskStopped = false;
-            pollerTaskRunning = true;
-            pollerIsPaused = false;
 
             while (!pollerTaskStopped) {
 
-                if (iteration >= Registers.Count + 1) {
-                    iteration = 0;
-                    //invoke cycle polled event
-                    InvokePolledCycleDone();
-                    continue;
-                }
+                tcpMessagesSentThisCycle = 0;
 
-                if(pollerUseMultiFrame) {
-                    await OnMultiFrameCycle();
-                } else {
-                    await OnSingleFrameCycle();
+                await OnMultiFrameCycle();
+
+                if(!IsConnected) {
+                    pollerTaskStopped = true;
+                    return;
                 }
 
                 pollerFirstCycle = false;
-
-                iteration++;
-
-                pollerIsPaused = !pollerTaskRunning;
+                InvokePolledCycleDone();
 
             }
-
-            pollerIsPaused = false;
-
-        }
-
-        private async Task OnSingleFrameCycle () {
-
-            foreach (var reg in Registers) {
-
-                if (reg.IsAllowedRegisterGenericType()) {
-
-                    var lastVal = reg.Value;
-
-                    var rwReg = (IRegisterInternal)reg;
-
-                    var readout = await rwReg.ReadAsync();
-
-                    if (lastVal != readout) {
-
-                        rwReg.SetValueFromPLC(readout);
-                        InvokeRegisterChanged(reg);
-
-                    }
-
-                }
-
-            }
-
-            await GetPLCInfoAsync();
 
         }
 
         private async Task OnMultiFrameCycle () {
 
+            var sw = Stopwatch.StartNew();
+
             await UpdateRCPRegisters();
+
+            await UpdateDTRegisters();
 
             await GetPLCInfoAsync();
 
+            sw.Stop();
+            PollerCycleDurationMs = (int)sw.ElapsedMilliseconds;
+
         }
+
+        #endregion
+
+        #region Smart register polling methods
 
         private async Task UpdateRCPRegisters () {
 
             //build booleans
-            var rcpList = Registers.Where(x => x.GetType() == typeof(BoolRegister))
+            var rcpList = RegistersUnderlying.Where(x => x.GetType() == typeof(BoolRegister))
                                    .Select(x => (BoolRegister)x)
                                    .ToArray();
 
@@ -216,6 +165,8 @@ namespace MewtocolNet
 
                 string rcpRequest = rcpString.ToString();
                 var result = await SendCommandAsync(rcpRequest);
+                if (!result.Success) return;
+
                 var resultBitArray = result.Response.ParseRCMultiBit();
 
                 for (int k = 0; k < resultBitArray.Length; k++) {
@@ -233,9 +184,27 @@ namespace MewtocolNet
 
         }
 
-        internal void PropertyRegisterWasSet(string propName, object value) {
+        private async Task UpdateDTRegisters () {
 
-            _ = SetRegisterAsync(GetRegister(propName), value);
+            foreach (var reg in RegistersUnderlying) {
+
+                var type = reg.GetType();
+
+                if(reg.RegisterType.IsNumericDTDDT() || reg.RegisterType == RegisterType.DT_BYTE_RANGE) {
+
+                    var lastVal = reg.Value;
+                    var rwReg = (IRegisterInternal)reg;
+                    var readout = await rwReg.ReadAsync();
+                    if (readout == null) return;
+
+                    if (lastVal != readout) {
+                        rwReg.SetValueFromPLC(readout);
+                        InvokeRegisterChanged(reg);
+                    }
+
+                }
+
+            }
 
         }
 
@@ -409,7 +378,7 @@ namespace MewtocolNet
                 throw MewtocolException.DupeNameRegister(builtRegister);
 
             builtRegister.attachedInterface = this;
-            Registers.Add(builtRegister);
+            RegistersUnderlying.Add(builtRegister);
 
         }
 
@@ -422,7 +391,7 @@ namespace MewtocolNet
                 throw MewtocolException.DupeNameRegister(register);
 
             register.attachedInterface = this;
-            Registers.Add(register);
+            RegistersUnderlying.Add(register);
 
         }
 
@@ -458,7 +427,7 @@ namespace MewtocolNet
         /// <returns></returns>
         public IRegister GetRegister(string name) {
 
-            return Registers.FirstOrDefault(x => x.Name == name);
+            return RegistersUnderlying.FirstOrDefault(x => x.Name == name);
 
         }
 
@@ -471,13 +440,19 @@ namespace MewtocolNet
         /// </summary>
         public IEnumerable<IRegister> GetAllRegisters() {
 
-            return Registers.Cast<IRegister>();
+            return RegistersUnderlying.Cast<IRegister>();
 
         }
 
         #endregion
 
         #region Event Invoking 
+
+        internal void PropertyRegisterWasSet(string propName, object value) {
+
+            _ = SetRegisterAsync(GetRegister(propName), value);
+
+        }
 
         internal void InvokeRegisterChanged(IRegister reg) {
 

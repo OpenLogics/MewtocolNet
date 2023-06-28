@@ -34,8 +34,8 @@ namespace MewtocolTests {
                 "D0005000051", //double word register
                 "D0005000051", //double word register
                 "D0005000051", //double word register
-                "D0005000065", //variable len register even bytes
-                "D0005000066", //variable len register odd bytes
+                "D0005000064", //variable len register even bytes
+                "D0005000065", //variable len register odd bytes
             };
 
             //test mewtocol idents

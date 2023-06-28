@@ -62,8 +62,11 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public override async Task<object> ReadAsync() {
 
+            if (!attachedInterface.IsConnected) return null;
+
             var read = await attachedInterface.ReadRawRegisterAsync(this);
-            var parsed = PlcValueParser.Parse<bool>(read);
+            if(read == null) return null;   
+            var parsed = PlcValueParser.Parse<bool>(this, read);
 
             SetValueFromPLC(parsed);
             return parsed;
@@ -73,7 +76,9 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public override async Task<bool> WriteAsync(object data) {
 
-            return await attachedInterface.WriteRawRegisterAsync(this, PlcValueParser.Encode((bool)data));
+            if (!attachedInterface.IsConnected) return false;
+
+            return await attachedInterface.WriteRawRegisterAsync(this, PlcValueParser.Encode(this, (bool)data));
 
         }
 

@@ -3,8 +3,7 @@ using System;
 using System.Collections;
 using System.Reflection;
 
-namespace MewtocolNet
-{
+namespace MewtocolNet {
 
     internal struct RegisterBuildInfo {
 
@@ -24,24 +23,21 @@ namespace MewtocolNet
             Type registerClassType = dotnetCastType.GetDefaultRegisterHoldingType();
 
             bool isBytesRegister = !registerClassType.IsGenericType && registerClassType == typeof(BytesRegister);
+            bool isStringRegister = !registerClassType.IsGenericType && registerClassType == typeof(StringRegister);
 
             if (regType.IsNumericDTDDT() && (dotnetCastType == typeof(bool))) {
 
                 //-------------------------------------------
                 //as numeric register with boolean bit target
                 //create a new bregister instance
-                var flags = BindingFlags.Public | BindingFlags.Instance;
-
-                //int _adress, int _reservedByteSize, string _name = null
-                var parameters = new object[] { memoryAddress, memorySizeBytes, name };
-                var instance = (BaseRegister)Activator.CreateInstance(typeof(BytesRegister), flags, null, parameters, null);
+                var instance = new BytesRegister(memoryAddress, memorySizeBytes, name);
 
                 if (collectionType != null)
                     instance.WithCollectionType(collectionType);
 
                 return instance;
 
-            } else if (regType.IsNumericDTDDT() && !isBytesRegister) {
+            } else if (regType.IsNumericDTDDT() && !isBytesRegister && !isStringRegister) {
 
                 //-------------------------------------------
                 //as numeric register
@@ -66,12 +62,20 @@ namespace MewtocolNet
 
                 //-------------------------------------------
                 //as byte range register
+                var instance = new BytesRegister(memoryAddress, memorySizeBytes, name);
 
-                //create a new bregister instance
-                var flags = BindingFlags.Public | BindingFlags.Instance;
-                //int _adress, int _reservedSize, string _name = null
-                var parameters = new object[] { memoryAddress, memorySizeBytes, name };
-                var instance = (BaseRegister)Activator.CreateInstance(typeof(BytesRegister), flags, null, parameters, null);
+                if (collectionType != null)
+                    instance.WithCollectionType(collectionType);
+
+                return instance;
+
+            }
+
+            if (isStringRegister) {
+
+                //-------------------------------------------
+                //as byte range register
+                var instance = (BaseRegister)new StringRegister(memoryAddress, name);   
 
                 if (collectionType != null)
                     instance.WithCollectionType(collectionType);
@@ -89,10 +93,7 @@ namespace MewtocolNet
                 var spAddr = specialAddress;
                 var areaAddr = memoryAddress;
 
-                //create a new bregister instance
-                var flags = BindingFlags.Public | BindingFlags.Instance;
-                var parameters = new object[] { io, spAddr.Value, areaAddr, name };
-                var instance = (BoolRegister)Activator.CreateInstance(typeof(BoolRegister), flags, null, parameters, null);
+                var instance = new BoolRegister(io, spAddr.Value, areaAddr, name);
 
                 if (collectionType != null)
                     ((IRegisterInternal)instance).WithCollectionType(collectionType);

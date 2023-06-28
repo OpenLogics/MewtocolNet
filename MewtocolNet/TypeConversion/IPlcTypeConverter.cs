@@ -4,9 +4,9 @@ namespace MewtocolNet {
 
     internal interface IPlcTypeConverter {
 
-        object FromRawData(byte[] data);
+        object FromRawData(IRegister register, byte[] data);
 
-        byte[] ToRawData(object value);
+        byte[] ToRawData(IRegister register, object value);
 
         Type GetDotnetType();
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MewtocolNet.Registers {
@@ -71,8 +72,12 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public override async Task<object> ReadAsync() {
 
+            if (!attachedInterface.IsConnected) return null;
+
             var read = await attachedInterface.ReadRawRegisterAsync(this);
-            var parsed = PlcValueParser.Parse<byte[]>(read);
+            if (read == null) return null;
+
+            var parsed = PlcValueParser.Parse<byte[]>(this, read);
 
             SetValueFromPLC(parsed);
             return parsed;
@@ -81,6 +86,8 @@ namespace MewtocolNet.Registers {
 
         /// <inheritdoc/>
         public override async Task<bool> WriteAsync(object data) {
+
+            if (!attachedInterface.IsConnected) return false;
 
             return await attachedInterface.WriteRawRegisterAsync(this, (byte[])data);
 

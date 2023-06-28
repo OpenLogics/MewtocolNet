@@ -9,4 +9,13 @@
 
     }
 
+    internal enum CommandState {
+
+        Intial,
+        LineFeed,
+        RequestedNextFrame,
+        Complete
+
+    }
+
 }

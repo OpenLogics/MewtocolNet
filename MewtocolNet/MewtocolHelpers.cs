@@ -13,6 +13,37 @@ namespace MewtocolNet {
     /// </summary>
     public static class MewtocolHelpers {
 
+        #region Value PLC Humanizers
+
+        /// <summary>
+        /// Gets the TimeSpan as a PLC representation string fe.
+        /// <code>
+        /// T#1h10m30s20ms
+        /// </code>
+        /// </summary>
+        /// <param name="timespan"></param>
+        /// <returns></returns>
+        public static string AsPLCTime (this TimeSpan timespan) {
+
+            if (timespan == null || timespan == TimeSpan.Zero)
+                return $"T#0s";
+
+            StringBuilder sb = new StringBuilder("T#");
+
+            int millis = timespan.Milliseconds;
+            int seconds = timespan.Seconds;
+            int minutes = timespan.Minutes;
+            int hours = timespan.Hours;
+
+            if (hours > 0) sb.Append($"{hours}h");
+            if (minutes > 0) sb.Append($"{minutes}m");
+            if (seconds > 0) sb.Append($"{seconds}s");
+            if (millis > 0) sb.Append($"{millis}ms");
+
+            return sb.ToString();
+
+        }
+
         /// <summary>
         /// Turns a bit array into a 0 and 1 string
         /// </summary>
@@ -23,6 +54,10 @@ namespace MewtocolNet {
             return string.Join("", bits.Select(x => x ? "1" : "0"));
 
         }
+
+        #endregion
+
+        #region Byte and string operation helpers
 
         /// <summary>
         /// Converts a string (after converting to upper case) to ascii bytes 
@@ -35,7 +70,12 @@ namespace MewtocolNet {
 
         }
 
-        internal static string BuildBCCFrame(this string asciiArr) {
+        /// <summary>
+        /// Builds the BCC / Checksum for the mewtocol command
+        /// </summary>
+        /// <param name="asciiArr">The mewtocol command (%01#RCS0001)</param>
+        /// <returns>The mewtocol command with the appended checksum</returns>
+        public static string BuildBCCFrame(this string asciiArr) {
 
             Encoding ae = Encoding.ASCII;
             byte[] b = ae.GetBytes(asciiArr);
@@ -63,7 +103,12 @@ namespace MewtocolNet {
 
         }
 
+        /// <summary>
+        /// Parses a return message as RCS single bit
+        /// </summary>
         internal static bool? ParseRCSingleBit(this string _onString) {
+
+            _onString = _onString.Replace("\r", "");
 
             var res = new Regex(@"\%([0-9]{2})\$RC(.)").Match(_onString);
             if (res.Success) {
@@ -74,7 +119,12 @@ namespace MewtocolNet {
 
         }
 
+        /// <summary>
+        /// Parses a return message as RCS multiple bits
+        /// </summary>
         internal static BitArray ParseRCMultiBit(this string _onString) {
+
+            _onString = _onString.Replace("\r", "");
 
             var res = new Regex(@"\%([0-9]{2})\$RC(?<bits>(?:0|1){0,8})(..)").Match(_onString);
             if (res.Success) {
@@ -124,7 +174,7 @@ namespace MewtocolNet {
         }
 
         /// <summary>
-        /// Splits a string in even parts
+        /// Splits a string into even parts
         /// </summary>
         internal static IEnumerable<string> SplitInParts(this string s, int partLength) {
 
@@ -138,9 +188,11 @@ namespace MewtocolNet {
 
         }
 
+        /// <summary>
+        /// Converts a hex string (AB01C1) to a byte array
+        /// </summary>
         internal static byte[] HexStringToByteArray (this string hex) {
-            if (hex == null)
-                return null;
+            if (hex == null) return null;
             return Enumerable.Range(0, hex.Length)
                              .Where(x => x % 2 == 0)
                              .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
@@ -166,24 +218,9 @@ namespace MewtocolNet {
 
         }
 
-        internal static string AsPLC (this TimeSpan timespan) {
-
-            StringBuilder sb = new StringBuilder("T#");
-
-            int millis = timespan.Milliseconds;
-            int seconds = timespan.Seconds;
-            int minutes = timespan.Minutes;
-            int hours = timespan.Hours;
-
-            if (hours > 0) sb.Append($"{hours}h");
-            if (minutes > 0) sb.Append($"{minutes}m");
-            if (seconds > 0) sb.Append($"{seconds}s");
-            if (millis > 0) sb.Append($"{millis}ms");
-
-            return sb.ToString();
-
-        }
-
+        /// <summary>
+        /// Switches byte order from mixed to big endian
+        /// </summary>
         internal static byte[] BigToMixedEndian(this byte[] arr) {
 
             List<byte> oldBL = new List<byte>(arr);
@@ -205,6 +242,10 @@ namespace MewtocolNet {
             return tempL.ToArray();
 
         }
+
+        #endregion
+
+        #region Comparerers
 
         /// <summary>
         /// Checks if the register type is boolean
@@ -248,6 +289,8 @@ namespace MewtocolNet {
             return ( reg1.Name != null || compare.Name != null) && reg1.Name == compare.Name;
 
         }
+
+        #endregion
 
     }
 

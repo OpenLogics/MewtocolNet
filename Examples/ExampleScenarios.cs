@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using MewtocolNet.Registers;
 using System.Diagnostics;
 using System.Text;
+using Microsoft.Win32;
 
 namespace Examples;
 
@@ -17,7 +18,7 @@ public class ExampleScenarios {
     public void SetupLogger () {
 
         //attaching the logger
-        Logger.LogLevel = LogLevel.Info;
+        Logger.LogLevel = LogLevel.Error;
         Logger.OnNewLogMessage((date, level, msg) => {
 
             if (level == LogLevel.Error) Console.ForegroundColor = ConsoleColor.Red;
@@ -46,6 +47,7 @@ public class ExampleScenarios {
         interf.WithRegisterCollection(registers).WithPoller();
 
         await interf.ConnectAsync();
+        await interf.AwaitFirstDataAsync();
 
         _ = Task.Factory.StartNew(async () => {
             
@@ -54,21 +56,17 @@ public class ExampleScenarios {
                 //flip the bool register each tick and wait for it to be registered
                 //await interf.SetRegisterAsync(nameof(registers.TestBool1), !registers.TestBool1);
 
-                Console.Title = $"Polling Paused: {interf.PollingPaused}, " +
-                $"Poller active: {interf.PollerActive}, " +
+                Console.Title =
                 $"Speed UP: {interf.BytesPerSecondUpstream} B/s, " +
                 $"Speed DOWN: {interf.BytesPerSecondDownstream} B/s, " +
-                $"Poll delay: {interf.PollerDelayMs} ms, " +
+                $"Poll cycle: {interf.PollerCycleDurationMs} ms, " +
                 $"Queued MSGs: {interf.QueuedMessages}";
 
                 Console.Clear();
                 Console.WriteLine("Underlying registers on tick: \n");
 
-                foreach (var register in interf.Registers) {
-
+                foreach (var register in interf.Registers)
                     Console.WriteLine($"{register.ToString(true)}");
-
-                }
 
                 Console.WriteLine($"{registers.TestBool1}");
                 Console.WriteLine($"{registers.TestDuplicate}");
@@ -192,12 +190,12 @@ public class ExampleScenarios {
     public async Task RunReadTest () {
 
         //setting up a new PLC interface and register collection
-        MewtocolInterface interf = new MewtocolInterface("192.168.115.210");
+        MewtocolInterface interf = new MewtocolInterface("192.168.115.210").WithPoller();
 
         //auto add all built registers to the interface 
         var builder = RegBuilder.ForInterface(interf);
         var r0reg = builder.FromPlcRegName("R0").Build();
-        builder.FromPlcRegName("R1").Build();
+        builder.FromPlcRegName("R1", "Testname").Build();
         builder.FromPlcRegName("R1F").Build();
         builder.FromPlcRegName("R101A").Build();
 
@@ -205,35 +203,57 @@ public class ExampleScenarios {
         builder.FromPlcRegName("DDT36").AsPlcType(PlcVarType.DINT).Build();
         builder.FromPlcRegName("DT200").AsBytes(30).Build();
 
-        builder.FromPlcRegName("DDT38").AsPlcType(PlcVarType.TIME).Build();
-        //builder.FromPlcRegName("DT40").AsPlcType(PlcVarType.STRING).Build();
+        var timeReg = builder.FromPlcRegName("DDT38").AsPlcType(PlcVarType.TIME).Build();
+        var stringReg = builder.FromPlcRegName("DT40").AsPlcType(PlcVarType.STRING).Build();
 
         //connect
         await interf.ConnectAsync();
 
-        //var res = await interf.SendCommandAsync("%01#RCSR000F");
+        //await first register data
+        await interf.AwaitFirstDataAsync();
 
-        while(true) {
+        _ = Task.Factory.StartNew(async () => {
 
-            await interf.SetRegisterAsync(r0reg, !(bool)r0reg.Value);
-            await interf.SetRegisterAsync(shortReg, (short)new Random().Next(0, 100));
+            void setTitle () {
 
-            var sw = Stopwatch.StartNew();
-
-            foreach (var reg in interf.Registers) {
-
-                await reg.ReadAsync();
-
-                Console.WriteLine($"Register {reg.ToString()}");
+                Console.Title =
+                $"Speed UP: {interf.BytesPerSecondUpstream} B/s, " +
+                $"Speed DOWN: {interf.BytesPerSecondDownstream} B/s, " +
+                $"Poll cycle: {interf.PollerCycleDurationMs} ms, " +
+                $"Queued MSGs: {interf.QueuedMessages}";
 
             }
 
+            while (interf.IsConnected) { 
+                setTitle();
+                await Task.Delay(1000);
+            }
+
+            setTitle();
+
+        });
+
+        while (interf.IsConnected) {
+
+            var sw = Stopwatch.StartNew();
+
+            //set bool
+            await r0reg.WriteAsync(!(bool)r0reg.Value);
+            
+            //set random num
+            await shortReg.WriteAsync((short)new Random().Next(0, 100));
+            await stringReg.WriteAsync($"_{DateTime.Now.Second}s_");
+
             sw.Stop();
 
-            Console.WriteLine($"Total read time for registers: {sw.Elapsed.TotalMilliseconds:N0}ms");
+            foreach (var reg in interf.Registers)
+                Console.WriteLine(reg.ToString());     
+
+            Console.WriteLine($"Total write time for registers: {sw.Elapsed.TotalMilliseconds:N0}ms");
 
             Console.WriteLine();
 
+            //await Task.Delay(new Random().Next(0, 10000));
             await Task.Delay(1000);
 
         }
@@ -244,28 +264,24 @@ public class ExampleScenarios {
     public async Task MultiFrameTest() {
 
         var preLogLevel = Logger.LogLevel;
-        Logger.LogLevel = LogLevel.Error;
+        Logger.LogLevel = LogLevel.Critical;
 
         //setting up a new PLC interface and register collection
-        MewtocolInterface interf = new MewtocolInterface("192.168.115.210");
+        MewtocolInterface interf = new MewtocolInterface("192.168.115.210") {
+            ConnectTimeout = 3000,
+        };
 
         //auto add all built registers to the interface 
         var builder = RegBuilder.ForInterface(interf);
         var r0reg = builder.FromPlcRegName("R0").Build();
         builder.FromPlcRegName("R1").Build();
-        builder.FromPlcRegName("R1F").Build();
-        builder.FromPlcRegName("R60A").Build();
-        builder.FromPlcRegName("R61A").Build();
-        builder.FromPlcRegName("R62A").Build();
-        builder.FromPlcRegName("R63A").Build();
-        builder.FromPlcRegName("R64A").Build();
-        builder.FromPlcRegName("R65A").Build();
-        builder.FromPlcRegName("R66A").Build();
-        builder.FromPlcRegName("R67A").Build();
-        builder.FromPlcRegName("R68A").Build();
-        builder.FromPlcRegName("R69A").Build();
-        builder.FromPlcRegName("R70A").Build();
-        builder.FromPlcRegName("R71A").Build();
+        builder.FromPlcRegName("DT0").AsBytes(100).Build();
+
+        for (int i = 1; i < 100; i++) {
+
+            builder.FromPlcRegName($"R{i}A").Build();
+
+        }
 
         //connect
         await interf.ConnectAsync();
@@ -273,35 +289,17 @@ public class ExampleScenarios {
         Console.WriteLine("Poller cycle started");
         var sw = Stopwatch.StartNew();
 
-        await interf.RunPollerCylceManual(false);
+        int cmdCount = await interf.RunPollerCylceManual();
 
         sw.Stop();
 
         Console.WriteLine("Poller cycle finished");
 
-        Console.WriteLine($"Single frame excec time: {sw.ElapsedMilliseconds:N0}ms");
+        Console.WriteLine($"Single frame excec time: {sw.ElapsedMilliseconds:N0}ms for {cmdCount} commands");
 
         interf.Disconnect();
 
         await Task.Delay(1000);
-
-        await interf.ConnectAsync();
-
-        sw = Stopwatch.StartNew();
-
-        Console.WriteLine("Poller cycle started");
-
-        await interf.RunPollerCylceManual(true);
-
-        sw.Stop();
-
-        Console.WriteLine("Poller cycle finished");
-
-        Console.WriteLine($"Multi frame excec time: {sw.ElapsedMilliseconds:N0}ms");
-
-        Logger.LogLevel = preLogLevel;
-
-        await Task.Delay(10000);
 
     }
 
