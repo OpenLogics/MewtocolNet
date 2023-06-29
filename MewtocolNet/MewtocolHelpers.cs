@@ -60,6 +60,29 @@ namespace MewtocolNet {
         #region Byte and string operation helpers
 
         /// <summary>
+        /// Searches a byte array for a pattern
+        /// </summary>
+        /// <param name="src"></param>
+        /// <param name="pattern"></param>
+        /// <returns>The start index of the found pattern or -1</returns>
+        public static int SearchBytePattern(this byte[] src, byte[] pattern) {
+
+            int maxFirstCharSlot = src.Length - pattern.Length + 1;
+            for (int i = 0; i < maxFirstCharSlot; i++) {
+                if (src[i] != pattern[0]) // compare only first byte
+                    continue;
+
+                // found a match on first byte, now try to match rest of the pattern
+                for (int j = pattern.Length - 1; j >= 1; j--) {
+                    if (src[i + j] != pattern[j]) break;
+                    if (j == 1) return i;
+                }
+            }
+            return -1;
+
+        }
+
+        /// <summary>
         /// Converts a string (after converting to upper case) to ascii bytes 
         /// </summary>
         internal static byte[] BytesFromHexASCIIString(this string _str) {
@@ -204,7 +227,7 @@ namespace MewtocolNet {
         /// </summary>
         /// <param name="seperator">Seperator between the hex numbers</param>
         /// <param name="arr">The byte array</param>
-        internal static string ToHexString (this byte[] arr, string seperator = "") {
+        public static string ToHexString (this byte[] arr, string seperator = "") {
 
             StringBuilder sb = new StringBuilder();
 

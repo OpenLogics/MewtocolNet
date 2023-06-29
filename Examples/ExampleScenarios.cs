@@ -10,6 +10,9 @@ using MewtocolNet.Registers;
 using System.Diagnostics;
 using System.Text;
 using Microsoft.Win32;
+using MewtocolNet.ComCassette;
+using System.Linq;
+using System.Net;
 
 namespace Examples;
 
@@ -28,61 +31,6 @@ public class ExampleScenarios {
             Console.ResetColor();
 
         });
-
-    }
-
-    [Scenario("Permament connection with poller")]
-    public async Task RunCyclicPollerAsync () {
-
-        Console.WriteLine("Starting poller scenario");
-
-        int runTime = 10000;
-        int remainingTime = runTime;
-
-        //setting up a new PLC interface and register collection
-        MewtocolInterface interf = new MewtocolInterface("192.168.115.210");
-        TestRegisters registers = new TestRegisters();
-
-        //attaching the register collection and an automatic poller
-        interf.WithRegisterCollection(registers).WithPoller();
-
-        await interf.ConnectAsync();
-        await interf.AwaitFirstDataAsync();
-
-        _ = Task.Factory.StartNew(async () => {
-            
-            while (interf.IsConnected) {
-
-                //flip the bool register each tick and wait for it to be registered
-                //await interf.SetRegisterAsync(nameof(registers.TestBool1), !registers.TestBool1);
-
-                Console.Title =
-                $"Speed UP: {interf.BytesPerSecondUpstream} B/s, " +
-                $"Speed DOWN: {interf.BytesPerSecondDownstream} B/s, " +
-                $"Poll cycle: {interf.PollerCycleDurationMs} ms, " +
-                $"Queued MSGs: {interf.QueuedMessages}";
-
-                Console.Clear();
-                Console.WriteLine("Underlying registers on tick: \n");
-
-                foreach (var register in interf.Registers)
-                    Console.WriteLine($"{register.ToString(true)}");
-
-                Console.WriteLine($"{registers.TestBool1}");
-                Console.WriteLine($"{registers.TestDuplicate}");
-
-                remainingTime -= 1000;
-
-                Console.WriteLine($"\nStopping in: {remainingTime}ms");
-
-                await Task.Delay(1000);
-
-            }
-
-        });
-
-        await Task.Delay(runTime);
-        interf.Disconnect();
 
     }
 
@@ -125,68 +73,7 @@ public class ExampleScenarios {
 
     }
 
-    [Scenario("Test auto enums and bitwise, needs the example program from MewtocolNet/PLC_Test")]
-    public async Task RunEnumsBitwiseAsync () {
-
-        Console.WriteLine("Starting auto enums and bitwise");
-
-        //setting up a new PLC interface and register collection
-        MewtocolInterface interf = new MewtocolInterface("192.168.115.210");
-        TestRegistersEnumBitwise registers = new TestRegistersEnumBitwise();
-
-        //attaching the register collection and an automatic poller
-        interf.WithRegisterCollection(registers).WithPoller();
-
-        registers.PropertyChanged += (s, e) => {
-
-            Console.Clear();
-
-            var props = registers.GetType().GetProperties();
-
-            foreach (var prop in props) {
-
-                var val = prop.GetValue(registers);
-                string printVal = val?.ToString() ?? "null";
-
-                if (val is BitArray bitarr) {
-                    printVal = bitarr.ToBitString();
-                }
-
-                Console.Write($"{prop.Name} - ");
-
-                if(printVal == "True") {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                }
-
-                Console.Write($"{printVal}");
-
-                Console.ResetColor();
-
-                Console.WriteLine();
-
-            }
-
-        };
-
-        await interf.ConnectAsync();
-
-        //use the async method to make sure the cycling is stopped
-        //await interf.SetRegisterAsync(nameof(registers.StartCyclePLC), false);
-
-        await Task.Delay(5000);
-
-        //set the register without waiting for it async
-        registers.StartCyclePLC = true;
-
-        await Task.Delay(5000);
-
-        registers.StartCyclePLC = false;
-
-        await Task.Delay(2000);
-
-    }
-
-    [Scenario("Read register test")]
+    [Scenario("Read all kinds of example registers")]
     public async Task RunReadTest () {
 
         //setting up a new PLC interface and register collection
@@ -260,8 +147,8 @@ public class ExampleScenarios {
 
     }
 
-    [Scenario("Test multi frame")]
-    public async Task MultiFrameTest() {
+    [Scenario("Test read speed 100 R registers")]
+    public async Task ReadRSpeedTest() {
 
         var preLogLevel = Logger.LogLevel;
         Logger.LogLevel = LogLevel.Critical;
@@ -273,11 +160,7 @@ public class ExampleScenarios {
 
         //auto add all built registers to the interface 
         var builder = RegBuilder.ForInterface(interf);
-        var r0reg = builder.FromPlcRegName("R0").Build();
-        builder.FromPlcRegName("R1").Build();
-        builder.FromPlcRegName("DT0").AsBytes(100).Build();
-
-        for (int i = 1; i < 100; i++) {
+        for (int i = 0; i < 100; i++) {
 
             builder.FromPlcRegName($"R{i}A").Build();
 
@@ -295,11 +178,45 @@ public class ExampleScenarios {
 
         Console.WriteLine("Poller cycle finished");
 
-        Console.WriteLine($"Single frame excec time: {sw.ElapsedMilliseconds:N0}ms for {cmdCount} commands");
+        Console.WriteLine($"Single frame excec time: {sw.ElapsedMilliseconds:N0}ms for {cmdCount} commands and {interf.Registers.Count()} R registers");
 
         interf.Disconnect();
 
         await Task.Delay(1000);
+
+    }
+
+    [Scenario("Find all COM5 cassettes in the network")]
+    public async Task FindCassettes () {
+
+        Console.Clear();
+
+        var casettes =  await CassetteFinder.FindClientsAsync();
+
+        foreach (var cassette in casettes) {
+
+            Console.WriteLine($"{cassette.Name}");
+            Console.WriteLine($"IP: {cassette.IPAddress}");
+            Console.WriteLine($"Port: {cassette.Port}");
+            Console.WriteLine($"DHCP: {cassette.UsesDHCP}");
+            Console.WriteLine($"Subnet Mask: {cassette.SubnetMask}");
+            Console.WriteLine($"Gateway: {cassette.GatewayAddress}");
+            Console.WriteLine($"Mac: {cassette.MacAddress.ToHexString(":")}");
+            Console.WriteLine($"Firmware: {cassette.FirmwareVersion}");
+            Console.WriteLine($"Status: {cassette.Status}");
+            Console.WriteLine($"Endpoint: {cassette.EndpointName} - {cassette.Endpoint.Address}");
+            Console.WriteLine();
+
+        }
+
+        await Task.Delay(5000);
+
+        var found = casettes.FirstOrDefault(x => x.Endpoint.Address.ToString() == "10.237.191.75");
+
+        found.IPAddress = IPAddress.Parse($"192.168.1.{new Random().Next(20, 120)}");
+        found.Name = $"Rand{new Random().Next(5, 15)}";
+
+        await found.SendNewConfigAsync();
 
     }
 

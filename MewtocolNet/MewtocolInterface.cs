@@ -466,7 +466,7 @@ namespace MewtocolNet {
                     await stream.ReadAsync(responseBuffer, 0, responseBuffer.Length);
 
                     bool terminatorReceived = responseBuffer.Any(x => x == (byte)CR);
-                    var delimiterTerminatorIdx = SearchBytePattern(responseBuffer, new byte[] { (byte)DELIMITER, (byte)CR });
+                    var delimiterTerminatorIdx = responseBuffer.SearchBytePattern(new byte[] { (byte)DELIMITER, (byte)CR });
 
                     if (terminatorReceived && delimiterTerminatorIdx == -1) {
                         cmdState = CommandState.Complete;
@@ -555,23 +555,6 @@ namespace MewtocolNet {
 
             return 0;
 
-        }
-
-        private int SearchBytePattern (byte[] src, byte[] pattern) {
-
-            int maxFirstCharSlot = src.Length - pattern.Length + 1;
-            for (int i = 0; i < maxFirstCharSlot; i++) {
-                if (src[i] != pattern[0]) // compare only first byte
-                    continue;
-
-                // found a match on first byte, now try to match rest of the pattern
-                for (int j = pattern.Length - 1; j >= 1; j--) {
-                    if (src[i + j] != pattern[j]) break;
-                    if (j == 1) return i;
-                }
-            }
-            return -1;
-        
         }
 
         #endregion

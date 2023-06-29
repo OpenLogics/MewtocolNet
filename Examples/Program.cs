@@ -7,6 +7,8 @@ using System.Reflection;
 using System.Threading.Tasks;
 using MewtocolNet.Logging;
 using System.Text.RegularExpressions;
+using System.Globalization;
+using System.Threading;
 
 namespace Examples;
 
@@ -16,13 +18,21 @@ class Program {
 
     static void Main(string[] args) {
 
+        Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-us");
+
+        Console.Clear();
+
         AppDomain.CurrentDomain.UnhandledException += (s,e) => {
-            Console.WriteLine(e.ExceptionObject.ToString());
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"Uncatched exception: {e.ExceptionObject.ToString()}");
+            Console.ResetColor();
         };
 
-        TaskScheduler.UnobservedTaskException += (s,e) => {
-            Console.WriteLine(e.Exception.ToString());
-        };
+        //TaskScheduler.UnobservedTaskException += (s,e) => {
+        //    Console.ForegroundColor = ConsoleColor.Magenta;
+        //    Console.WriteLine($"Unobserved Task Uncatched exception: {e.Exception.ToString()}");
+        //    Console.ResetColor();
+        //};
 
         ExampleSzenarios.SetupLogger();
 
