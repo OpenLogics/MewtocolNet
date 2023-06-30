@@ -5,7 +5,7 @@ namespace MewtocolNet {
     /// <summary>
     /// All modes
     /// </summary>
-    public class PLCMode {
+    public struct PLCMode {
 
         /// <summary>
         /// PLC is running

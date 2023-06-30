@@ -19,8 +19,9 @@ namespace MewtocolNet {
         /// Gets generic information about the PLC
         /// </summary>
         /// <returns>A PLCInfo class</returns>
-        public async Task<PLCInfo> GetPLCInfoAsync() {
-            var resu = await SendCommandAsync("%01#RT");
+        public async Task<PLCInfo> GetPLCInfoAsync(int timeout = -1) {
+
+            var resu = await SendCommandAsync("%01#RT", true, timeout);
             if (!resu.Success) return null;
 
             var reg = new Regex(@"\%([0-9]{2})\$RT([0-9]{2})([0-9]{2})([0-9]{2})([0-9]{2})([0-9]{2})([0-9]{2})([0-9]{4})..", RegexOptions.IgnoreCase);

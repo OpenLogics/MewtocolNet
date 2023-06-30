@@ -73,9 +73,9 @@ namespace MewtocolTests
 
                 output.WriteLine($"Testing: {plc.PLCName}");
 
-                var cycleClient = new MewtocolInterface(plc.PLCIP, plc.PLCPort);
+                var cycleClient = new MewtocolInterfaceShared(plc.PLCIP, plc.PLCPort);
 
-                await cycleClient.ConnectAsync();
+                await cycleClient.ConnectAsyncOld();
 
                 Assert.True(cycleClient.IsConnected);
 
@@ -94,9 +94,9 @@ namespace MewtocolTests
 
                 output.WriteLine($"Testing: {plc.PLCName}\n");
 
-                var client = new MewtocolInterface(plc.PLCIP, plc.PLCPort);
+                var client = new MewtocolInterfaceShared(plc.PLCIP, plc.PLCPort);
 
-                await client.ConnectAsync();
+                await client.ConnectAsyncOld();
 
                 output.WriteLine($"{client.PlcInfo}\n");
 

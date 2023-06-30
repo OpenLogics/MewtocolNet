@@ -18,6 +18,8 @@ namespace MewtocolNet {
                 }
             }
 
+            if(task.IsCanceled) return default(T);  
+
             return task.Result;
 
         }

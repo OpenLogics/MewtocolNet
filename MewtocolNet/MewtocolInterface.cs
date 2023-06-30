@@ -1,18 +1,12 @@
-using MewtocolNet.Exceptions;
-using MewtocolNet.Logging;
+﻿using MewtocolNet.Logging;
 using MewtocolNet.Queue;
-using MewtocolNet.RegisterAttributes;
 using MewtocolNet.Registers;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -20,177 +14,119 @@ using System.Threading.Tasks;
 
 namespace MewtocolNet {
 
-    /// <summary>
-    /// The PLC com interface class
-    /// </summary>
-    public partial class MewtocolInterface : INotifyPropertyChanged, IDisposable {
+    public partial class MewtocolInterface : IPlc, INotifyPropertyChanged, IDisposable {
 
-        /// <summary>
-        /// Gets triggered when the PLC connection was established
-        /// </summary>
+        #region Private fields
+
+        private protected Stream stream;
+
+        private int tcpMessagesSentThisCycle = 0;
+        private int pollerCycleDurationMs;
+        private volatile int queuedMessages;
+        private bool isConnected;
+        private PLCInfo plcInfo;
+        private protected int stationNumber;
+
+        private protected int bytesTotalCountedUpstream = 0;
+        private protected int bytesTotalCountedDownstream = 0;
+        private protected int cycleTimeMs = 25;
+        private protected int bytesPerSecondUpstream = 0;
+        private protected int bytesPerSecondDownstream = 0;
+
+        private protected AsyncQueue queue = new AsyncQueue();
+        private protected int RecBufferSize = 128;
+        private protected Stopwatch speedStopwatchUpstr;
+        private protected Stopwatch speedStopwatchDownstr;
+        private protected Task firstPollTask = new Task(() => { });
+
+        #endregion
+
+        #region Internal fields 
+
+        internal event Action PolledCycle;
+        internal volatile bool pollerTaskStopped = true;
+        internal volatile bool pollerFirstCycle;
+        internal bool usePoller = false;
+
+        internal List<BaseRegister> RegistersUnderlying { get; private set; } = new List<BaseRegister>();
+        internal IEnumerable<IRegisterInternal> RegistersInternal => RegistersUnderlying.Cast<IRegisterInternal>();
+
+        #endregion
+
+        #region Public Read Only Properties / Fields
+
+        /// <inheritdoc/>
         public event Action<PLCInfo> Connected;
 
-        /// <summary>
-        /// Gets triggered when the PLC connection was closed or lost
-        /// </summary>
+        /// <inheritdoc/>
         public event Action Disconnected;
 
-        /// <summary>
-        /// Gets triggered when a registered data register changes its value
-        /// </summary>
+        /// <inheritdoc/>
         public event Action<IRegister> RegisterChanged;
 
-        /// <summary>
-        /// Gets triggered when a property of the interface changes
-        /// </summary>
+        /// <inheritdoc/>
         public event PropertyChangedEventHandler PropertyChanged;
 
-        private int connectTimeout = 3000;
-        /// <summary>
-        /// The initial connection timeout in milliseconds
-        /// </summary>
-        public int ConnectTimeout {
-            get { return connectTimeout; }
-            set { connectTimeout = value; }
-        }
+        /// <inheritdoc/>
+        public bool Disposed { get; private set; }
 
-        private volatile int queuedMessages;
-        /// <summary>
-        /// Currently queued Messages
-        /// </summary>
-        public int QueuedMessages {
-            get => queuedMessages;
-        }
+        /// <inheritdoc/>
+        public int QueuedMessages => queuedMessages;
 
-        /// <summary>
-        /// The host ip endpoint, leave it null to use an automatic interface
-        /// </summary>
-        public IPEndPoint HostEndpoint { get; set; }
-
-        private bool isConnected;
-        /// <summary>
-        /// The current connection state of the interface
-        /// </summary>
+        /// <inheritdoc/>
         public bool IsConnected {
             get => isConnected;
-            private set {
+            private protected set {
                 isConnected = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsConnected)));
+                OnPropChange();
             }
         }
 
-        private bool disposed;
-        /// <summary>
-        /// True if the current interface was disposed
-        /// </summary>
-        public bool Disposed {
-            get { return disposed; }
-            private set { disposed = value; }
-        }
-
-
-        private PLCInfo plcInfo;
-        /// <summary>
-        /// Generic information about the connected PLC
-        /// </summary>
+        /// <inheritdoc/>
         public PLCInfo PlcInfo {
             get => plcInfo;
             private set {
                 plcInfo = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PlcInfo)));
+                OnPropChange();
             }
         }
 
-        /// <summary>
-        /// The registered data registers of the PLC
-        /// </summary>
-        internal List<BaseRegister> RegistersUnderlying { get; private set; } = new List<BaseRegister>();
-
+        /// <inheritdoc/>
         public IEnumerable<IRegister> Registers => RegistersUnderlying.Cast<IRegister>();
 
-        internal IEnumerable<IRegisterInternal> RegistersInternal => RegistersUnderlying.Cast<IRegisterInternal>();
-
-        private string ip;
-        private int port;
-        private int stationNumber;
-        private int cycleTimeMs = 25;
-
-        private int bytesTotalCountedUpstream = 0;
-        private int bytesTotalCountedDownstream = 0;
-
-        /// <summary>
-        /// The current IP of the PLC connection
-        /// </summary>
-        public string IpAddress => ip;
-        /// <summary>
-        /// The current port of the PLC connection
-        /// </summary>
-        public int Port => port;
-        /// <summary>
-        /// The station number of the PLC
-        /// </summary>
+        /// <inheritdoc/>
         public int StationNumber => stationNumber;
 
-        /// <summary>
-        /// The duration of the last message cycle
-        /// </summary>
-        public int CycleTimeMs {
-            get { return cycleTimeMs; }
-            private set {
-                cycleTimeMs = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CycleTimeMs)));
-            }
-        }
-
-        private int bytesPerSecondUpstream = 0;
-        /// <summary>
-        /// The current transmission speed in bytes per second
-        /// </summary>
+        /// <inheritdoc/>
         public int BytesPerSecondUpstream {
             get { return bytesPerSecondUpstream; }
-            private set {
+            private protected set {
                 bytesPerSecondUpstream = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BytesPerSecondUpstream)));
+                OnPropChange();
             }
         }
 
-        private int bytesPerSecondDownstream = 0;
-        /// <summary>
-        /// The current transmission speed in bytes per second
-        /// </summary>
+        /// <inheritdoc/>
         public int BytesPerSecondDownstream {
             get { return bytesPerSecondDownstream; }
-            private set {
+            private protected set {
                 bytesPerSecondDownstream = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BytesPerSecondDownstream)));
+                OnPropChange();
             }
         }
 
-        internal NetworkStream stream;
-        internal TcpClient client;
-        internal readonly SerialQueue queue = new SerialQueue();
-        private int RecBufferSize = 128;
-        internal int SendExceptionsInRow = 0;
-        internal bool ImportantTaskRunning = false;
+        #endregion
 
-        private Stopwatch speedStopwatchUpstr;
-        private Stopwatch speedStopwatchDownstr;
+        #region Public read/write Properties / Fields
 
-        private Task firstPollTask = new Task(() => { });
+        /// <inheritdoc/>
+        public int ConnectTimeout { get; set; } = 3000;
 
-        #region Initialization
+        #endregion
 
-        /// <summary>
-        /// Builds a new Interfacer for a PLC
-        /// </summary>
-        /// <param name="_ip">IP adress of the PLC</param>
-        /// <param name="_port">Port of the PLC</param>
-        /// <param name="_station">Station Number of the PLC</param>
-        public MewtocolInterface(string _ip, int _port = 9094, int _station = 1) {
+        #region Methods
 
-            ip = _ip;
-            port = _port;
-            stationNumber = _station;
+        private protected MewtocolInterface () {
 
             Connected += MewtocolInterface_Connected;
 
@@ -215,210 +151,60 @@ namespace MewtocolNet {
             };
 
         }
+        
+        /// <inheritdoc/>
+        public virtual Task ConnectAsync () => throw new NotImplementedException();
 
-        #endregion
+        /// <inheritdoc/>
+        public async Task AwaitFirstDataAsync() => await firstPollTask;
 
-        #region Setup
-
-        /// <summary>
-        /// Trys to connect to the PLC by the IP given in the constructor
-        /// </summary>
-        /// <param name="OnConnected">
-        /// Gets called when a connection with a PLC was established
-        /// <para/>
-        /// If <see cref="WithPoller"/> is used it waits for the first data receive cycle to complete
-        /// </param>
-        /// <param name="OnFailed">Gets called when an error or timeout during connection occurs</param>
-        /// <returns></returns>
-        public async Task<MewtocolInterface> ConnectAsync(Action<PLCInfo> OnConnected = null, Action OnFailed = null) {
-
-            firstPollTask = new Task(() => { });
-
-            Logger.Log("Connecting to PLC...", LogLevel.Info, this);
-
-            var plcinf = await GetPLCInfoAsync();
-
-            if (plcinf != null) {
-
-                Logger.Log("Connected", LogLevel.Info, this);
-                Logger.Log($"\n\n{plcinf.ToString()}\n\n", LogLevel.Verbose, this);
-
-                Connected?.Invoke(plcinf);
-
-                if (!usePoller) {
-                    if (OnConnected != null) OnConnected(plcinf);
-                    firstPollTask.RunSynchronously();
-                    return this;
-                }
-
-                PolledCycle += OnPollCycleDone;
-                void OnPollCycleDone() {
-
-                    if (OnConnected != null) OnConnected(plcinf);
-                    firstPollTask.RunSynchronously();
-                    PolledCycle -= OnPollCycleDone;
-
-                }
-
-            } else {
-
-                if (OnFailed != null) {
-                    OnFailed();
-                    Disconnected?.Invoke();
-                    firstPollTask.RunSynchronously();
-                    Logger.Log("Initial connection failed", LogLevel.Info, this);
-                }
-
-            }
-
-            return this;
-
-        }
-
-        /// <summary>
-        /// Use this to await the first poll iteration after connecting,
-        /// This also completes if the initial connection fails
-        /// </summary>
-        public async Task AwaitFirstDataAsync () => await firstPollTask;
-
-        /// <summary>
-        /// Changes the connections parameters of the PLC, only applyable when the connection is offline
-        /// </summary>
-        /// <param name="_ip">Ip adress</param>
-        /// <param name="_port">Port number</param>
-        /// <param name="_station">Station number</param>
-        public void ChangeConnectionSettings(string _ip, int _port, int _station = 1) {
-
-            if (IsConnected)
-                throw new Exception("Cannot change the connection settings while the PLC is connected");
-
-            ip = _ip;
-            port = _port;
-            stationNumber = _station;
-
-        }
-
-        /// <summary>
-        /// Closes the connection all cyclic polling 
-        /// </summary>
+        /// <inheritdoc/>
         public void Disconnect() {
 
-            if (!IsConnected)
-                return;
+            if (!IsConnected) return;
+
+            pollCycleTask.Wait();
 
             OnMajorSocketExceptionWhileConnected();
 
         }
 
-        /// <summary>
-        /// Attaches a poller to the interface that continously 
-        /// polls the registered data registers and writes the values to them
-        /// </summary>
-        public MewtocolInterface WithPoller() {
+        /// <inheritdoc/>
+        public void Dispose() {
 
-            usePoller = true;
-            return this;
-
-        }
-
-        #endregion
-
-        #region TCP connection state handling
-
-        private async Task ConnectTCP() {
-
-            if (!IPAddress.TryParse(ip, out var targetIP)) {
-                throw new ArgumentException("The IP adress of the PLC was no valid format");
-            }
-
-            try {
-
-                if (HostEndpoint != null) {
-
-                    client = new TcpClient(HostEndpoint) {
-                        ReceiveBufferSize = RecBufferSize,
-                        NoDelay = false,
-                    };
-                    var ep = (IPEndPoint)client.Client.LocalEndPoint;
-                    Logger.Log($"Connecting [MAN] endpoint: {ep.Address}:{ep.Port}", LogLevel.Verbose, this);
-
-                } else {
-
-                    client = new TcpClient() {
-                        ReceiveBufferSize = RecBufferSize,
-                        NoDelay = false,
-                        ExclusiveAddressUse = true,
-                    };
-
-                }
-
-                var result = client.BeginConnect(targetIP, port, null, null);
-                var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(ConnectTimeout));
-
-                if (!success || !client.Connected) {
-                    OnMajorSocketExceptionWhileConnecting();
-                    return;
-                }
-
-                if (HostEndpoint == null) {
-                    var ep = (IPEndPoint)client.Client.LocalEndPoint;
-                    Logger.Log($"Connecting [AUTO] endpoint: {ep.Address.MapToIPv4()}:{ep.Port}", LogLevel.Verbose, this);
-                }
-
-                stream = client.GetStream();
-                stream.ReadTimeout = 1000;
-
-                await Task.CompletedTask;
-
-            } catch (SocketException) {
-
-                OnMajorSocketExceptionWhileConnecting();
-
-            }
+            if (Disposed) return;
+            Disconnect();
+            //GC.SuppressFinalize(this);
+            Disposed = true;
 
         }
 
-        #endregion
+        /// <inheritdoc/>
+        public virtual string GetConnectionInfo() => throw new NotImplementedException();
 
-        #region Low level command handling
-
-        /// <summary>
-        /// Calculates the checksum automatically and sends a command to the PLC then awaits results
-        /// </summary>
-        /// <param name="_msg">MEWTOCOL Formatted request string ex: %01#RT</param>
-        /// <param name="withTerminator">Append the checksum and bcc automatically</param>
-        /// <returns>Returns the result</returns>
-        public async Task<MewtocolFrameResponse> SendCommandAsync(string _msg, bool withTerminator = true) {
+        /// <inheritdoc/>
+        public async Task<MewtocolFrameResponse> SendCommandAsync(string _msg, bool withTerminator = true, int timeoutMs = -1) {
 
             //send request
             queuedMessages++;
-            var tempResponse = await queue.Enqueue(() => SendFrameAsync(_msg, withTerminator, withTerminator));
+
+            var tempResponse = queue.Enqueue(async () => await SendFrameAsync(_msg, withTerminator, withTerminator));
+
+            if (await Task.WhenAny(tempResponse, Task.Delay(timeoutMs)) != tempResponse) {
+                // timeout logic
+                return new MewtocolFrameResponse(403, "Timed out");
+            } 
 
             tcpMessagesSentThisCycle++;
             queuedMessages--;
 
-            return tempResponse;
+            return tempResponse.Result;
 
         }
 
-        private async Task<MewtocolFrameResponse> SendFrameAsync (string frame, bool useBcc = true, bool useCr = true) {
+        private protected async Task<MewtocolFrameResponse> SendFrameAsync (string frame, bool useBcc = true, bool useCr = true) {
 
             try {
-
-                //stop time
-                if (speedStopwatchUpstr == null) {
-                    speedStopwatchUpstr = Stopwatch.StartNew();
-                }
-
-                if (speedStopwatchUpstr.Elapsed.TotalSeconds >= 1) {
-                    speedStopwatchUpstr.Restart();
-                    bytesTotalCountedUpstream = 0;
-                }
-
-                const char CR = '\r';
-                const char DELIMITER = '&';
-
-                if (client == null || !client.Connected) await ConnectTCP();
 
                 if (useBcc)
                     frame = $"{frame.BuildBCCFrame()}";
@@ -428,82 +214,32 @@ namespace MewtocolNet {
 
                 //write inital command
                 byte[] writeBuffer = Encoding.UTF8.GetBytes(frame);
-                await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length);
-
-                //calc upstream speed
-                bytesTotalCountedUpstream += writeBuffer.Length;
-
-                var perSecUpstream = (double)((bytesTotalCountedUpstream / speedStopwatchUpstr.Elapsed.TotalMilliseconds) * 1000);
-                if (perSecUpstream <= 10000)
-                    BytesPerSecondUpstream = (int)Math.Round(perSecUpstream, MidpointRounding.AwayFromZero);
-
+                stream.Write(writeBuffer, 0, writeBuffer.Length);
 
                 Logger.Log($"[---------CMD START--------]", LogLevel.Critical, this);
                 Logger.Log($"--> OUT MSG: {frame.Replace("\r", "(CR)")}", LogLevel.Critical, this);
 
-                //read
-                List<byte> totalResponse = new List<byte>();
-                byte[] responseBuffer = new byte[512];
+                var readResult = await ReadCommandAsync();
 
-                bool wasMultiFramedResponse = false;
-                CommandState cmdState = CommandState.Intial;
+                //did not receive bytes but no errors, the com port was not configured right
+                if (readResult.Item1.Length == 0) {
 
-                //read until command complete
-                while (cmdState != CommandState.Complete) {
-
-                    //time measuring
-                    if (speedStopwatchDownstr == null) {
-                        speedStopwatchDownstr = Stopwatch.StartNew();
-                    }
-
-                    if (speedStopwatchDownstr.Elapsed.TotalSeconds >= 1) {
-                        speedStopwatchDownstr.Restart();
-                        bytesTotalCountedDownstream = 0;
-                    }
-
-                    responseBuffer = new byte[128];
-
-                    await stream.ReadAsync(responseBuffer, 0, responseBuffer.Length);
-
-                    bool terminatorReceived = responseBuffer.Any(x => x == (byte)CR);
-                    var delimiterTerminatorIdx = responseBuffer.SearchBytePattern(new byte[] { (byte)DELIMITER, (byte)CR });
-
-                    if (terminatorReceived && delimiterTerminatorIdx == -1) {
-                        cmdState = CommandState.Complete;
-                    } else if (delimiterTerminatorIdx != -1) {
-                        cmdState = CommandState.RequestedNextFrame;
-                    } else {
-                        cmdState = CommandState.LineFeed;
-                    }
-
-                    //log message parts
-                    var tempMsg = Encoding.UTF8.GetString(responseBuffer).Replace("\r", "(CR)");
-                    Logger.Log($">> IN PART: {tempMsg}, Command state: {cmdState}", LogLevel.Critical, this);
-
-                    //error response
-                    int errorCode = CheckForErrorMsg(tempMsg);
-                    if (errorCode != 0) return new MewtocolFrameResponse(errorCode);
-
-                    //add complete response to collector without empty bytes
-                    totalResponse.AddRange(responseBuffer.Where(x => x != (byte)0x0));
-
-                    //request next part of the command if the delimiter was received
-                    if (cmdState == CommandState.RequestedNextFrame) {
-
-                        Logger.Log($"Requesting next frame...", LogLevel.Critical, this);
-
-                        wasMultiFramedResponse = true;
-                        writeBuffer = Encoding.UTF8.GetBytes("%01**&\r");
-                        await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length);
-
-                    }
+                    return new MewtocolFrameResponse(402, "Receive buffer was empty");
 
                 }
 
                 //build final result
-                string resString = Encoding.UTF8.GetString(totalResponse.ToArray());
+                string resString = Encoding.UTF8.GetString(readResult.Item1);
 
-                if (wasMultiFramedResponse) {
+                //check if the message had errors
+                //error response
+                var gotErrorcode = CheckForErrorMsg(resString);
+                if (gotErrorcode != 0) {
+                    return new MewtocolFrameResponse(gotErrorcode);
+                }
+
+                //was multiframed response
+                if (readResult.Item2) {
 
                     var split = resString.Split('&');
 
@@ -519,13 +255,6 @@ namespace MewtocolNet {
 
                 }
 
-                bytesTotalCountedDownstream += Encoding.ASCII.GetByteCount(resString);
-
-                var perSecDownstream = (double)((bytesTotalCountedDownstream / speedStopwatchDownstr.Elapsed.TotalMilliseconds) * 1000);
-
-                if (perSecUpstream <= 10000)
-                    BytesPerSecondDownstream = (int)Math.Round(perSecUpstream, MidpointRounding.AwayFromZero);
-
                 Logger.Log($"<-- IN MSG: {resString.Replace("\r", "(CR)")}", LogLevel.Critical, this);
                 Logger.Log($"Total bytes parsed: {resString.Length}", LogLevel.Critical, this);
                 Logger.Log($"[---------CMD END----------]", LogLevel.Critical, this);
@@ -540,7 +269,73 @@ namespace MewtocolNet {
 
         }
 
-        private int CheckForErrorMsg (string msg) {
+        private protected async Task<(byte[], bool)> ReadCommandAsync () {
+
+            //read total
+            List<byte> totalResponse = new List<byte>();
+            bool wasMultiFramedResponse = false;
+
+            try {
+
+                bool needsRead = false;
+
+                do {
+
+                    byte[] buffer = new byte[128];
+                    int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+
+                    byte[] received = new byte[bytesRead];
+                    Buffer.BlockCopy(buffer, 0, received, 0, bytesRead);
+
+                    var commandRes = ParseBufferFrame(received);
+                    needsRead = commandRes == CommandState.LineFeed || commandRes == CommandState.RequestedNextFrame;
+
+                    var tempMsg = Encoding.UTF8.GetString(received).Replace("\r", "(CR)");
+                    Logger.Log($">> IN PART: {tempMsg}, Command state: {commandRes}", LogLevel.Critical, this);
+
+                    //add complete response to collector without empty bytes
+                    totalResponse.AddRange(received.Where(x => x != (byte)0x0));
+
+                    if (commandRes == CommandState.RequestedNextFrame) {
+
+                        //request next frame
+                        var writeBuffer = Encoding.UTF8.GetBytes("%01**&\r");
+                        await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length);
+                        wasMultiFramedResponse = true;
+
+                    }
+
+                } while (needsRead);
+
+            } catch (OperationCanceledException) { }
+
+            return (totalResponse.ToArray(), wasMultiFramedResponse);
+
+        }
+
+        private protected CommandState ParseBufferFrame(byte[] received) {
+
+            const char CR = '\r';
+            const char DELIMITER = '&';
+
+            CommandState cmdState;
+
+            bool terminatorReceived = received.Any(x => x == (byte)CR);
+            var delimiterTerminatorIdx = received.ToArray().SearchBytePattern(new byte[] { (byte)DELIMITER, (byte)CR });
+
+            if (terminatorReceived && delimiterTerminatorIdx == -1) {
+                cmdState = CommandState.Complete;
+            } else if (delimiterTerminatorIdx != -1) {
+                cmdState = CommandState.RequestedNextFrame;
+            } else {
+                cmdState = CommandState.LineFeed;
+            }
+
+            return cmdState;
+
+        }
+
+        private protected int CheckForErrorMsg (string msg) {
 
             //error catching
             Regex errorcheck = new Regex(@"\%[0-9]{2}\!([0-9]{2})", RegexOptions.IgnoreCase);
@@ -557,11 +352,7 @@ namespace MewtocolNet {
 
         }
 
-        #endregion
-
-        #region Disposing
-
-        private void OnMajorSocketExceptionWhileConnecting() {
+        private protected void OnMajorSocketExceptionWhileConnecting() {
 
             if (IsConnected) {
 
@@ -572,7 +363,7 @@ namespace MewtocolNet {
 
         }
 
-        private void OnMajorSocketExceptionWhileConnected() {
+        private protected void OnMajorSocketExceptionWhileConnected() {
 
             if (IsConnected) {
 
@@ -583,43 +374,44 @@ namespace MewtocolNet {
 
         }
 
+        private protected virtual void OnConnected (PLCInfo plcinf) {
 
-        /// <summary>
-        /// Disposes the current interface and clears all its members
-        /// </summary>
-        public void Dispose() {
+            Logger.Log("Connected", LogLevel.Info, this);
+            Logger.Log($"\n\n{plcinf.ToString()}\n\n", LogLevel.Verbose, this);
 
-            if (Disposed) return;
+            IsConnected = true;
 
-            Disconnect();
+            Connected?.Invoke(plcinf);
 
-            //GC.SuppressFinalize(this);
+            if (!usePoller) {
+                firstPollTask.RunSynchronously();
+            }
 
-            Disposed = true;
+            PolledCycle += OnPollCycleDone;
+            void OnPollCycleDone() {
 
-        }
-
-        private void OnDisconnect () {
-
-            if (IsConnected) {
-
-                BytesPerSecondDownstream = 0;
-                BytesPerSecondUpstream = 0;
-                CycleTimeMs = 0;
-
-                IsConnected = false;
-                ClearRegisterVals();
-
-                Disconnected?.Invoke();
-                KillPoller();
-                client.Close();
+                firstPollTask.RunSynchronously();
+                PolledCycle -= OnPollCycleDone;
 
             }
 
         }
 
+        private protected virtual void OnDisconnect () {
 
-        private void ClearRegisterVals() {
+            BytesPerSecondDownstream = 0;
+            BytesPerSecondUpstream = 0;
+            CycleTimeMs = 0;
+
+            IsConnected = false;
+            ClearRegisterVals();
+
+            Disconnected?.Invoke();
+            KillPoller();
+
+        }
+
+        private protected void ClearRegisterVals() {
 
             for (int i = 0; i < RegistersUnderlying.Count; i++) {
 
@@ -630,28 +422,7 @@ namespace MewtocolNet {
 
         }
 
-        #endregion
-
-        #region Accessing Info 
-
-        /// <summary>
-        /// Gets the connection info string
-        /// </summary>
-        public string GetConnectionPortInfo() {
-
-            return $"{IpAddress}:{Port}";
-
-        }
-
-        #endregion
-
-        #region Property change evnts
-
-        /// <summary>
-        /// Triggers a property changed event
-        /// </summary>
-        /// <param name="propertyName">Name of the property to trigger for</param>
-        private void OnPropChange ([CallerMemberName]string propertyName = null) {
+        private protected void OnPropChange([CallerMemberName] string propertyName = null) {
 
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 

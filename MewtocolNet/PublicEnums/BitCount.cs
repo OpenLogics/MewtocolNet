@@ -1,4 +1,5 @@
-﻿namespace MewtocolNet.RegisterAttributes {
+﻿namespace MewtocolNet {
+
     /// <summary>
     /// The size of the bitwise register
     /// </summary>

@@ -1,6 +1,7 @@
 ﻿using MewtocolNet.Exceptions;
 using MewtocolNet.Logging;
 using MewtocolNet.RegisterAttributes;
+using MewtocolNet.RegisterBuilding;
 using MewtocolNet.Registers;
 using System;
 using System.Collections;
@@ -12,24 +13,14 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MewtocolNet
-{
+namespace MewtocolNet {
 
     /// <summary>
     /// The PLC com interface class
     /// </summary>
     public partial class MewtocolInterface {
 
-        internal event Action PolledCycle;
-
-        internal volatile bool pollerTaskStopped = true;
-        internal volatile bool pollerFirstCycle;
-
-        internal bool usePoller = false;
-
-        private int tcpMessagesSentThisCycle = 0;
-
-        private int pollerCycleDurationMs;
+        internal Task pollCycleTask;
 
         /// <summary>
         /// True if the poller is actvice (can be paused)
@@ -87,7 +78,8 @@ namespace MewtocolNet
 
             tcpMessagesSentThisCycle = 0;
 
-            await OnMultiFrameCycle();
+            pollCycleTask = OnMultiFrameCycle();
+            await pollCycleTask;
 
             return tcpMessagesSentThisCycle;
 
@@ -104,9 +96,10 @@ namespace MewtocolNet
 
                 tcpMessagesSentThisCycle = 0;
 
-                await OnMultiFrameCycle();
+                pollCycleTask = OnMultiFrameCycle();
+                await pollCycleTask;
 
-                if(!IsConnected) {
+                if (!IsConnected) {
                     pollerTaskStopped = true;
                     return;
                 }

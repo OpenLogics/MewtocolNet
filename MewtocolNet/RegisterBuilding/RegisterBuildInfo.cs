@@ -3,7 +3,7 @@ using System;
 using System.Collections;
 using System.Reflection;
 
-namespace MewtocolNet {
+namespace MewtocolNet.RegisterBuilding {
 
     internal struct RegisterBuildInfo {
 

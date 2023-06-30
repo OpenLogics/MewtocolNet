@@ -54,7 +54,8 @@ class Program {
 
             if(foundAtt != null && foundAtt is ScenarioAttribute att) {
 
-                Console.WriteLine($"[{j + 1}] {method.Name}() - {att.Description}");
+                string paramsStr = string.Join(" ", method.GetParameters().Select(x => x.Name));
+                Console.WriteLine($"[{j + 1}] {method.Name}({paramsStr}) - {att.Description}");
                 invokeableMethods.Add(method);
 
                 j++;
@@ -78,6 +79,8 @@ class Program {
         var line = Console.ReadLine();
 
         var loggerMatch = Regex.Match(line, @"logger (?<level>[a-zA-Z]{0,})");
+        var splitInput = Regex.Split(line, " ");        
+
 
         if (loggerMatch.Success && Enum.TryParse<LogLevel>(loggerMatch.Groups["level"].Value, out var loglevel)) {
 
@@ -93,13 +96,26 @@ class Program {
 
             Console.Clear();
 
-        } else if (int.TryParse(line, out var lineNum)) {
+        } else if (int.TryParse(splitInput[0], out var lineNum)) {
 
             var index = Math.Clamp(lineNum - 1, 0, invokeableMethods.Count - 1);
 
-            var task = (Task)invokeableMethods.ElementAt(index).Invoke(ExampleSzenarios, null);
+            object[] invParams = null;
 
-            task.Wait();
+            if(splitInput.Length > 1) {
+                invParams = splitInput.Skip(1).Cast<object>().ToArray();     
+            }
+
+            try {
+
+                var task = (Task)invokeableMethods.ElementAt(index).Invoke(ExampleSzenarios, invParams);
+                task.Wait();
+
+            } catch (TargetParameterCountException) {
+
+                Console.WriteLine("Missing parameters");
+            
+            }
 
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("The program ran to completition");

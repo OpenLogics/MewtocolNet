@@ -1,15 +1,18 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace MewtocolNet.Queue {
 
-    internal class SerialQueue {
+    internal class AsyncQueue {
 
         readonly object _locker = new object();
         readonly WeakReference<Task> _lastTask = new WeakReference<Task>(null);
 
         internal Task<T> Enqueue<T>(Func<Task<T>> asyncFunction) {
             lock (_locker) {
+
                 Task lastTask;
                 Task<T> resultTask;
 
@@ -22,6 +25,7 @@ namespace MewtocolNet.Queue {
                 _lastTask.SetTarget(resultTask);
 
                 return resultTask;
+
             }
         }
 

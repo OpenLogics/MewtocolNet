@@ -31,7 +31,7 @@ namespace MewtocolNet.Logging {
                 if (sender == null) {
                     LogInvoked?.Invoke(DateTime.Now, loglevel, message);
                 } else {
-                    LogInvoked?.Invoke(DateTime.Now, loglevel, $"[{sender.GetConnectionPortInfo()}] {message}");
+                    LogInvoked?.Invoke(DateTime.Now, loglevel, $"[{sender.GetConnectionInfo()}] {message}");
                 }
             }
 

@@ -5,7 +5,7 @@ namespace MewtocolNet {
     /// <summary>
     /// Contains information about the plc and its cpu
     /// </summary>
-    public partial class CpuInfo {
+    public struct CpuInfo {
 
         /// <summary>
         /// The cpu type of the plc

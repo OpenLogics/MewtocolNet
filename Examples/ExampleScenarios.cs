@@ -13,6 +13,7 @@ using Microsoft.Win32;
 using MewtocolNet.ComCassette;
 using System.Linq;
 using System.Net;
+using System.IO.Ports;
 
 namespace Examples;
 
@@ -21,7 +22,7 @@ public class ExampleScenarios {
     public void SetupLogger () {
 
         //attaching the logger
-        Logger.LogLevel = LogLevel.Error;
+        Logger.LogLevel = LogLevel.Verbose;
         Logger.OnNewLogMessage((date, level, msg) => {
 
             if (level == LogLevel.Error) Console.ForegroundColor = ConsoleColor.Red;
@@ -38,7 +39,7 @@ public class ExampleScenarios {
     public async Task RunDisposalAndDisconnectAsync () {
 
         //automatic disposal
-        using (var interf = new MewtocolInterface("192.168.115.210")) {
+        using (var interf = Mewtocol.Ethernet("192.168.115.210")) {
 
             await interf.ConnectAsync();
 
@@ -55,7 +56,7 @@ public class ExampleScenarios {
         Console.WriteLine("Disposed, closed connection");
 
         //manual close
-        var interf2 = new MewtocolInterface("192.168.115.210");
+        var interf2 = Mewtocol.Ethernet("192.168.115.210");
 
         await interf2.ConnectAsync();
 
@@ -77,7 +78,7 @@ public class ExampleScenarios {
     public async Task RunReadTest () {
 
         //setting up a new PLC interface and register collection
-        MewtocolInterface interf = new MewtocolInterface("192.168.115.210").WithPoller();
+        var interf = Mewtocol.Ethernet("192.168.115.210").WithPoller();
 
         //auto add all built registers to the interface 
         var builder = RegBuilder.ForInterface(interf);
@@ -147,20 +148,18 @@ public class ExampleScenarios {
 
     }
 
-    [Scenario("Test read speed 100 R registers")]
-    public async Task ReadRSpeedTest() {
+    [Scenario("Test read speed TCP (n) R registers")]
+    public async Task ReadRSpeedTest (string registerCount) {
 
         var preLogLevel = Logger.LogLevel;
         Logger.LogLevel = LogLevel.Critical;
 
         //setting up a new PLC interface and register collection
-        MewtocolInterface interf = new MewtocolInterface("192.168.115.210") {
-            ConnectTimeout = 3000,
-        };
+        using var interf = Mewtocol.Ethernet("192.168.115.210");
 
         //auto add all built registers to the interface 
         var builder = RegBuilder.ForInterface(interf);
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < int.Parse(registerCount); i++) {
 
             builder.FromPlcRegName($"R{i}A").Build();
 
@@ -168,6 +167,11 @@ public class ExampleScenarios {
 
         //connect
         await interf.ConnectAsync();
+
+        if(!interf.IsConnected) {
+            Console.WriteLine("Aborted, connection failed");
+            return;
+        }
 
         Console.WriteLine("Poller cycle started");
         var sw = Stopwatch.StartNew();
@@ -180,9 +184,72 @@ public class ExampleScenarios {
 
         Console.WriteLine($"Single frame excec time: {sw.ElapsedMilliseconds:N0}ms for {cmdCount} commands and {interf.Registers.Count()} R registers");
 
-        interf.Disconnect();
-
         await Task.Delay(1000);
+
+    }
+
+    [Scenario("Test read speed Serial (n) R registers")]
+    public async Task ReadRSpeedTestSerial (string registerCount) {
+
+        var preLogLevel = Logger.LogLevel;
+        Logger.LogLevel = LogLevel.Critical;
+
+        //setting up a new PLC interface and register collection
+        //MewtocolInterfaceShared interf = Mewtocol.SerialAuto("COM4");
+        using var interf = Mewtocol.Serial("COM4", BaudRate._115200, DataBits.Eight, Parity.Odd, StopBits.One);
+
+        //auto add all built registers to the interface 
+        var builder = RegBuilder.ForInterface(interf);
+        for (int i = 0; i < int.Parse(registerCount); i++) {
+
+            builder.FromPlcRegName($"R{i}A").Build();
+
+        }
+
+        //connect
+        await interf.ConnectAsync();
+
+        if (!interf.IsConnected) {
+            Console.WriteLine("Aborted, connection failed");
+            return;
+        }
+
+        Console.WriteLine("Poller cycle started");
+        var sw = Stopwatch.StartNew();
+
+        int cmdCount = await interf.RunPollerCylceManual();
+
+        sw.Stop();
+
+        Console.WriteLine("Poller cycle finished");
+
+        Console.WriteLine($"Single frame excec time: {sw.ElapsedMilliseconds:N0}ms for {cmdCount} commands and {interf.Registers.Count()} R registers");
+
+    }
+
+    [Scenario("Test automatic serial port setup")]
+    public async Task TestAutoSerialSetup () {
+
+        var preLogLevel = Logger.LogLevel;
+        Logger.LogLevel = LogLevel.Critical;
+
+        //setting up a new PLC interface and register collection
+        var interf = Mewtocol.SerialAuto("COM4");
+
+        //connect
+        await interf.ConnectAsync();
+
+        if (!interf.IsConnected) {
+
+            Console.WriteLine("Aborted, connection failed");
+            return;
+
+        } else {
+
+            Console.WriteLine("Serial port settings found");
+
+        }
+
 
     }
 
@@ -209,9 +276,9 @@ public class ExampleScenarios {
 
         }
 
-        await Task.Delay(5000);
-
         var found = casettes.FirstOrDefault(x => x.Endpoint.Address.ToString() == "10.237.191.75");
+
+        if (found == null) return;
 
         found.IPAddress = IPAddress.Parse($"192.168.1.{new Random().Next(20, 120)}");
         found.Name = $"Rand{new Random().Next(5, 15)}";
