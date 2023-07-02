@@ -289,6 +289,86 @@ namespace MewtocolNet {
 
         #endregion
 
+        #region Reading / Writing Plc program
+
+        public async Task ReadPLCProgramAsync () {
+
+            var cmd = SendCommandAsync($"");
+
+
+        }
+
+        public async Task GetSystemRegister () {
+
+            //the "." means CR or \r
+
+            await SendCommandAsync("%EE#RT");
+
+            //then get plc status extended? gets polled all time
+            // %EE#EX00RT00
+            await SendCommandAsync("%EE#EX00RT00");
+
+            //fpx C14 r
+
+            //%EE$EX00 RT
+            //00 Extended mode
+            //32 Data item count
+            //70 Machine type
+            //00 Version (Fixed to 00)
+            //16 Prog capacity in K
+            //81 Operation mode / status
+            //00 Link unit
+            //60 Error flag
+            //0000 Self diag error
+            //50 Version
+            //02 Hardware information
+            //0 Number of programs
+            //4100 Program size BCD
+            //1600 Header size (no. of words) bcd
+            //1604 System register size
+            //96230000001480004 ??
+            //                      
+
+            // PLC TYPE     | Machine Code | HW Information
+            // FPX   C14 R  | 70           | 02
+            // FPX   C30 T  | 77           | 02
+
+            // FPX-H C14 R  | A0           | 01
+            // FPX-H C30 T  | A5           | 01
+
+
+            //then a sequence of these is sent
+
+            // Specifiy register for monitoring
+            // %EE#MDFFFFFF
+            //await SendCommandAsync("%EE#MDFFFFFF");
+
+            // reset monitor registers
+            // %EE#MCFFFFF -> gets ackn
+            //await SendCommandAsync("%EE#MCFFFFF");
+
+            // maybe some special registers?
+            // %EE#MCR9029R0000R0000R0000R0000R0000R0000R0000 -> gets ackn
+            //await SendCommandAsync("%EE#MCR9029R0000R0000R0000R0000R0000R0000R0000");
+
+            // gets requested when opening plc status
+            // %EE#MG
+            // has a response like: 
+
+            //await SendCommandAsync("%EE#MG");
+
+
+            //var res = cmd.Response.Replace("%01$RR", "");
+
+            //var parts = res.SplitInParts(4);
+
+            //foreach (var part in parts)
+            //    Console.WriteLine(part);
+
+        }
+
+        #endregion
+
         #region Helpers
 
         internal string GetStationNumber() {

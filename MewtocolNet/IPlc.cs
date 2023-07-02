@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MewtocolNet.Registers;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -50,6 +51,11 @@ namespace MewtocolNet {
         int StationNumber { get; }
 
         /// <summary>
+        /// A connection info string
+        /// </summary>
+        string ConnectionInfo { get; }
+
+        /// <summary>
         /// The initial connection timeout in milliseconds
         /// </summary>
         int ConnectTimeout { get; set; }
@@ -90,6 +96,26 @@ namespace MewtocolNet {
         /// Gets the connection info string
         /// </summary>
         string GetConnectionInfo();
+
+        /// <summary>
+        /// Adds a register to the plc
+        /// </summary>
+        void AddRegister(BaseRegister register);
+
+        /// <summary>
+        /// Adds a register to the plc
+        /// </summary>
+        void AddRegister(IRegister register);
+
+        /// <summary>
+        /// Gets a register from the plc by name
+        /// </summary>
+        IRegister GetRegister(string name);
+
+        /// <summary>
+        /// Gets all registers from the plc
+        /// </summary>
+        IEnumerable<IRegister> GetAllRegisters();
 
     }
 

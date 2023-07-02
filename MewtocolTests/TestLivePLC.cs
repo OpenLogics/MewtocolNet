@@ -45,10 +45,10 @@ namespace MewtocolTests
                 AfterWriteValue = true,
             },
             new RegisterReadWriteTest {
-                TargetRegister = new NumberRegister<int>(3000),
+                TargetRegister = new NumberRegister<short>(3000),
                 RegisterPlcAddressName = "DT3000",
-                IntialValue = (int)0,
-                AfterWriteValue = (int)-513,
+                IntialValue = (short)0,
+                AfterWriteValue = (short)-513,
             },
 
         };
@@ -73,9 +73,9 @@ namespace MewtocolTests
 
                 output.WriteLine($"Testing: {plc.PLCName}");
 
-                var cycleClient = new MewtocolInterfaceShared(plc.PLCIP, plc.PLCPort);
+                var cycleClient = Mewtocol.Ethernet(plc.PLCIP, plc.PLCPort);
 
-                await cycleClient.ConnectAsyncOld();
+                await cycleClient.ConnectAsync();
 
                 Assert.True(cycleClient.IsConnected);
 
@@ -94,9 +94,9 @@ namespace MewtocolTests
 
                 output.WriteLine($"Testing: {plc.PLCName}\n");
 
-                var client = new MewtocolInterfaceShared(plc.PLCIP, plc.PLCPort);
+                var client = Mewtocol.Ethernet(plc.PLCIP, plc.PLCPort);
 
-                await client.ConnectAsyncOld();
+                await client.ConnectAsync();
 
                 output.WriteLine($"{client.PlcInfo}\n");
 
@@ -111,38 +111,43 @@ namespace MewtocolTests
 
         }
 
-        //[Fact(DisplayName = "Reading basic information from PLC")]
-        //public async void TestRegisterReadWriteAsync () {
+        [Fact(DisplayName = "Reading basic information from PLC")]
+        public async void TestRegisterReadWriteAsync() {
 
-        //    foreach (var plc in testPlcInformationData) {
+            foreach (var plc in testPlcInformationData) {
 
-        //        output.WriteLine($"Testing: {plc.PLCName}\n");
+                output.WriteLine($"Testing: {plc.PLCName}\n");
 
-        //        var client = new MewtocolInterface(plc.PLCIP, plc.PLCPort);
+                var client = Mewtocol.Ethernet(plc.PLCIP, plc.PLCPort);
 
-        //        foreach (var testRW in testRegisterRW) {
+                foreach (var testRW in testRegisterRW) {
 
-        //            client.AddRegister(testRW.TargetRegister);
+                    client.AddRegister(testRW.TargetRegister);
 
-        //        }  
+                }
 
-        //        await client.ConnectAsync();
-        //        Assert.True(client.IsConnected);
+                await client.ConnectAsync();
+                Assert.True(client.IsConnected);
 
-        //        foreach (var testRW in testRegisterRW) {
+                foreach (var testRW in testRegisterRW) {
 
-        //            client.AddRegister(testRW.TargetRegister);
+                    var testRegister = client.Registers.First(x => x.PLCAddressName == testRW.RegisterPlcAddressName);
 
-        //        }
+                    //test inital val
+                    Assert.Equal(testRW.IntialValue, testRegister.Value);
 
-        //        Assert.Equal(client.PlcInfo.CpuInformation.Cputype, plc.Type);
-        //        Assert.Equal(client.PlcInfo.CpuInformation.ProgramCapacity, plc.ProgCapacity);
+                    await testRegister.WriteAsync(testRW.AfterWriteValue);
 
-        //        client.Disconnect();
+                    //test after write val
+                    Assert.Equal(testRW.AfterWriteValue, testRegister.Value);
 
-        //    }
+                }
 
-        //}
+                client.Disconnect();
+
+            }
+
+        }
 
     }
 

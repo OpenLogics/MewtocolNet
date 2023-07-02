@@ -10,6 +10,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
+using MewtocolNet.RegisterAttributes;
 
 namespace MewtocolNet {
     
@@ -17,11 +18,23 @@ namespace MewtocolNet {
 
         private bool autoSerial;
 
+        private event Action tryingSerialConfig;
+
         //serial config
-        public string PortName { get; private set; }    
-        public int SerialBaudRate { get; private set; }    
-        public int SerialDataBits { get; private set; }    
-        public Parity SerialParity { get; private set; }    
+
+        /// <inheritdoc/>
+        public string PortName { get; private set; }
+
+        /// <inheritdoc/>
+        public int SerialBaudRate { get; private set; }
+
+        /// <inheritdoc/>
+        public int SerialDataBits { get; private set; }
+
+        /// <inheritdoc/>
+        public Parity SerialParity { get; private set; }
+
+        /// <inheritdoc/>
         public StopBits SerialStopBits { get; private set; }
 
         //Serial
@@ -29,11 +42,17 @@ namespace MewtocolNet {
 
         internal MewtocolInterfaceSerial () : base() { }
 
-
         /// <inheritdoc/>
         public IPlcSerial WithPoller () {
              
             usePoller = true;
+            return this;
+
+        }
+
+        public IPlcSerial AddRegisterCollection (RegisterCollection collection) {
+
+            WithRegisterCollection(collection);
             return this;
 
         }
@@ -89,8 +108,17 @@ namespace MewtocolNet {
 
         }
 
+        public override async Task ConnectAsync() => await ConnectAsync(null);
+
         /// <inheritdoc/>
-        public override async Task ConnectAsync () {
+        public async Task ConnectAsync (Action onTryingConfig = null) {
+
+            void OnTryConfig() {
+                onTryingConfig();
+            }
+
+            if (onTryingConfig != null)
+                tryingSerialConfig += OnTryConfig;
 
             try {
 
@@ -98,10 +126,12 @@ namespace MewtocolNet {
 
                 if(autoSerial) {
 
+                    Logger.Log($"Connecting [AUTO CONFIGURE]: {PortName}", LogLevel.Info, this);
                     gotInfo = await TryConnectAsyncMulti();
 
                 } else {
 
+                    Logger.Log($"Connecting [MAN]: {PortName}", LogLevel.Info, this);
                     gotInfo = await TryConnectAsyncSingle(PortName, SerialBaudRate, SerialDataBits, SerialParity, SerialStopBits);
 
                 }
@@ -112,7 +142,7 @@ namespace MewtocolNet {
 
                 } else {
 
-                    Logger.Log("Initial connection failed", LogLevel.Info, this);
+                    Logger.Log("Initial connection failed", LogLevel.Error, this);
                     OnMajorSocketExceptionWhileConnecting();
 
                 }
@@ -124,6 +154,8 @@ namespace MewtocolNet {
                 OnMajorSocketExceptionWhileConnecting();
 
             }
+
+            tryingSerialConfig -= OnTryConfig;
 
         }
 
@@ -193,19 +225,20 @@ namespace MewtocolNet {
                 SerialParity = par;
                 SerialStopBits = sbits;
                 OnSerialPropsChanged();
+                tryingSerialConfig?.Invoke();
 
                 serialClient.Open();
 
                 if (!serialClient.IsOpen) {
 
-                    Logger.Log($"Failed to open [SERIAL]: {GetConnectionInfo()}", LogLevel.Verbose, this);
+                    Logger.Log($"Failed to open [SERIAL]: {GetConnectionInfo()}", LogLevel.Critical, this);
                     return null;
 
                 }
 
                 stream = serialClient.BaseStream;
 
-                Logger.Log($"Opened [SERIAL]: {GetConnectionInfo()}", LogLevel.Verbose, this);
+                Logger.Log($"Opened [SERIAL]: {GetConnectionInfo()}", LogLevel.Critical, this);
 
                 var plcinf = await GetPLCInfoAsync(100);
 

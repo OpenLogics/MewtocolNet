@@ -1,6 +1,9 @@
-﻿using System;
+﻿using MewtocolNet.Exceptions;
+using System;
 using System.Collections.Generic;
 using System.IO.Ports;
+using System.Linq;
+using System.Net;
 using System.Text;
 
 namespace MewtocolNet {
@@ -13,14 +16,29 @@ namespace MewtocolNet {
         /// <summary>
         /// Builds a ethernet based Mewtocol Interface
         /// </summary>
-        /// <param name="_ip"></param>
-        /// <param name="_port"></param>
-        /// <param name="_station"></param>
+        /// <param name="ip"></param>
+        /// <param name="port"></param>
+        /// <param name="station">Plc station number</param>
         /// <returns></returns>
-        public static IPlcEthernet Ethernet (string _ip, int _port = 9094, int _station = 1) {
+        public static IPlcEthernet Ethernet (string ip, int port = 9094, int station = 1) {
 
             var instance = new MewtocolInterfaceTcp();
-            instance.ConfigureConnection(_ip, _port, _station);
+            instance.ConfigureConnection(ip, port, station);
+            return instance;
+
+        }
+
+        /// <summary>
+        /// Builds a ethernet based Mewtocol Interface
+        /// </summary>
+        /// <param name="ip"></param>
+        /// <param name="port"></param>
+        /// <param name="station">Plc station number</param>
+        /// <returns></returns>
+        public static IPlcEthernet Ethernet(IPAddress ip, int port = 9094, int station = 1) {
+
+            var instance = new MewtocolInterfaceTcp();
+            instance.ConfigureConnection(ip, port, station);
             return instance;
 
         }
@@ -28,16 +46,19 @@ namespace MewtocolNet {
         /// <summary>
         /// Builds a serial port based Mewtocol Interface
         /// </summary>
-        /// <param name="_portName"></param>
-        /// <param name="_baudRate"></param>
-        /// <param name="_dataBits"></param>
-        /// <param name="_parity"></param>
-        /// <param name="_stopBits"></param>
+        /// <param name="portName"></param>
+        /// <param name="baudRate"></param>
+        /// <param name="dataBits"></param>
+        /// <param name="parity"></param>
+        /// <param name="stopBits"></param>
+        /// <param name="station"></param>
         /// <returns></returns>
-        public static IPlcSerial Serial (string _portName, BaudRate _baudRate = BaudRate._19200, DataBits _dataBits = DataBits.Eight, Parity _parity = Parity.Odd, StopBits _stopBits = StopBits.One, int _station = 1) {
+        public static IPlcSerial Serial (string portName, BaudRate baudRate = BaudRate._19200, DataBits dataBits = DataBits.Eight, Parity parity = Parity.Odd, StopBits stopBits = StopBits.One, int station = 1) {
+
+            TestPortName(portName);
 
             var instance = new MewtocolInterfaceSerial();
-            instance.ConfigureConnection(_portName, (int)_baudRate, (int)_dataBits, _parity, _stopBits, _station);
+            instance.ConfigureConnection(portName, (int)baudRate, (int)dataBits, parity, stopBits, station);
             return instance;
 
         }
@@ -45,15 +66,26 @@ namespace MewtocolNet {
         /// <summary>
         /// Builds a serial mewtocol interface that finds the correct settings for the given port name automatically
         /// </summary>
-        /// <param name="_portName"></param>
-        /// <param name="_station"></param>
+        /// <param name="portName"></param>
+        /// <param name="station"></param>
         /// <returns></returns>
-        public static IPlcSerial SerialAuto (string _portName, int _station = 1) {
+        public static IPlcSerial SerialAuto (string portName, int station = 1) {
+
+            TestPortName(portName);
 
             var instance = new MewtocolInterfaceSerial();
-            instance.ConfigureConnection(_portName, _station);
+            instance.ConfigureConnection(portName, station);
             instance.ConfigureConnectionAuto();
             return instance;
+
+        }
+
+        private static void TestPortName (string portName) {
+
+            var portnames = SerialPort.GetPortNames();
+
+            if (!portnames.Any(x => x == portName))
+                throw new MewtocolException($"The port {portName} is no valid port");
 
         }
 

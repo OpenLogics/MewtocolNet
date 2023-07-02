@@ -21,7 +21,7 @@ namespace MewtocolNet.RegisterBuilding {
 
         };
 
-        public static RegBuilder ForInterface (IPlcEthernet interf) {
+        public static RegBuilder ForInterface (IPlc interf) {
 
             var rb = new RegBuilder();
             rb.forInterface = interf as MewtocolInterface;

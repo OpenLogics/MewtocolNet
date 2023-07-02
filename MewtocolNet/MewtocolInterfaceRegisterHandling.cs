@@ -205,15 +205,7 @@ namespace MewtocolNet {
 
         #region Register Colleciton adding
 
-        /// <summary>
-        /// Attaches a register collection object to 
-        /// the interface that can be updated automatically.
-        /// <para/>
-        /// Just create a class inheriting from <see cref="RegisterCollectionBase"/>
-        /// and assert some propertys with the custom <see cref="RegisterAttribute"/>.
-        /// </summary>
-        /// <param name="collection">A collection inherting the <see cref="RegisterCollectionBase"/> class</param>
-        public MewtocolInterface WithRegisterCollection(RegisterCollectionBase collection) {
+        internal MewtocolInterface WithRegisterCollection (RegisterCollection collection) {
 
             collection.PLCInterface = this;
 
@@ -353,6 +345,23 @@ namespace MewtocolNet {
 
         #region Register Adding
 
+        /// <inheritdoc/>
+        public void AddRegister(BaseRegister register) {
+
+            if (CheckDuplicateRegister(register))
+                throw MewtocolException.DupeRegister(register);
+
+            if (CheckDuplicateNameRegister(register))
+                throw MewtocolException.DupeNameRegister(register);
+
+            register.attachedInterface = this;
+            RegistersUnderlying.Add(register);
+
+        }
+
+        /// <inheritdoc/>
+        public void AddRegister(IRegister register) => AddRegister(register as BaseRegister);
+
         internal void AddRegister (RegisterBuildInfo buildInfo) {
 
             var builtRegister = buildInfo.Build();
@@ -372,19 +381,6 @@ namespace MewtocolNet {
 
             builtRegister.attachedInterface = this;
             RegistersUnderlying.Add(builtRegister);
-
-        }
-
-        public void AddRegister (BaseRegister register) {
-
-            if (CheckDuplicateRegister(register))
-                throw MewtocolException.DupeRegister(register);
-
-            if (CheckDuplicateNameRegister(register))
-                throw MewtocolException.DupeNameRegister(register);
-
-            register.attachedInterface = this;
-            RegistersUnderlying.Add(register);
 
         }
 
@@ -414,24 +410,15 @@ namespace MewtocolNet {
 
         #region Register accessing
 
-        /// <summary>
-        /// Gets a register that was added by its name
-        /// </summary>
-        /// <returns></returns>
+        /// <inheritdoc/>>
         public IRegister GetRegister(string name) {
 
             return RegistersUnderlying.FirstOrDefault(x => x.Name == name);
 
         }
 
-        #endregion
-
-        #region Register Reading
-
-        /// <summary>
-        /// Gets a list of all added registers
-        /// </summary>
-        public IEnumerable<IRegister> GetAllRegisters() {
+        /// <inheritdoc/>
+        public IEnumerable<IRegister> GetAllRegisters () {
 
             return RegistersUnderlying.Cast<IRegister>();
 

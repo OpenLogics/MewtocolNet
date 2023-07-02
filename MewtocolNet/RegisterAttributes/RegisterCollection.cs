@@ -6,7 +6,7 @@ namespace MewtocolNet.RegisterAttributes {
     /// <summary>
     /// A register collection base with full auto read and notification support built in
     /// </summary>
-    public class RegisterCollectionBase : INotifyPropertyChanged {
+    public class RegisterCollection : INotifyPropertyChanged {
 
         /// <summary>
         /// Reference to its bound interface

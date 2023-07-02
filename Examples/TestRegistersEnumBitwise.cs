@@ -5,7 +5,7 @@ using System.Collections;
 
 namespace Examples {
 
-    public class TestRegistersEnumBitwise : RegisterCollectionBase {
+    public class TestRegistersEnumBitwise : RegisterCollection {
 
         private bool startCyclePLC;
 

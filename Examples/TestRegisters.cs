@@ -4,7 +4,7 @@ using System;
 using System.Collections;
 
 namespace Examples {
-    public class TestRegisters : RegisterCollectionBase {
+    public class TestRegisters : RegisterCollection {
 
         //corresponds to a R100 boolean register in the PLC
         [Register(IOType.R, 1000)]

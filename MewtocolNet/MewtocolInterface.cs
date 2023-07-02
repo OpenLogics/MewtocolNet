@@ -115,6 +115,9 @@ namespace MewtocolNet {
             }
         }
 
+        /// <inheritdoc/>
+        public string ConnectionInfo => GetConnectionInfo();
+
         #endregion
 
         #region Public read/write Properties / Fields
@@ -151,9 +154,9 @@ namespace MewtocolNet {
             };
 
         }
-        
+
         /// <inheritdoc/>
-        public virtual Task ConnectAsync () => throw new NotImplementedException();
+        public virtual async Task ConnectAsync() => throw new NotImplementedException();
 
         /// <inheritdoc/>
         public async Task AwaitFirstDataAsync() => await firstPollTask;
@@ -163,7 +166,8 @@ namespace MewtocolNet {
 
             if (!IsConnected) return;
 
-            pollCycleTask.Wait();
+            if(pollCycleTask != null && !pollCycleTask.IsCompleted)  
+                pollCycleTask.Wait();
 
             OnMajorSocketExceptionWhileConnected();
 
@@ -212,9 +216,15 @@ namespace MewtocolNet {
                 if (useCr)
                     frame = $"{frame}\r";
 
+
+                SetUpstreamStopWatchStart();
+
                 //write inital command
                 byte[] writeBuffer = Encoding.UTF8.GetBytes(frame);
                 stream.Write(writeBuffer, 0, writeBuffer.Length);
+
+                //calc upstream speed
+                CalcUpstreamSpeed(writeBuffer.Length);
 
                 Logger.Log($"[---------CMD START--------]", LogLevel.Critical, this);
                 Logger.Log($"--> OUT MSG: {frame.Replace("\r", "(CR)")}", LogLevel.Critical, this);
@@ -235,7 +245,9 @@ namespace MewtocolNet {
                 //error response
                 var gotErrorcode = CheckForErrorMsg(resString);
                 if (gotErrorcode != 0) {
-                    return new MewtocolFrameResponse(gotErrorcode);
+                    var errResponse = new MewtocolFrameResponse(gotErrorcode);
+                    Logger.Log($"Command error: {errResponse.Error}", LogLevel.Error, this);
+                    return errResponse;
                 }
 
                 //was multiframed response
@@ -281,8 +293,12 @@ namespace MewtocolNet {
 
                 do {
 
+                    SetDownstreamStopWatchStart();
+
                     byte[] buffer = new byte[128];
                     int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+
+                    CalcDownstreamSpeed(bytesRead);
 
                     byte[] received = new byte[bytesRead];
                     Buffer.BlockCopy(buffer, 0, received, 0, bytesRead);
@@ -338,7 +354,7 @@ namespace MewtocolNet {
         private protected int CheckForErrorMsg (string msg) {
 
             //error catching
-            Regex errorcheck = new Regex(@"\%[0-9]{2}\!([0-9]{2})", RegexOptions.IgnoreCase);
+            Regex errorcheck = new Regex(@"\%..\!([0-9]{2})", RegexOptions.IgnoreCase);
             Match m = errorcheck.Match(msg);
 
             if (m.Success) {
@@ -401,7 +417,7 @@ namespace MewtocolNet {
 
             BytesPerSecondDownstream = 0;
             BytesPerSecondUpstream = 0;
-            CycleTimeMs = 0;
+            PollerCycleDurationMs = 0;
 
             IsConnected = false;
             ClearRegisterVals();
@@ -419,6 +435,53 @@ namespace MewtocolNet {
                 reg.ClearValue();
 
             }
+
+        }
+
+        private void SetUpstreamStopWatchStart () {
+
+            if (speedStopwatchUpstr == null) {
+                speedStopwatchUpstr = Stopwatch.StartNew();
+            }
+
+            if (speedStopwatchUpstr.Elapsed.TotalSeconds >= 1) {
+                speedStopwatchUpstr.Restart();
+                bytesTotalCountedUpstream = 0;
+            }
+
+        }
+
+        private void SetDownstreamStopWatchStart () {
+
+            if (speedStopwatchDownstr == null) {
+                speedStopwatchDownstr = Stopwatch.StartNew();
+            }
+
+            if (speedStopwatchDownstr.Elapsed.TotalSeconds >= 1) {
+                speedStopwatchDownstr.Restart();
+                bytesTotalCountedDownstream = 0;
+            }
+
+        }
+
+        private void CalcUpstreamSpeed (int byteCount) {
+
+            bytesTotalCountedUpstream += byteCount;
+
+            var perSecUpstream = (double)((bytesTotalCountedUpstream / speedStopwatchUpstr.Elapsed.TotalMilliseconds) * 1000);
+            if (perSecUpstream <= 10000)
+                BytesPerSecondUpstream = (int)Math.Round(perSecUpstream, MidpointRounding.AwayFromZero);
+
+        }
+
+        private void CalcDownstreamSpeed (int byteCount) {
+
+            bytesTotalCountedDownstream += byteCount;
+
+            var perSecDownstream = (double)((bytesTotalCountedDownstream / speedStopwatchDownstr.Elapsed.TotalMilliseconds) * 1000);
+
+            if (perSecDownstream <= 10000)
+                BytesPerSecondDownstream = (int)Math.Round(perSecDownstream, MidpointRounding.AwayFromZero);
 
         }
 

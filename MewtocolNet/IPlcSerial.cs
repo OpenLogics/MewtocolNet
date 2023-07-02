@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MewtocolNet.RegisterAttributes;
+using System;
 using System.Collections.Generic;
 using System.IO.Ports;
 using System.Text;
@@ -37,11 +38,6 @@ namespace MewtocolNet {
         StopBits SerialStopBits { get; }
 
         /// <summary>
-        /// Attaches a poller to the interface
-        /// </summary>
-        public IPlcSerial WithPoller();
-
-        /// <summary>
         /// Sets up the connection settings for the device
         /// </summary>
         /// <param name="_portName">Port name of COM port</param>
@@ -50,7 +46,29 @@ namespace MewtocolNet {
         /// <param name="_parity">The serial connection parity</param>
         /// <param name="_stopBits">The serial connection stop bits</param>
         /// <param name="_station">The station number of the PLC</param>
-        void ConfigureConnection(string _portName, int _baudRate = 19200, int _dataBits = 8, Parity _parity = Parity.Odd, StopBits _stopBits = StopBits.One, int _station = 1)
+        void ConfigureConnection(string _portName, int _baudRate = 19200, int _dataBits = 8, Parity _parity = Parity.Odd, StopBits _stopBits = StopBits.One, int _station = 1);
+
+        /// <summary>
+        /// Tries to establish a connection with the device asynchronously
+        /// </summary>
+        Task ConnectAsync();
+
+        /// <summary>
+        /// Tries to establish a connection with the device asynchronously
+        /// </summary>
+        Task ConnectAsync(Action onTryingConfig);
+
+        /// <summary>
+        /// Attaches a poller to the interface
+        /// </summary>
+        IPlcSerial WithPoller();
+
+        /// <summary>
+        /// Attaches a register collection object to 
+        /// the interface that can be updated automatically.
+        /// </summary>
+        /// <param name="collection">The type of the collection base class</param>
+        IPlcSerial AddRegisterCollection(RegisterCollection collection);
 
     }
 

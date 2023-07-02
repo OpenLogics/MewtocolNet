@@ -15,7 +15,7 @@ namespace MewtocolTests {
             this.output = output;
         }
 
-        public class TestRegisterCollection : RegisterCollectionBase {
+        public class TestRegisterCollection : RegisterCollection {
 
             //corresponds to a R100 boolean register in the PLC
             //can also be written as R1000 because the last one is a special address
@@ -109,8 +109,8 @@ namespace MewtocolTests {
         [Fact(DisplayName = "Boolean R generation")]
         public void BooleanGen() {
 
-            var interf = new MewtocolInterfaceShared("192.168.0.1");
-            interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
+            var interf = Mewtocol.Ethernet("192.168.0.1");
+            interf.AddRegisterCollection(new TestRegisterCollection()).WithPoller();
 
             var register = interf.GetRegister(nameof(TestRegisterCollection.TestBool1));
 
@@ -122,8 +122,8 @@ namespace MewtocolTests {
         [Fact(DisplayName = "Boolean input XD generation")]
         public void BooleanInputGen() {
 
-            var interf = new MewtocolInterfaceShared("192.168.0.1");
-            interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
+            var interf = Mewtocol.Ethernet("192.168.0.1");
+            interf.AddRegisterCollection(new TestRegisterCollection()).WithPoller();
 
             var register = interf.GetRegister(nameof(TestRegisterCollection.TestBoolInputXD));
 
@@ -135,8 +135,8 @@ namespace MewtocolTests {
         [Fact(DisplayName = "Int16 generation")]
         public void Int16Gen() {
 
-            var interf = new MewtocolInterfaceShared("192.168.0.1");
-            interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
+            var interf = Mewtocol.Ethernet("192.168.0.1");
+            interf.AddRegisterCollection(new TestRegisterCollection()).WithPoller();
 
             var register = interf.GetRegister(nameof(TestRegisterCollection.TestInt16));
 
@@ -148,8 +148,8 @@ namespace MewtocolTests {
         [Fact(DisplayName = "UInt16 generation")]
         public void UInt16Gen() {
 
-            var interf = new MewtocolInterfaceShared("192.168.0.1");
-            interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
+            var interf = Mewtocol.Ethernet("192.168.0.1");
+            interf.AddRegisterCollection(new TestRegisterCollection()).WithPoller();
 
             var register = interf.GetRegister(nameof(TestRegisterCollection.TestUInt16));
 
@@ -161,8 +161,8 @@ namespace MewtocolTests {
         [Fact(DisplayName = "Int32 generation")]
         public void Int32Gen() {
 
-            var interf = new MewtocolInterfaceShared("192.168.0.1");
-            interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
+            var interf = Mewtocol.Ethernet("192.168.0.1");
+            interf.AddRegisterCollection(new TestRegisterCollection()).WithPoller();
 
             var register = interf.GetRegister(nameof(TestRegisterCollection.TestInt32));
 
@@ -174,8 +174,8 @@ namespace MewtocolTests {
         [Fact(DisplayName = "UInt32 generation")]
         public void UInt32Gen() {
 
-            var interf = new MewtocolInterfaceShared("192.168.0.1");
-            interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
+            var interf = Mewtocol.Ethernet("192.168.0.1");
+            interf.AddRegisterCollection(new TestRegisterCollection()).WithPoller();
 
             var register = interf.GetRegister(nameof(TestRegisterCollection.TestUInt32));
 
@@ -187,8 +187,8 @@ namespace MewtocolTests {
         [Fact(DisplayName = "Float32 generation")]
         public void Float32Gen() {
 
-            var interf = new MewtocolInterfaceShared("192.168.0.1");
-            interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
+            var interf = Mewtocol.Ethernet("192.168.0.1");
+            interf.AddRegisterCollection(new TestRegisterCollection()).WithPoller();
 
             var register = interf.GetRegister(nameof(TestRegisterCollection.TestFloat32));
 
@@ -200,8 +200,8 @@ namespace MewtocolTests {
         [Fact(DisplayName = "TimeSpan generation")]
         public void TimespanGen() {
 
-            var interf = new MewtocolInterfaceShared("192.168.0.1");
-            interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
+            var interf = Mewtocol.Ethernet("192.168.0.1");
+            interf.AddRegisterCollection(new TestRegisterCollection()).WithPoller();
 
             var register = interf.GetRegister(nameof(TestRegisterCollection.TestTime));
 
@@ -209,22 +209,6 @@ namespace MewtocolTests {
             TestBasicGeneration((IRegisterInternal)register, nameof(TestRegisterCollection.TestTime), TimeSpan.Zero, 7012, "DDT7012");
 
         }
-
-        //[Fact(DisplayName = "String generation")]
-        //public void StringGen() {
-
-        //    var interf = new MewtocolInterface("192.168.0.1");
-        //    interf.WithRegisterCollection(new TestRegisterCollection()).WithPoller();
-
-        //    var register = interf.GetRegister(nameof(TestRegisterCollection.TestString2));
-
-        //    //test generic properties
-        //    TestBasicGeneration(register, nameof(TestRegisterCollection.TestString2), null!, 7005, "DT7005");
-
-        //    Assert.Equal(5, ((BytesRegister<string>)register).ReservedSize);
-        //    Assert.Equal(4, ((BytesRegister<string>)register).MemoryLength);
-
-        //}
 
     }
 

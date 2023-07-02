@@ -22,7 +22,7 @@ public class ExampleScenarios {
     public void SetupLogger () {
 
         //attaching the logger
-        Logger.LogLevel = LogLevel.Verbose;
+        Logger.LogLevel = LogLevel.Info;
         Logger.OnNewLogMessage((date, level, msg) => {
 
             if (level == LogLevel.Error) Console.ForegroundColor = ConsoleColor.Red;
@@ -74,11 +74,27 @@ public class ExampleScenarios {
 
     }
 
-    [Scenario("Read all kinds of example registers")]
-    public async Task RunReadTest () {
+    [Scenario("Read all kinds of example registers over ethernet")]
+    public async Task RunReadTestEth () {
 
         //setting up a new PLC interface and register collection
         var interf = Mewtocol.Ethernet("192.168.115.210").WithPoller();
+
+        await RunCyclicReadTest(interf);
+
+    }
+
+    [Scenario("Read all kinds of example registers over serial")]
+    public async Task RunReadTestSer () {
+
+        //setting up a new PLC interface and register collection
+        var interf = Mewtocol.SerialAuto("COM4").WithPoller();
+
+        await RunCyclicReadTest(interf);
+
+    }
+
+    private async Task RunCyclicReadTest (IPlc interf) {
 
         //auto add all built registers to the interface 
         var builder = RegBuilder.ForInterface(interf);
@@ -95,14 +111,26 @@ public class ExampleScenarios {
         var stringReg = builder.FromPlcRegName("DT40").AsPlcType(PlcVarType.STRING).Build();
 
         //connect
-        await interf.ConnectAsync();
+        if(interf is IPlcSerial serialPlc) {
+
+            await serialPlc.ConnectAsync(() => {
+
+                Console.WriteLine($"Trying config: {serialPlc.ConnectionInfo}");
+
+            });
+
+        } else {
+
+            await interf.ConnectAsync();
+
+        }
 
         //await first register data
         await interf.AwaitFirstDataAsync();
 
         _ = Task.Factory.StartNew(async () => {
 
-            void setTitle () {
+            void setTitle() {
 
                 Console.Title =
                 $"Speed UP: {interf.BytesPerSecondUpstream} B/s, " +
@@ -112,7 +140,7 @@ public class ExampleScenarios {
 
             }
 
-            while (interf.IsConnected) { 
+            while (interf.IsConnected) {
                 setTitle();
                 await Task.Delay(1000);
             }
@@ -127,7 +155,7 @@ public class ExampleScenarios {
 
             //set bool
             await r0reg.WriteAsync(!(bool)r0reg.Value);
-            
+
             //set random num
             await shortReg.WriteAsync((short)new Random().Next(0, 100));
             await stringReg.WriteAsync($"_{DateTime.Now.Second}s_");
@@ -135,7 +163,7 @@ public class ExampleScenarios {
             sw.Stop();
 
             foreach (var reg in interf.Registers)
-                Console.WriteLine(reg.ToString());     
+                Console.WriteLine(reg.ToString());
 
             Console.WriteLine($"Total write time for registers: {sw.Elapsed.TotalMilliseconds:N0}ms");
 
@@ -284,6 +312,35 @@ public class ExampleScenarios {
         found.Name = $"Rand{new Random().Next(5, 15)}";
 
         await found.SendNewConfigAsync();
+
+    }
+
+    [Scenario("Test")]
+    public async Task Test () {
+
+        Logger.LogLevel = LogLevel.Critical;
+
+        //fpx c14 r
+        var plxFpx = Mewtocol.Ethernet("192.168.178.55");
+        await plxFpx.ConnectAsync();
+        await ((MewtocolInterface)plxFpx).GetSystemRegister();
+
+        //fpx-h c30 t
+        var plcFpxH = Mewtocol.Ethernet("192.168.115.210");
+        await plcFpxH.ConnectAsync();
+        await ((MewtocolInterface)plcFpxH).GetSystemRegister();
+
+        //fpx-h c14 r
+        var plcFpxHc14 = Mewtocol.Ethernet("192.168.115.212");
+        await plcFpxHc14.ConnectAsync();
+        await ((MewtocolInterface)plcFpxHc14).GetSystemRegister();
+
+        //fpx c30 t
+        var plcFpxc30T = Mewtocol.Ethernet("192.168.115.213");
+        await plcFpxc30T.ConnectAsync();
+        await ((MewtocolInterface)plcFpxc30T).GetSystemRegister();
+
+        await Task.Delay(-1);
 
     }
 

@@ -26,23 +26,19 @@ namespace MewtocolNet {
     /// </summary>
     public class MewtocolInterfaceTcp : MewtocolInterface, IPlcEthernet {
 
-        /// <summary>
-        /// The host ip endpoint, leave it null to use an automatic interface
-        /// </summary>
-        public IPEndPoint HostEndpoint { get; set; }
-
         //TCP
         internal TcpClient client;
 
-        //tcp/ip config
-        private string ip;
-        private int port;
+        private IPAddress ipAddr;
 
         /// <inheritdoc/>
-        public string IpAddress => ip;
+        public string IpAddress => ipAddr.ToString();
 
         /// <inheritdoc/>
-        public int Port => port;
+        public int Port { get; private set; }
+
+        /// <inheritdoc/>
+        public IPEndPoint HostEndpoint { get; set; }
 
         internal MewtocolInterfaceTcp () : base() { }
 
@@ -54,14 +50,35 @@ namespace MewtocolNet {
        
         }
 
+        /// <inheritdoc/>
+        public IPlcEthernet AddRegisterCollection (RegisterCollection collection) {
+
+            WithRegisterCollection(collection);
+            return this;
+
+        }
+
         #region TCP connection state handling
 
         /// <inheritdoc/>
-        public void ConfigureConnection (string _ip, int _port = 9094, int _station = 1) {
+        public void ConfigureConnection (string ip, int port = 9094, int station = 1) {
 
-            ip = _ip;
-            port = _port;
-            stationNumber = _station;
+            if (!IPAddress.TryParse(ip, out ipAddr))
+                throw new MewtocolException($"The ip: {ip} is no valid ip address");
+            
+            Port = port;
+            stationNumber = station;
+
+            Disconnect();
+
+        }
+
+        /// <inheritdoc/>
+        public void ConfigureConnection(IPAddress ip, int port = 9094, int station = 1) {
+
+            ipAddr = ip;
+            Port = port;
+            stationNumber = station;
 
             Disconnect();
 
@@ -69,10 +86,6 @@ namespace MewtocolNet {
 
         /// <inheritdoc/>
         public override async Task ConnectAsync () {
-
-            if (!IPAddress.TryParse(ip, out var targetIP)) {
-                throw new ArgumentException("The IP adress of the PLC was no valid format");
-            }
 
             try {
 
@@ -83,29 +96,31 @@ namespace MewtocolNet {
                         NoDelay = false,
                     };
                     var ep = (IPEndPoint)client.Client.LocalEndPoint;
-                    Logger.Log($"Connecting [MAN] endpoint: {ep.Address}:{ep.Port}", LogLevel.Verbose, this);
+                    Logger.Log($"Connecting [MAN] endpoint: {ep.Address}:{ep.Port}", LogLevel.Info, this);
 
                 } else {
 
                     client = new TcpClient() {
                         ReceiveBufferSize = RecBufferSize,
                         NoDelay = false,
-                        ExclusiveAddressUse = true,
+                        //ExclusiveAddressUse = true,
                     };
 
                 }
 
-                var result = client.BeginConnect(targetIP, port, null, null);
+                var result = client.BeginConnect(ipAddr, Port, null, null);
                 var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(ConnectTimeout));
 
                 if (!success || !client.Connected) {
+
+                    Logger.Log("The PLC connection timed out", LogLevel.Error, this);
                     OnMajorSocketExceptionWhileConnecting();
                     return;
                 }
 
                 if (HostEndpoint == null) {
                     var ep = (IPEndPoint)client.Client.LocalEndPoint;
-                    Logger.Log($"Connecting [AUTO] endpoint: {ep.Address.MapToIPv4()}:{ep.Port}", LogLevel.Verbose, this);
+                    Logger.Log($"Connecting [AUTO] endpoint: {ep.Address.MapToIPv4()}:{ep.Port}", LogLevel.Info, this);
                 }
 
                 //get the stream
@@ -121,7 +136,7 @@ namespace MewtocolNet {
 
                 } else {
 
-                    Logger.Log("Initial connection failed", LogLevel.Info, this);
+                    Logger.Log("Initial connection failed", LogLevel.Error, this);
                     OnDisconnect();
 
                 }
