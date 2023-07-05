@@ -132,7 +132,7 @@ namespace MewtocolNet {
 
                 if (plcinf != null) {
 
-                    OnConnected(plcinf);
+                    OnConnected(plcinf.Value);
 
                 } else {
 

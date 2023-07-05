@@ -18,12 +18,17 @@
     <DocumentationFile>..\Builds\MewtocolNet.xml</DocumentationFile>
     <OutputPath>..\Builds</OutputPath>
   </PropertyGroup>
-	<ItemGroup>
-		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-			<_Parameter1>MewtocolTests</_Parameter1>
-		</AssemblyAttribute>
-	</ItemGroup>
-	<ItemGroup>
-	  <PackageReference Include="System.IO.Ports" Version="7.0.0" />
-	</ItemGroup>
+  <ItemGroup>
+  	<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+  		<_Parameter1>MewtocolTests</_Parameter1>
+  	</AssemblyAttribute>
+  </ItemGroup>
+  <ItemGroup>
+  	<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+  		<_Parameter1>DocBuilder</_Parameter1>
+  	</AssemblyAttribute>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.IO.Ports" Version="7.0.0" />
+  </ItemGroup>
 </Project>

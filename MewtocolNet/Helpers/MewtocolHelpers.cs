@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MewtocolNet.DocAttributes;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -312,6 +313,77 @@ namespace MewtocolNet {
             return ( reg1.Name != null || compare.Name != null) && reg1.Name == compare.Name;
 
         }
+
+        #endregion
+
+        #region PLC Type Enum Parsing
+
+        /// <summary>
+        /// Converts the enum to a plc name string
+        /// </summary>
+        public static string ToName(this PlcType plcT) {
+
+            return string.Join(" or ", ParsedPlcName.LegacyPlcDeconstruct(plcT).Select(x => x.WholeName));
+
+        }
+
+        /// <summary>
+        /// Converts the enum to a decomposed <see cref="ParsedPlcName"/> struct
+        /// </summary>
+        public static ParsedPlcName[] ToNameDecompose (this PlcType legacyT) {
+
+            return ParsedPlcName.LegacyPlcDeconstruct(legacyT);
+
+        }
+
+        /// <summary>
+        /// Checks if the PLC type is discontinued
+        /// </summary>
+        public static bool IsDiscontinued (this PlcType plcT) {
+
+            var memberInfos = plcT.GetType().GetMember(plcT.ToString());
+            var enumValueMemberInfo = memberInfos.FirstOrDefault(m => m.DeclaringType == plcT.GetType());
+            var valueAttributes = enumValueMemberInfo?.GetCustomAttributes(typeof(PlcLegacyAttribute), false);
+            if (valueAttributes != null) {
+                var found = valueAttributes.FirstOrDefault(x => x.GetType() == typeof(PlcLegacyAttribute));
+                if (found != null) return true;
+            }
+
+            return false;
+
+        }
+
+        #if DEBUG
+
+        internal static bool WasTestedLive (this PlcType plcT) {
+
+            var memberInfos = plcT.GetType().GetMember(plcT.ToString());
+            var enumValueMemberInfo = memberInfos.FirstOrDefault(m => m.DeclaringType == plcT.GetType());
+            var valueAttributes = enumValueMemberInfo?.GetCustomAttributes(typeof(PlcCodeTestedAttribute), false);
+            if (valueAttributes != null) {
+                var found = valueAttributes.FirstOrDefault(x => x.GetType() == typeof(PlcCodeTestedAttribute));
+                if (found != null) return true;
+            }
+
+            return false;
+
+        }
+
+        internal static bool IsEXRTPLC (this PlcType plcT) {
+
+            var memberInfos = plcT.GetType().GetMember(plcT.ToString());
+            var enumValueMemberInfo = memberInfos.FirstOrDefault(m => m.DeclaringType == plcT.GetType());
+            var valueAttributes = enumValueMemberInfo?.GetCustomAttributes(typeof(PlcEXRTAttribute), false);
+            if (valueAttributes != null) {
+                var found = valueAttributes.FirstOrDefault(x => x.GetType() == typeof(PlcEXRTAttribute));
+                if (found != null) return true;
+            }
+
+            return false;
+
+        }
+
+        #endif
 
         #endregion
 

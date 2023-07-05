@@ -122,7 +122,7 @@ namespace MewtocolNet {
 
             try {
 
-                PLCInfo gotInfo = null;
+                PLCInfo? gotInfo = null;
 
                 if(autoSerial) {
 
@@ -138,7 +138,7 @@ namespace MewtocolNet {
 
                 if(gotInfo != null) {
 
-                    OnConnected(gotInfo);
+                    OnConnected(gotInfo.Value);
 
                 } else {
 
@@ -159,7 +159,7 @@ namespace MewtocolNet {
 
         }
 
-        private async Task<PLCInfo> TryConnectAsyncMulti () {
+        private async Task<PLCInfo?> TryConnectAsyncMulti () {
 
             var baudRates = Enum.GetValues(typeof(BaudRate)).Cast<BaudRate>();
 
@@ -205,7 +205,7 @@ namespace MewtocolNet {
 
         }
 
-        private async Task<PLCInfo> TryConnectAsyncSingle (string port, int baud, int dbits, Parity par, StopBits sbits) {
+        private async Task<PLCInfo?> TryConnectAsyncSingle (string port, int baud, int dbits, Parity par, StopBits sbits) {
 
             try {
 

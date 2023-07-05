@@ -1,8 +1,32 @@
 ﻿namespace MewtocolNet {
+
+
+    public enum CpuType {
+
+
+
+    }
+
+    public struct PLCInfo {
+
+        /// <summary>
+        /// Current error code of the PLC
+        /// </summary>
+        public string ErrorCode { get; internal set; }
+
+        /// <summary>
+        /// Current station number of the PLC
+        /// </summary>
+        public int StationNumber { get; internal set; }
+
+
+    }
+
     /// <summary>
     /// Contains generic information about the plc
     /// </summary>
-    public class PLCInfo {
+    public class PLCInfoOld
+        {
 
         /// <summary>
         /// Contains information about the PLCs cpu
@@ -12,6 +36,7 @@
         /// Contains information about the PLCs operation modes
         /// </summary>
         public PLCMode OperationMode { get; set; }
+
         /// <summary>
         /// Current error code of the PLC
         /// </summary>
