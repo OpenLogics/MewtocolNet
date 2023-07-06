@@ -2,7 +2,7 @@
 
 ## 1. Run the tests
 
-`dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=../Builds/TestResults/coverage.opencover.xml`
+`dotnet test "./MewtocolTests" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=../Builds/TestResults/coverage.opencover.xml`
 
 ## 2. Run the docs Autobuilder
 

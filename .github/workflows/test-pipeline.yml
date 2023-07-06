@@ -34,13 +34,8 @@ jobs:
             6.0.x
             7.0.x
 
-      - name: 'Install MAUI Workloads'
-        run: |
-          dotnet workload install android --ignore-failed-sources
-          dotnet workload install maui --ignore-failed-sources
-
       - name: 'Run tests'
-        run: dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=../Builds/TestResults/coverage.opencover.xml
+        run: dotnet test "./MewtocolTests" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=../Builds/TestResults/coverage.opencover.xml
 
       - name: Report Generator
         uses: danielpalme/ReportGenerator-GitHub-Action@5.1.22
