@@ -21,34 +21,15 @@ namespace MewtocolNet {
         /// <returns>A PLCInfo class</returns>
         public async Task<PLCInfo?> GetPLCInfoAsync(int timeout = -1) {
 
-            //var resu = await SendCommandAsync("%01#RT", true, timeout);
-            //if (!resu.Success) return null;
+            var regexRT = new Regex(@"\%EE\$RT(?<cputype>..)(?<cpuver>..)(?<cap>..)(?<op>..)..(?<flg>..)(?<sdiag>....).*", RegexOptions.IgnoreCase);
+            
+            var regexEXRT = new Regex(@"\%EE\$EX00RT00(?<icnt>..)(?<mc>..)..(?<cap>..)(?<op>..)..(?<flg>..)(?<sdiag>....)(?<ver>..)(?<hwif>..)(?<nprog>.)(?<progsz>....)(?<hdsz>....)(?<sysregsz>....).*", RegexOptions.IgnoreCase);
 
-            //var reg = new Regex(@"\%([0-9]{2})\$RT([0-9]{2})([0-9]{2})([0-9]{2})([0-9]{2})([0-9]{2})([0-9]{2})([0-9]{4})..", RegexOptions.IgnoreCase);
-            //Match m = reg.Match(resu.Response);
+            var resRT = await SendCommandAsync("%EE#RT", timeoutMs: timeout);
+            if (!resRT.Success) return null;
 
-            //if (m.Success) {
+            var resEXRT = await SendCommandAsync("%EE#EX00RT00", timeoutMs: timeout);
 
-            //    string station = m.Groups[1].Value;
-            //    string cpu = m.Groups[2].Value;
-            //    string version = m.Groups[3].Value;
-            //    string capacity = m.Groups[4].Value;
-            //    string operation = m.Groups[5].Value;
-
-            //    string errorflag = m.Groups[7].Value;
-            //    string error = m.Groups[8].Value;
-
-            //    PLCInfo retInfo = new PLCInfo {
-            //        CpuInformation = CpuInfo.BuildFromHexString(cpu, version, capacity),
-            //        OperationMode = PLCMode.BuildFromHex(operation),
-            //        ErrorCode = error,
-            //        StationNumber = int.Parse(station ?? "0"),
-            //    };
-
-            //    PlcInfo = retInfo;
-            //    return retInfo;
-
-            //}
 
             return null;
         

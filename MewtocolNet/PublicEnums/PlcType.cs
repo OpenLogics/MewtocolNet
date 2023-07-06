@@ -5,6 +5,8 @@ namespace MewtocolNet {
     //this overwrites the CPU code and only comes with EXRT
     //special chars: (d = -) (c = .) (s = /)
 
+    //MISSING! FP7 and EcoLogix
+
     /// <summary>
     /// The type of the PLC
     /// </summary>
@@ -66,20 +68,20 @@ namespace MewtocolNet {
         [PlcLegacy]
         FP1_2c7k__C24_C40_OR_FPdM_2c7k__C20R_C20T_C32T = 0x05,
         /// <summary>
-        /// FP1 5.0k C56,C72
+        /// FP1 5.0k C56,C72 or FPM 5k C20RC,C20TC,C32TC
         /// </summary>
         [PlcLegacy]
-        FP1_5k__C56_C72 = 0x06,
+        FP1_5k__C56_C72_OR_FPdM_5k__C20RC_C20TC_C32TC = 0x06,
 
         #endregion
 
         #region FP10 Family (Legacy)
 
         /// <summary>
-        /// FP10 OR FP10S 30k
+        /// FP10 30k,60k OR FP10S 30k
         /// </summary>
         [PlcLegacy]
-        FP10_30k_OR_FP10S_30k = 0x20,
+        FP10_30k_OR_FP10_60k_OR_FP10S_30k = 0x20,
 
         //misses entry FP10 60k 
 
@@ -88,13 +90,10 @@ namespace MewtocolNet {
         #region FP10SH Family (Legacy)
 
         /// <summary>
-        /// FP10SH 30k
+        /// FP10SH 30k, 60k, 120k
         /// </summary>
         [PlcLegacy]
-        FP10SH_30k = 0x30,
-
-        //misses entry FP10SH 60k
-        //misses entry FP10SH 120k
+        FP10SH_30k_OR_FP10SH_60k_OR_FP10SH_120k = 0x30,
 
         #endregion
 
@@ -121,20 +120,20 @@ namespace MewtocolNet {
         #region FP-Sigma Family (Legacy)
 
         /// <summary>
-        /// FP-Sigma 12k
+        /// FP-SIGMA 12k
         /// </summary>
         [PlcLegacy, PlcEXRT]
         FPdSIGMA_12k = 0x43,
         /// <summary>
-        /// FP-Sigma 32k
+        /// FP-SIGMA 32k
         /// </summary>
         [PlcLegacy, PlcEXRT]
         FPdSIGMA_32k = 0x44,
         /// <summary>
-        /// FP-SIGMA 16k
+        /// FP-SIGMA 16k or FP-SIGMA 40k
         /// </summary>
         [PlcLegacy, PlcEXRT]
-        FPdSIGMA_16k = 0xE1,
+        FPdSIGMA_16k_OR_FPdSIGMA_40k = 0xE1,
 
         #endregion
 

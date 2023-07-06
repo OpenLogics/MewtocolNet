@@ -28,7 +28,12 @@ void WritePlcTypeTable(IEnumerable<PlcType> vals) {
 
     var groups = vals.GroupBy(x => x.ToNameDecompose()[0].Group)
                      .SelectMany(grouping => grouping.OrderBy(b => (int)b))
-                     .GroupBy(x => x.ToNameDecompose()[0].Group);
+                     .GroupBy(
+                        x => string.Join(", ", 
+                        x.ToNameDecompose()
+                         .DistinctBy(y => y.Group)
+                         .Select(y => y.Group))
+                      );
 
     markdownBuilder.AppendLine("<table>");
 

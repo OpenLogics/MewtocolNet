@@ -210,6 +210,8 @@ namespace MewtocolNet {
 
             try {
 
+                if (stream == null) return new MewtocolFrameResponse(405, "PLC not initialized");
+
                 if (useBcc)
                     frame = $"{frame.BuildBCCFrame()}";
 

@@ -101,7 +101,7 @@ All supported PLC types for auto recognition are listed in this table. Other one
 <td align=center> ❌ </td>
 </tr>
 <tr>
-<td colspan="7" height=50>📟 <b>FP1</b> </td>
+<td colspan="7" height=50>📟 <b>FP1, FP-M</b> </td>
 </tr>
 <tr>
 <td> C14, C16 </td>
@@ -143,19 +143,37 @@ All supported PLC types for auto recognition are listed in this table. Other one
 <td> C56, C72 </td>
 <td> 5k </td>
 <td><code>0x06</code></td>
-<td><i>FP1_5k__C56_C72</i></td>
+<td><i>FP1_5k__C56_C72_OR_FPdM_5k__C20RC_C20TC_C32TC</i></td>
 <td align=center>⚠️</td>
 <td align=center> ❌ </td>
 <td align=center> ❌ </td>
 </tr>
 <tr>
-<td colspan="7" height=50>📟 <b>FP10</b> </td>
+<td> C20RC, C20TC, C32TC </td>
+<td> 5k </td>
+<td><code>0x06</code></td>
+<td><i>FP1_5k__C56_C72_OR_FPdM_5k__C20RC_C20TC_C32TC</i></td>
+<td align=center>⚠️</td>
+<td align=center> ❌ </td>
+<td align=center> ❌ </td>
+</tr>
+<tr>
+<td colspan="7" height=50>📟 <b>FP10, FP10S</b> </td>
 </tr>
 <tr>
 <td> - </td>
 <td> 30k </td>
 <td><code>0x20</code></td>
-<td><i>FP10_30k_OR_FP10S_30k</i></td>
+<td><i>FP10_30k_OR_FP10_60k_OR_FP10S_30k</i></td>
+<td align=center>⚠️</td>
+<td align=center> ❌ </td>
+<td align=center> ❌ </td>
+</tr>
+<tr>
+<td> - </td>
+<td> 60k </td>
+<td><code>0x20</code></td>
+<td><i>FP10_30k_OR_FP10_60k_OR_FP10S_30k</i></td>
 <td align=center>⚠️</td>
 <td align=center> ❌ </td>
 <td align=center> ❌ </td>
@@ -164,7 +182,7 @@ All supported PLC types for auto recognition are listed in this table. Other one
 <td> - </td>
 <td> 30k </td>
 <td><code>0x20</code></td>
-<td><i>FP10_30k_OR_FP10S_30k</i></td>
+<td><i>FP10_30k_OR_FP10_60k_OR_FP10S_30k</i></td>
 <td align=center>⚠️</td>
 <td align=center> ❌ </td>
 <td align=center> ❌ </td>
@@ -176,7 +194,25 @@ All supported PLC types for auto recognition are listed in this table. Other one
 <td> - </td>
 <td> 30k </td>
 <td><code>0x30</code></td>
-<td><i>FP10SH_30k</i></td>
+<td><i>FP10SH_30k_OR_FP10SH_60k_OR_FP10SH_120k</i></td>
+<td align=center>⚠️</td>
+<td align=center> ❌ </td>
+<td align=center> ❌ </td>
+</tr>
+<tr>
+<td> - </td>
+<td> 60k </td>
+<td><code>0x30</code></td>
+<td><i>FP10SH_30k_OR_FP10SH_60k_OR_FP10SH_120k</i></td>
+<td align=center>⚠️</td>
+<td align=center> ❌ </td>
+<td align=center> ❌ </td>
+</tr>
+<tr>
+<td> - </td>
+<td> 120k </td>
+<td><code>0x30</code></td>
+<td><i>FP10SH_30k_OR_FP10SH_60k_OR_FP10SH_120k</i></td>
 <td align=center>⚠️</td>
 <td align=center> ❌ </td>
 <td align=center> ❌ </td>
@@ -243,6 +279,9 @@ All supported PLC types for auto recognition are listed in this table. Other one
 <td align=center>⚠️</td>
 <td align=center> ❌ </td>
 <td align=center> ❌ </td>
+</tr>
+<tr>
+<td colspan="7" height=50>📟 <b>FP3, FP-C</b> </td>
 </tr>
 <tr>
 <td> - </td>
@@ -320,7 +359,16 @@ All supported PLC types for auto recognition are listed in this table. Other one
 <td> - </td>
 <td> 16k </td>
 <td><code>0xE1</code></td>
-<td><i>FPdSIGMA_16k</i></td>
+<td><i>FPdSIGMA_16k_OR_FPdSIGMA_40k</i></td>
+<td align=center>⚠️</td>
+<td align=center> ✅ </td>
+<td align=center> ❌ </td>
+</tr>
+<tr>
+<td> - </td>
+<td> 40k </td>
+<td><code>0xE1</code></td>
+<td><i>FPdSIGMA_16k_OR_FPdSIGMA_40k</i></td>
 <td align=center>⚠️</td>
 <td align=center> ✅ </td>
 <td align=center> ❌ </td>
