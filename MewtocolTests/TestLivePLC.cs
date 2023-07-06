@@ -20,7 +20,7 @@ namespace MewtocolTests
                 PLCName = "FPX-H C30T",
                 PLCIP = "192.168.115.210",
                 PLCPort = 9094,
-                Type = CpuType.FP_Sigma_X_H_30K_60K_120K,
+                Type = PlcType.FPdXH_32k__C30TsP_C40T_C60TsP,
                 ProgCapacity = 32,
 
             },
@@ -29,7 +29,7 @@ namespace MewtocolTests
                 PLCName = "FPX-H C14R",
                 PLCIP = "192.168.115.212",
                 PLCPort = 9094,
-                Type = CpuType.FP_Sigma_X_H_30K_60K_120K,
+                Type = PlcType.FPdXH_16k__C14R,
                 ProgCapacity = 16,
 
             },
@@ -57,7 +57,7 @@ namespace MewtocolTests
 
             this.output = output;
 
-            Logger.LogLevel = LogLevel.Verbose;
+            Logger.LogLevel = LogLevel.Critical;
             Logger.OnNewLogMessage((d, l, m) => {
 
                 output.WriteLine($"Mewtocol Logger: {d} {m}");
@@ -102,8 +102,8 @@ namespace MewtocolTests
 
                 Assert.True(client.IsConnected);
 
-                Assert.Equal(client.PlcInfo.CpuInformation.Cputype, plc.Type);
-                Assert.Equal(client.PlcInfo.CpuInformation.ProgramCapacity, plc.ProgCapacity);
+                Assert.Equal(client.PlcInfo.TypeCode, plc.Type);
+                Assert.Equal(client.PlcInfo.ProgramCapacity, plc.ProgCapacity);
 
                 client.Disconnect();
 

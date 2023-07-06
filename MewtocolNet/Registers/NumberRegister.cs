@@ -178,7 +178,9 @@ namespace MewtocolNet.Registers {
 
             if (!attachedInterface.IsConnected) return false;
 
-            return await attachedInterface.WriteRawRegisterAsync(this, PlcValueParser.Encode(this, (T)data));
+            var res = await attachedInterface.WriteRawRegisterAsync(this, PlcValueParser.Encode(this, (T)data));
+            if (res) SetValueFromPLC(data);
+            return res;
 
         }
 

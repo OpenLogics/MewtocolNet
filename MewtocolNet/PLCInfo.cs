@@ -1,5 +1,4 @@
-﻿using MewtocolNet.PublicEnums;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace MewtocolNet {
@@ -38,6 +37,11 @@ namespace MewtocolNet {
         /// Current error code of the PLC
         /// </summary>
         public string SelfDiagnosticError { get; internal set; }
+
+        /// <summary>
+        /// Quickcheck for the runmode flag
+        /// </summary>
+        public bool IsRunMode => OperationMode.HasFlag(OPMode.RunMode);
 
         internal bool TryExtendFromEXRT (string msg) {
 
@@ -106,6 +110,12 @@ namespace MewtocolNet {
         /// <inheritdoc/>
         public static bool operator != (PLCInfo c1, PLCInfo c2) {
             return !c1.Equals(c2);
+        }
+
+        public override string ToString() {
+
+            return $"{TypeCode.ToName()}, OP: {OperationMode}";
+
         }
 
     }

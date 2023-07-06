@@ -1,8 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+	
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;</TargetFrameworks>
+
+	<IsPublishable>false</IsPublishable>
+	  
+    <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>Mewtocol.NET</PackageId>
-    <Version>0.7.1</Version>
+    <Version>0.0.0</Version>
     <Authors>Felix Weiss</Authors>
     <Company>Womed</Company>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -13,22 +17,28 @@
     <PackageTags>plc;panasonic;mewtocol;automation;</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <UserSecretsId>2ccdcc9b-94a3-4e76-8827-453ab889ea33</UserSecretsId>
+  
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DocumentationFile>..\Builds\MewtocolNet.xml</DocumentationFile>
-    <OutputPath>..\Builds</OutputPath>
+  
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <DocumentationFile>..\Builds\MewtocolNet\MewtocolNet.xml</DocumentationFile>
+    <OutputPath>..\Builds\MewtocolNet</OutputPath>
   </PropertyGroup>
-  <ItemGroup>
+  
+	<ItemGroup>
   	<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
   		<_Parameter1>MewtocolTests</_Parameter1>
   	</AssemblyAttribute>
   </ItemGroup>
-  <ItemGroup>
+  
+	<ItemGroup>
   	<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
   		<_Parameter1>DocBuilder</_Parameter1>
   	</AssemblyAttribute>
   </ItemGroup>
-  <ItemGroup>
+  
+	<ItemGroup>
     <PackageReference Include="System.IO.Ports" Version="7.0.0" />
   </ItemGroup>
+	
 </Project>

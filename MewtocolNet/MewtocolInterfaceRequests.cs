@@ -69,15 +69,15 @@ namespace MewtocolNet {
         /// </summary>
         /// <param name="mode">The mode to change to</param>
         /// <returns>The success state of the write operation</returns>
-        public async Task<bool> SetOperationMode(OPMode mode) {
+        public async Task<bool> SetOperationMode (bool setRun) {
 
-            string modeChar = mode == OPMode.Prog ? "P" : "R";
+            string modeChar = setRun ? "R" : "P";
 
             string requeststring = $"%{GetStationNumber()}#RM{modeChar}";
             var result = await SendCommandAsync(requeststring);
 
             if (result.Success) {
-                Logger.Log($"operation mode was changed to {mode}", LogLevel.Info, this);
+                Logger.Log($"operation mode was changed to {(setRun ? "Run" : "Prog")}", LogLevel.Info, this);
             } else {
                 Logger.Log("Operation mode change failed", LogLevel.Error, this);
             }

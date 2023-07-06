@@ -10,7 +10,7 @@ public class ExpectedPlcInformationData {
 
     public int PLCPort { get; set; }
 
-    public CpuType Type { get; set; }
+    public PlcType Type { get; set; }
 
     public int ProgCapacity { get; set; }
 

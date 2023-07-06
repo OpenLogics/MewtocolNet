@@ -72,7 +72,7 @@ internal class ScanCommand : CommandLineExcecuteable {
                 AnsiConsole.Write(found.Select(x => new {
                     x.Cassette.Name,
                     PLC = x.PLCInf.TypeCode.ToName(),
-                    IsRun = x.PLCInf.OperationMode.HasFlag(OPMode.Run),
+                    IsRun = x.PLCInf.OperationMode.HasFlag(OPMode.RunMode),
                     IP = x.Cassette.IPAddress,
                     x.Cassette.Port,
                     DHCP = x.Cassette.UsesDHCP,
