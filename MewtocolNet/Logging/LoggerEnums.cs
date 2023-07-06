@@ -6,6 +6,10 @@
     public enum LogLevel {
 
         /// <summary>
+        /// Logs nothing
+        /// </summary>
+        None = -1,
+        /// <summary>
         /// Logs only errors
         /// </summary>
         Error = 0,

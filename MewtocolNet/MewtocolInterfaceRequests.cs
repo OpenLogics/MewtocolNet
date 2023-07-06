@@ -1,3 +1,4 @@
+using MewtocolNet.Exceptions;
 using MewtocolNet.Logging;
 using MewtocolNet.Registers;
 using System;
@@ -21,18 +22,42 @@ namespace MewtocolNet {
         /// <returns>A PLCInfo class</returns>
         public async Task<PLCInfo?> GetPLCInfoAsync(int timeout = -1) {
 
-            var regexRT = new Regex(@"\%EE\$RT(?<cputype>..)(?<cpuver>..)(?<cap>..)(?<op>..)..(?<flg>..)(?<sdiag>....).*", RegexOptions.IgnoreCase);
-            
-            var regexEXRT = new Regex(@"\%EE\$EX00RT00(?<icnt>..)(?<mc>..)..(?<cap>..)(?<op>..)..(?<flg>..)(?<sdiag>....)(?<ver>..)(?<hwif>..)(?<nprog>.)(?<progsz>....)(?<hdsz>....)(?<sysregsz>....).*", RegexOptions.IgnoreCase);
-
             var resRT = await SendCommandAsync("%EE#RT", timeoutMs: timeout);
-            if (!resRT.Success) return null;
+            
+            if (!resRT.Success) {
+
+                //timeouts are ok and dont throw
+                if (resRT == MewtocolFrameResponse.Timeout) return null;
+
+                throw new MewtocolException(resRT.Error);
+
+            }
 
             var resEXRT = await SendCommandAsync("%EE#EX00RT00", timeoutMs: timeout);
 
+            //timeouts are ok and dont throw
+            if (!resRT.Success && resRT == MewtocolFrameResponse.Timeout) return null;
 
-            return null;
-        
+            PLCInfo plcInf;
+
+            //dont overwrite, use first
+            if (!PLCInfo.TryFromRT(resRT.Response, out plcInf)) {
+
+                throw new MewtocolException("The RT message could not be parsed");
+
+            }
+
+            //overwrite first with EXRT
+            if (resEXRT.Success && !plcInf.TryExtendFromEXRT(resEXRT.Response)) {
+
+                throw new MewtocolException("The EXRT message could not be parsed");
+
+            }
+
+            PlcInfo = plcInf;   
+
+            return plcInf;
+
         }
 
         #endregion

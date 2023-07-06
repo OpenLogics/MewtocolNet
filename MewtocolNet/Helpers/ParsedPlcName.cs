@@ -35,9 +35,9 @@ namespace MewtocolNet {
         /// <inheritdoc/>
         public override string ToString() => WholeName;
 
-        internal static ParsedPlcName[] LegacyPlcDeconstruct<T> (T legacyT) {
+        internal static ParsedPlcName[] PlcDeconstruct (PlcType plcT) {
 
-            string wholeStr = legacyT.ToString();
+            string wholeStr = plcT.ToString();
 
             var split = wholeStr.Replace("_OR_", "|").Split('|');
             var reg = new Regex(@"(?<group>[A-Za-z0-9]*)_(?<size>[A-Za-z0-9]*)(?:__)?(?<additional>.*)");

@@ -159,7 +159,7 @@ namespace MewtocolNet {
         public virtual async Task ConnectAsync() => throw new NotImplementedException();
 
         /// <inheritdoc/>
-        public async Task AwaitFirstDataAsync() => await firstPollTask;
+        public async Task AwaitFirstDataCycleAsync() => await firstPollTask;
 
         /// <inheritdoc/>
         public void Disconnect() {
@@ -196,7 +196,7 @@ namespace MewtocolNet {
 
             if (await Task.WhenAny(tempResponse, Task.Delay(timeoutMs)) != tempResponse) {
                 // timeout logic
-                return new MewtocolFrameResponse(403, "Timed out");
+                return MewtocolFrameResponse.Timeout;
             } 
 
             tcpMessagesSentThisCycle++;
@@ -210,7 +210,7 @@ namespace MewtocolNet {
 
             try {
 
-                if (stream == null) return new MewtocolFrameResponse(405, "PLC not initialized");
+                if (stream == null) return MewtocolFrameResponse.NotIntialized;
 
                 if (useBcc)
                     frame = $"{frame.BuildBCCFrame()}";

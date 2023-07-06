@@ -126,7 +126,7 @@ public class ExampleScenarios {
         }
 
         //await first register data
-        await interf.AwaitFirstDataAsync();
+        await interf.AwaitFirstDataCycleAsync();
 
         _ = Task.Factory.StartNew(async () => {
 

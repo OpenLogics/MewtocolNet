@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MewtocolNet.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -20,8 +21,7 @@ namespace MewtocolNet.ComCassette {
 
             var from = new IPEndPoint(IPAddress.Any, 0);
 
-            List<CassetteInformation> cassettesFound = new List<CassetteInformation>();
-            List<Task<List<CassetteInformation>>> interfacesTasks = new List<Task<List<CassetteInformation>>>();
+            var interfacesTasks = new List<Task<List<CassetteInformation>>>();
 
             var usableInterfaces = GetUseableNetInterfaces();
 
@@ -56,10 +56,21 @@ namespace MewtocolNet.ComCassette {
             //run the interface querys
             var grouped = await Task.WhenAll(interfacesTasks);
 
-            foreach (var item in grouped)
-                cassettesFound.AddRange(item);
+            var decomposed = new List<CassetteInformation>();     
 
-            return cassettesFound;
+            foreach (var grp in grouped) {
+
+                foreach (var cassette in grp) {
+
+                    if (decomposed.Any(x => x.MacAddress.SequenceEqual(cassette.MacAddress))) continue;
+
+                    decomposed.Add(cassette);
+
+                }
+
+            }
+
+            return decomposed;
 
         }
 

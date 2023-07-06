@@ -83,7 +83,7 @@ namespace MewtocolNet {
         /// Use this to await the first poll iteration after connecting,
         /// This also completes if the initial connection fails
         /// </summary>
-        Task AwaitFirstDataAsync();
+        Task AwaitFirstDataCycleAsync();
 
         /// <summary>
         /// Runs a single poller cycle manually,

@@ -323,7 +323,9 @@ namespace MewtocolNet {
         /// </summary>
         public static string ToName(this PlcType plcT) {
 
-            return string.Join(" or ", ParsedPlcName.LegacyPlcDeconstruct(plcT).Select(x => x.WholeName));
+            if (plcT == 0) return "Unknown";
+
+            return string.Join(" or ", ParsedPlcName.PlcDeconstruct(plcT).Select(x => x.WholeName));
 
         }
 
@@ -332,7 +334,9 @@ namespace MewtocolNet {
         /// </summary>
         public static ParsedPlcName[] ToNameDecompose (this PlcType legacyT) {
 
-            return ParsedPlcName.LegacyPlcDeconstruct(legacyT);
+            if ((int)legacyT == 0) return Array.Empty<ParsedPlcName>();
+
+            return ParsedPlcName.PlcDeconstruct(legacyT);
 
         }
 

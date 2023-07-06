@@ -11,7 +11,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MewtocolTests", "MewtocolTe
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MewExplorer", "MewExplorer\MewExplorer.csproj", "{F243F38A-76D3-4C38-BAE6-C61729479661}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocBuilder", "DocBuilder\DocBuilder.csproj", "{50F2D23F-C875-4006-A0B6-7F5A181BC944}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DocBuilder", "DocBuilder\DocBuilder.csproj", "{50F2D23F-C875-4006-A0B6-7F5A181BC944}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MewTerminal", "MewTerminal\MewTerminal.csproj", "{D1E751C6-296F-4CF1-AE28-C6D4388C7CF1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -89,6 +91,18 @@ Global
 		{50F2D23F-C875-4006-A0B6-7F5A181BC944}.Release|x64.Build.0 = Release|Any CPU
 		{50F2D23F-C875-4006-A0B6-7F5A181BC944}.Release|x86.ActiveCfg = Release|Any CPU
 		{50F2D23F-C875-4006-A0B6-7F5A181BC944}.Release|x86.Build.0 = Release|Any CPU
+		{D1E751C6-296F-4CF1-AE28-C6D4388C7CF1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1E751C6-296F-4CF1-AE28-C6D4388C7CF1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1E751C6-296F-4CF1-AE28-C6D4388C7CF1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D1E751C6-296F-4CF1-AE28-C6D4388C7CF1}.Debug|x64.Build.0 = Debug|Any CPU
+		{D1E751C6-296F-4CF1-AE28-C6D4388C7CF1}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D1E751C6-296F-4CF1-AE28-C6D4388C7CF1}.Debug|x86.Build.0 = Debug|Any CPU
+		{D1E751C6-296F-4CF1-AE28-C6D4388C7CF1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1E751C6-296F-4CF1-AE28-C6D4388C7CF1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1E751C6-296F-4CF1-AE28-C6D4388C7CF1}.Release|x64.ActiveCfg = Release|Any CPU
+		{D1E751C6-296F-4CF1-AE28-C6D4388C7CF1}.Release|x64.Build.0 = Release|Any CPU
+		{D1E751C6-296F-4CF1-AE28-C6D4388C7CF1}.Release|x86.ActiveCfg = Release|Any CPU
+		{D1E751C6-296F-4CF1-AE28-C6D4388C7CF1}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

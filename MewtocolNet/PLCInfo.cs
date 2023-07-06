@@ -1,66 +1,111 @@
-﻿namespace MewtocolNet {
+﻿using MewtocolNet.PublicEnums;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
+namespace MewtocolNet {
 
-    public enum CpuType {
-
-
-
-    }
-
+    /// <summary>
+    /// Holds various informations about the PLC
+    /// </summary>
     public struct PLCInfo {
 
         /// <summary>
-        /// Current error code of the PLC
+        /// The type of the PLC named by Panasonic
         /// </summary>
-        public string ErrorCode { get; internal set; }
+        public PlcType TypeCode { get; private set; }
 
         /// <summary>
-        /// Current station number of the PLC
+        /// Contains information about the PLCs operation modes as flags
         /// </summary>
-        public int StationNumber { get; internal set; }
-
-
-    }
-
-    /// <summary>
-    /// Contains generic information about the plc
-    /// </summary>
-    public class PLCInfoOld
-        {
+        public OPMode OperationMode { get; private set; }
 
         /// <summary>
-        /// Contains information about the PLCs cpu
+        /// Hardware information flags about the PLC
         /// </summary>
-        public CpuInfo CpuInformation { get; set; }
+        public HWInformation HardwareInformation { get; private set; }  
+
         /// <summary>
-        /// Contains information about the PLCs operation modes
+        /// Program capacity in 1K steps
         /// </summary>
-        public PLCMode OperationMode { get; set; }
+        public int ProgramCapacity { get; private set; }
+
+        /// <summary>
+        /// Version of the cpu
+        /// </summary>
+        public string CpuVersion { get; private set; }
 
         /// <summary>
         /// Current error code of the PLC
         /// </summary>
-        public string ErrorCode { get; set; }
+        public string SelfDiagnosticError { get; internal set; }
+
+        internal bool TryExtendFromEXRT (string msg) {
+
+            var regexEXRT = new Regex(@"\%EE\$EX00RT00(?<icnt>..)(?<mc>..)..(?<cap>..)(?<op>..)..(?<flg>..)(?<sdiag>....)(?<ver>..)(?<hwif>..)(?<nprog>.)(?<progsz>....)(?<hdsz>....)(?<sysregsz>....).*", RegexOptions.IgnoreCase);
+            var match = regexEXRT.Match(msg);      
+            if(match.Success) {
+
+                byte typeCodeByte = byte.Parse(match.Groups["mc"].Value, NumberStyles.HexNumber);
+
+                this.TypeCode = (PlcType)typeCodeByte;
+                this.CpuVersion = match.Groups["ver"].Value;
+                this.HardwareInformation = (HWInformation)byte.Parse(match.Groups["hwif"].Value, NumberStyles.HexNumber);
+
+                return true;
+
+            }
+
+            return false;
+
+        }
+
+        internal static bool TryFromRT (string msg, out PLCInfo inf) {
+
+            var regexRT = new Regex(@"\%EE\$RT(?<cputype>..)(?<cpuver>..)(?<cap>..)(?<op>..)..(?<flg>..)(?<sdiag>....).*", RegexOptions.IgnoreCase);
+            var match = regexRT.Match(msg);
+            if (match.Success) {
+
+                byte typeCodeByte = byte.Parse(match.Groups["cputype"].Value, NumberStyles.HexNumber);
+
+                inf = new PLCInfo {
+                    TypeCode = (PlcType)typeCodeByte,
+                    CpuVersion = match.Groups["cpuver"].Value,
+                    ProgramCapacity = int.Parse(match.Groups["cap"].Value),
+                    SelfDiagnosticError = match.Groups["sdiag"].Value,
+                    OperationMode = (OPMode)byte.Parse(match.Groups["op"].Value, NumberStyles.HexNumber),
+                };
+
+                return true;
+
+            }
+
+            inf = default(PLCInfo);
+            return false;
+
+        }
 
         /// <summary>
-        /// Current station number of the PLC
+        /// Plc info when its not connected 
         /// </summary>
-        public int StationNumber { get; set; }
+        public static PLCInfo None => new PLCInfo() {
 
-        /// <summary>
-        /// Generates a string containing some of the most important informations
-        /// </summary>
-        /// <returns></returns>
-        public override string ToString() {
+            SelfDiagnosticError = "",
+            CpuVersion = "",
+            HardwareInformation = 0,
+            OperationMode = 0,
+            ProgramCapacity = 0,
+            TypeCode = 0,
+        
+        };
 
-            return $"Type: {CpuInformation.Cputype},\n" +
-                   $"Capacity: {CpuInformation.ProgramCapacity}k\n" +
-                   $"CPU v: {CpuInformation.CpuVersion}\n" +
-                   $"Station Num: {StationNumber}\n" +
-                   $"--------------------------------\n" +
-                   $"OP Mode: {(OperationMode.RunMode ? "Run" : "Prog")}\n" +
-                   $"Error Code: {ErrorCode}";
+        /// <inheritdoc/>
+        public static bool operator == (PLCInfo c1, PLCInfo c2) {
+            return c1.Equals(c2);
+        }
 
+        /// <inheritdoc/>
+        public static bool operator != (PLCInfo c1, PLCInfo c2) {
+            return !c1.Equals(c2);
         }
 
     }

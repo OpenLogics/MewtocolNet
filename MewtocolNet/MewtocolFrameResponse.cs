@@ -14,6 +14,10 @@ namespace MewtocolNet {
 
         public string Error { get; private set; }
 
+        public static MewtocolFrameResponse Timeout => new MewtocolFrameResponse(403, "Request timed out");
+        
+        public static MewtocolFrameResponse NotIntialized => new MewtocolFrameResponse(405, "PLC was not initialized");
+
         public MewtocolFrameResponse (string response) {
 
             Success = true;
@@ -39,6 +43,16 @@ namespace MewtocolNet {
             ErrorCode = errorCode;
             Error = exceptionMsg;
 
+        }
+
+        /// <inheritdoc/>
+        public static bool operator == (MewtocolFrameResponse c1, MewtocolFrameResponse c2) {
+            return c1.Equals(c2);
+        }
+
+        /// <inheritdoc/>
+        public static bool operator != (MewtocolFrameResponse c1, MewtocolFrameResponse c2) {
+            return !c1.Equals(c2);
         }
 
     }
