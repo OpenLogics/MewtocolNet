@@ -21,7 +21,12 @@ jobs:
     runs-on: [self-hosted, linux, x64, womed-local-linux]
     steps:
       - uses: actions/checkout@v3
-  
+
+      - name: Extract branch name
+        shell: bash
+        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+        id: extract_branch
+
       - name: 'Setup dotnet'
         uses: actions/setup-dotnet@v2
         with:
@@ -50,7 +55,7 @@ jobs:
         if: ${{ github.event_name == 'workflow_call' }}
         uses: actions/cache/save@v3
         with:
-          key: ${{ inputs.cache-id }}-${{ GITHUB_REF##*/ }}
+          key: ${{ inputs.cache-id }}-${{ steps.extract_branch.outputs.branch }}
           path: |
             ${{ github.workspace }}/Builds/TestResults
             
@@ -59,13 +64,13 @@ jobs:
         run: |
             git fetch
             git checkout badges
-            cp ~/summary.html ./Builds/TestResults/summary_${{ GITHUB_REF##*/ }}.html
-            cp ~/badge_combined.svg ./Builds/TestResults/badge_combined_${{ GITHUB_REF##*/ }}.svg
+            cp ~/summary.html ./Builds/TestResults/summary_${{ steps.extract_branch.outputs.branch }}.html
+            cp ~/badge_combined.svg ./Builds/TestResults/badge_combined_${{ steps.extract_branch.outputs.branch }}.svg
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
-            git add "./Builds/TestResults/badge_combined_${{ GITHUB_REF##*/ }}.svg" -f
-            git add "./Builds/TestResults/summary_${{ GITHUB_REF##*/ }}.html" -f
-            git commit -m "Add/Update badge for branch ${{ GITHUB_REF##*/ }}"
+            git add "./Builds/TestResults/badge_combined_${{ steps.extract_branch.outputs.branch }}.svg" -f
+            git add "./Builds/TestResults/summary_${{ steps.extract_branch.outputs.branch }}.html" -f
+            git commit -m "Add/Update badge for branch ${{ steps.extract_branch.outputs.branch }}"
             
       - name: Push badge commit
         uses: ad-m/github-push-action@master
