@@ -18,7 +18,6 @@ jobs:
   #Run unit tests on the test PLCs
   run-unit-tests:
     name: 'Run tests and documentation'
-    needs: check-plcs-online
     runs-on: [self-hosted, linux, x64, womed-local-linux]
     steps:
       - uses: actions/checkout@v3
