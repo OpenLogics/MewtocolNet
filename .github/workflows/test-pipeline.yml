@@ -30,7 +30,9 @@ jobs:
       - name: 'Setup dotnet'
         uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: '6.0.x'
+          dotnet-version: |
+            6.0.x
+            7.0.x
 
       - name: 'Run tests'
         run: dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=../Builds/TestResults/coverage.opencover.xml
