@@ -1,7 +1,7 @@
 [![Publish pipeline](https://github.com/WOmed/MewtocolNet/actions/workflows/publish-pipeline.yml/badge.svg)](https://github.com/WOmed/MewtocolNet/actions/workflows/publish-pipeline.yml)
 [![Test pipeline](https://github.com/WOmed/MewtocolNet/actions/workflows/test-pipeline.yml/badge.svg)](https://github.com/WOmed/MewtocolNet/actions/workflows/test-pipeline.yml)
 [![GitHub tag](https://img.shields.io/github/v/tag/WOmed/MewtocolNet?label=Package%20Version)](https://github.com/WOmed/MewtocolNet/pkgs/nuget/Mewtocol.NET)
-[![gencov](https://github.com/WOmed/MewtocolNet/blob/badges/MewtocolTests/TestResults/badge_combined.svg)](https://htmlpreview.github.io/?https://github.com/WOmed/MewtocolNet/blob/badges/MewtocolTests/TestResults/summary.html)
+[![gencov](https://github.com/WOmed/MewtocolNet/blob/badges/Builds/TestResults/badge_combined_master.svg)](https://htmlpreview.github.io/?https://github.com/WOmed/MewtocolNet/blob/badges/MewtocolTests/TestResults/summary.html)
 ![GitHub](https://img.shields.io/github/license/WOmed/MewtocolNet?label=License)
 ![Status](https://img.shields.io/badge/Status-In%20dev-orange)
 
