@@ -37,6 +37,25 @@ jobs:
       - name: 'Run tests'
         run: dotnet test "./MewtocolTests" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=../Builds/TestResults/coverage.opencover.xml
 
+      - name: 'Run docbuilder'
+        run: dotnet run --project "./DocBuilder/DocBuilder.csproj"
+
+      - name: 'Commit generated docs to branch'
+        run: |
+            git fetch
+            git checkout ${{ steps.extract_branch.outputs.branch }}
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add "./DocBuilder/Docs/plctypes.md" -f
+            git commit -m "(AUTO_DOC) add documentation for branch ${{ steps.extract_branch.outputs.branch }}"
+
+      - name: 'Push docs commit'
+        uses: ad-m/github-push-action@master
+        if: ${{ success() }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ steps.extract_branch.outputs.branch }}
+
       - name: Report Generator
         uses: danielpalme/ReportGenerator-GitHub-Action@5.1.22
         with:
@@ -74,7 +93,7 @@ jobs:
             git add "./Builds/TestResults/summary_${{ steps.extract_branch.outputs.branch }}.html" -f
             git commit -m "Add/Update badge for branch ${{ steps.extract_branch.outputs.branch }}"
             
-      - name: Push badge commit
+      - name: 'Push badge commit'
         uses: ad-m/github-push-action@master
         if: ${{ success() }}
         with:
