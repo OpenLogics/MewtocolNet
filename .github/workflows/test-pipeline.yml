@@ -40,9 +40,11 @@ jobs:
         run: dotnet test "./MewtocolTests" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=../Builds/TestResults/coverage.opencover.xml
 
       - name: 'Run docbuilder'
+        if: always()
         run: dotnet run --project "./DocBuilder/DocBuilder.csproj" "./DocBuilder/Docs/plctypes.md"
 
       - name: 'Commit generated docs to branch'
+        if: always()
         run: |
             git fetch
             git checkout ${{ steps.extract_branch.outputs.branch }}
