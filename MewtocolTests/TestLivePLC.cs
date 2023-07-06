@@ -1,63 +1,79 @@
 ﻿using MewtocolNet;
 using MewtocolNet.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using MewtocolNet.RegisterBuilding;
+using MewtocolNet.Registers;
+using MewtocolTests.EncapsulatedTests;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace MewtocolTests {
+namespace MewtocolTests
+{
 
     public class TestLivePLC {
 
         private readonly ITestOutputHelper output;
 
-        private List<ExpectedTestData> testData = new() {
+        private List<ExpectedPlcInformationData> testPlcInformationData = new() {
 
-            new ExpectedTestData {
+            new ExpectedPlcInformationData {
 
                 PLCName = "FPX-H C30T",
                 PLCIP = "192.168.115.210",
                 PLCPort = 9094,
-                Type = CpuType.FP_Sigma_X_H_30K_60K_120K,
+                Type = PlcType.FPdXH_32k__C30TsP_C40T_C60TsP,
                 ProgCapacity = 32,
 
             },
-            new ExpectedTestData {
+            new ExpectedPlcInformationData {
 
                 PLCName = "FPX-H C14R",
                 PLCIP = "192.168.115.212",
                 PLCPort = 9094,
-                Type = CpuType.FP_Sigma_X_H_30K_60K_120K,
+                Type = PlcType.FPdXH_16k__C14R,
                 ProgCapacity = 16,
 
             },
 
         };
 
-        public TestLivePLC (ITestOutputHelper output) {
+        private List<RegisterReadWriteTest> testRegisterRW = new() {
+
+            new RegisterReadWriteTest {
+                TargetRegister = new BoolRegister(IOType.R, 0xA, 10),
+                RegisterPlcAddressName = "R10A",
+                IntialValue = false,
+                AfterWriteValue = true,
+            },
+            new RegisterReadWriteTest {
+                TargetRegister = new NumberRegister<short>(3000),
+                RegisterPlcAddressName = "DT3000",
+                IntialValue = (short)0,
+                AfterWriteValue = (short)-513,
+            },
+
+        };
+
+        public TestLivePLC(ITestOutputHelper output) {
 
             this.output = output;
 
-            Logger.LogLevel = LogLevel.Verbose;
-            Logger.OnNewLogMessage((d,m) => {
+            Logger.LogLevel = LogLevel.Critical;
+            Logger.OnNewLogMessage((d, l, m) => {
 
                 output.WriteLine($"Mewtocol Logger: {d} {m}");
 
             });
-        
+
         }
 
         [Fact(DisplayName = "Connection cycle client to PLC")]
-        public async void TestClientConnection () {
+        public async void TestClientConnection() {
 
-            foreach (var plc in testData) {
+            foreach (var plc in testPlcInformationData) {
 
                 output.WriteLine($"Testing: {plc.PLCName}");
 
-                var cycleClient = new MewtocolInterface(plc.PLCIP, plc.PLCPort);
+                var cycleClient = Mewtocol.Ethernet(plc.PLCIP, plc.PLCPort);
 
                 await cycleClient.ConnectAsync();
 
@@ -72,13 +88,13 @@ namespace MewtocolTests {
         }
 
         [Fact(DisplayName = "Reading basic information from PLC")]
-        public async void TestClientReadPLCStatus () {
+        public async void TestClientReadPLCStatus() {
 
-            foreach (var plc in testData) {
+            foreach (var plc in testPlcInformationData) {
 
                 output.WriteLine($"Testing: {plc.PLCName}\n");
 
-                var client = new MewtocolInterface(plc.PLCIP, plc.PLCPort);
+                var client = Mewtocol.Ethernet(plc.PLCIP, plc.PLCPort);
 
                 await client.ConnectAsync();
 
@@ -86,8 +102,8 @@ namespace MewtocolTests {
 
                 Assert.True(client.IsConnected);
 
-                Assert.Equal(client.PlcInfo.CpuInformation.Cputype, plc.Type);
-                Assert.Equal(client.PlcInfo.CpuInformation.ProgramCapacity, plc.ProgCapacity);
+                Assert.Equal(client.PlcInfo.TypeCode, plc.Type);
+                Assert.Equal(client.PlcInfo.ProgramCapacity, plc.ProgCapacity);
 
                 client.Disconnect();
 
@@ -95,19 +111,43 @@ namespace MewtocolTests {
 
         }
 
-    }
+        [Fact(DisplayName = "Reading basic information from PLC")]
+        public async void TestRegisterReadWriteAsync() {
 
-    public class ExpectedTestData {
+            foreach (var plc in testPlcInformationData) {
 
-        public string PLCName { get; set; }
+                output.WriteLine($"Testing: {plc.PLCName}\n");
 
-        public string PLCIP { get; set; }
+                var client = Mewtocol.Ethernet(plc.PLCIP, plc.PLCPort);
 
-        public int PLCPort { get; set; }
+                foreach (var testRW in testRegisterRW) {
 
-        public CpuType Type { get; set; } 
+                    client.AddRegister(testRW.TargetRegister);
 
-        public int ProgCapacity { get; set; }   
+                }
+
+                await client.ConnectAsync();
+                Assert.True(client.IsConnected);
+
+                foreach (var testRW in testRegisterRW) {
+
+                    var testRegister = client.Registers.First(x => x.PLCAddressName == testRW.RegisterPlcAddressName);
+
+                    //test inital val
+                    Assert.Equal(testRW.IntialValue, testRegister.Value);
+
+                    await testRegister.WriteAsync(testRW.AfterWriteValue);
+
+                    //test after write val
+                    Assert.Equal(testRW.AfterWriteValue, testRegister.Value);
+
+                }
+
+                client.Disconnect();
+
+            }
+
+        }
 
     }
 

@@ -1,10 +1,7 @@
-using Xunit;
-
 using MewtocolNet;
-using MewtocolNet.Registers;
-using Xunit.Abstractions;
-using MewtocolNet.Links;
 using System.Collections;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace MewtocolTests {
 
@@ -12,12 +9,12 @@ namespace MewtocolTests {
 
         private readonly ITestOutputHelper output;
 
-        public TestHelperExtensions (ITestOutputHelper output) {
+        public TestHelperExtensions(ITestOutputHelper output) {
             this.output = output;
         }
 
         [Fact(DisplayName = nameof(MewtocolHelpers.ToBitString))]
-        public void ToBitStringGeneration () {
+        public void ToBitStringGeneration() {
 
             var bitarr = new BitArray(16);
             bitarr[2] = true;
@@ -31,7 +28,7 @@ namespace MewtocolTests {
         }
 
         [Fact(DisplayName = nameof(MewtocolHelpers.ToHexString))]
-        public void ToHexStringGeneration () {
+        public void ToHexStringGeneration() {
 
             var bytes = new byte[6] {
                 0x10,
@@ -46,8 +43,8 @@ namespace MewtocolTests {
 
         }
 
-        [Fact(DisplayName = nameof(MewtocolHelpers.ToHexASCIIBytes))]
-        public void ToHexASCIIBytesGeneration () {
+        [Fact(DisplayName = nameof(MewtocolHelpers.BytesFromHexASCIIString))]
+        public void ToHexASCIIBytesGeneration() {
 
             string test = "Hello, world!";
 
@@ -65,12 +62,12 @@ namespace MewtocolTests {
                 0x4C,
                 0x44,
                 0x21
-            }, test.ToHexASCIIBytes());
+            }, test.BytesFromHexASCIIString());
 
         }
 
         [Fact(DisplayName = nameof(MewtocolHelpers.BuildBCCFrame))]
-        public void BuildBCCFrameGeneration () {
+        public void BuildBCCFrameGeneration() {
 
             string test = "%01#RCSX0000";
             string expect = "%01#RCSX00001D";
@@ -80,7 +77,7 @@ namespace MewtocolTests {
         }
 
         [Fact(DisplayName = nameof(MewtocolHelpers.ParseDTByteString))]
-        public void ParseDTByteStringGeneration () {
+        public void ParseDTByteStringGeneration() {
 
             var testList = new List<string>() {
                 "1112",
@@ -97,7 +94,7 @@ namespace MewtocolTests {
         }
 
         [Fact(DisplayName = nameof(MewtocolHelpers.ParseRCSingleBit))]
-        public void ParseRCSingleBitGeneration () {
+        public void ParseRCSingleBitGeneration() {
 
             Assert.True($"%01$RC1".BuildBCCFrame().ParseRCSingleBit());
             Assert.False($"%01$RC0".BuildBCCFrame().ParseRCSingleBit());

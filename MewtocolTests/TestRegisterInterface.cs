@@ -1,7 +1,6 @@
-using Xunit;
-
 using MewtocolNet;
 using MewtocolNet.Registers;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace MewtocolTests {
@@ -10,36 +9,40 @@ namespace MewtocolTests {
 
         private readonly ITestOutputHelper output;
 
-        public TestRegisterInterface (ITestOutputHelper output) {
+        public TestRegisterInterface(ITestOutputHelper output) {
             this.output = output;
         }
 
         [Fact(DisplayName = "Numeric mewtocol query building")]
-        public void NumericRegisterMewtocolIdentifiers () {
+        public void NumericRegisterMewtocolIdentifiers() {
 
-            List<IRegister> registers = new List<IRegister> {
-                new NRegister<short>(50, _name: null),
-                new NRegister<ushort>(50, _name: null),
-                new NRegister<int>(50, _name : null),
-                new NRegister<uint>(50, _name : null),
-                new NRegister<float>(50, _name : null),
-                new NRegister<TimeSpan>(50, _name : null),
+            List<IRegisterInternal> registers = new List<IRegisterInternal> {
+                new NumberRegister<short>(50),
+                new NumberRegister<ushort>(50),
+                new NumberRegister<int>(50),
+                new NumberRegister<uint>(50),
+                new NumberRegister<float>(50),
+                new NumberRegister<TimeSpan>(50),
+                new BytesRegister(50, 30),
+                new BytesRegister(50, 31),
             };
 
-            List<string> expcectedIdents = new List<string> {
+            List<string> expectedIdents = new List<string> {
                 "D0005000050", //single word register
                 "D0005000050", //single word register
                 "D0005000051", //double word register
                 "D0005000051", //double word register
                 "D0005000051", //double word register
                 "D0005000051", //double word register
+                "D0005000064", //variable len register even bytes
+                "D0005000065", //variable len register odd bytes
             };
 
             //test mewtocol idents
             for (int i = 0; i < registers.Count; i++) {
 
-                IRegister? reg = registers[i];
-                string expect = expcectedIdents[i];
+                IRegisterInternal? reg = registers[i];
+                string expect = expectedIdents[i];
 
                 Assert.Equal(expect, reg.BuildMewtocolQuery());
 
@@ -48,41 +51,56 @@ namespace MewtocolTests {
         }
 
         [Fact(DisplayName = "PLC register naming convention test")]
-        public void PLCRegisterIdentifiers () {
+        public void PLCRegisterIdentifiers() {
 
-            List<IRegister> registers = new List<IRegister> {
+            List<IRegisterInternal> registers = new List<IRegisterInternal> {
                 //numeric ones
-                new NRegister<short>(50, _name: null),
-                new NRegister<ushort>(60, _name : null),
-                new NRegister<int>(70, _name : null),
-                new NRegister<uint>(80, _name : null),
-                new NRegister<float>(90, _name : null),
-                new NRegister<TimeSpan>(100, _name : null),
+                new NumberRegister<short>(50, _name: null),
+                new NumberRegister<ushort>(60, _name : null),
+                new NumberRegister<int>(70, _name : null),
+                new NumberRegister<uint>(80, _name : null),
+                new NumberRegister<float>(90, _name : null),
+                new NumberRegister<TimeSpan>(100, _name : null),
+                
                 //boolean
-                new BRegister(100),
-                new BRegister(5, RegisterType.X),
-                new BRegister(SpecialAddress.A, RegisterType.X),
+                new BoolRegister(IOType.R, 0, 100),
+                new BoolRegister(IOType.R, 0, 0),
+                new BoolRegister(IOType.X, 5),
+                new BoolRegister(IOType.X, 0xA),
+                new BoolRegister(IOType.X, 0xF, 109),
+                new BoolRegister(IOType.Y, 0xC, 75),
+
                 //string
-                new SRegister(999, 5),
+                new BytesRegister(999, 5),
             };
 
             List<string> expcectedIdents = new List<string> {
+                
+                //numeric ones
                 "DT50",
                 "DT60",
                 "DDT70",
-                "DDT80", 
-                "DDT90", 
+                "DDT80",
+                "DDT90",
                 "DDT100",
+
+                //boolean
                 "R100",
+                "R0",
                 "X5",
                 "XA",
+                "X109F",
+                "Y75C",
+
+                 //string
                 "DT999"
+
             };
 
             //test mewtocol idents
             for (int i = 0; i < registers.Count; i++) {
 
-                IRegister? reg = registers[i];
+                IRegisterInternal? reg = registers[i];
                 string expect = expcectedIdents[i];
 
                 Assert.Equal(expect, reg.GetRegisterPLCName());
@@ -92,11 +110,11 @@ namespace MewtocolTests {
         }
 
         [Fact(DisplayName = "Non allowed (Overflow address)")]
-        public void OverFlowRegisterAddress () {
+        public void OverFlowRegisterAddress() {
 
             var ex = Assert.Throws<NotSupportedException>(() => {
 
-                new NRegister<short>(100000, _name: null);
+                new NumberRegister<short>(100000, _name: null);
 
             });
 
@@ -104,7 +122,7 @@ namespace MewtocolTests {
 
             var ex1 = Assert.Throws<NotSupportedException>(() => {
 
-                new BRegister(100000);
+                new BoolRegister(IOType.R, _areaAdress: 512);
 
             });
 
@@ -112,46 +130,28 @@ namespace MewtocolTests {
 
             var ex2 = Assert.Throws<NotSupportedException>(() => {
 
-                new SRegister(100000, 5);
+                new BoolRegister(IOType.X, _areaAdress: 110);
 
             });
 
             output.WriteLine(ex2.Message.ToString());
 
+            var ex3 = Assert.Throws<NotSupportedException>(() => {
+
+                new BytesRegister(100000, 5);
+
+            });
+
+            output.WriteLine(ex3.Message.ToString());
+
         }
 
         [Fact(DisplayName = "Non allowed (Wrong data type)")]
-        public void WrongDataTypeRegister () {
+        public void WrongDataTypeRegister() {
 
             var ex = Assert.Throws<NotSupportedException>(() => {
 
-                new NRegister<double>(100, _name: null);
-
-            });
-
-            output.WriteLine(ex.Message.ToString());
-
-        }
-
-        [Fact(DisplayName = "Non allowed (Wrong bool type address)")]
-        public void WrongDataTypeRegisterBool1 () {
-
-            var ex = Assert.Throws<NotSupportedException>(() => {
-
-                new BRegister(100, RegisterType.DDT_int);
-
-            });
-
-            output.WriteLine(ex.Message.ToString());
-
-        }
-
-        [Fact(DisplayName = "Non allowed (Wrong bool special address)")]
-        public void WrongDataTypeRegisterBool2 () {
-
-            var ex = Assert.Throws<NotSupportedException>(() => {
-
-                new BRegister(SpecialAddress.None, RegisterType.X);
+                new NumberRegister<double>(100, _name: null);
 
             });
 

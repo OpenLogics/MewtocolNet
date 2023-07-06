@@ -1,9 +1,6 @@
-using Xunit;
-
 using MewtocolNet;
-using MewtocolNet.Registers;
+using Xunit;
 using Xunit.Abstractions;
-using MewtocolNet.Links;
 
 namespace MewtocolTests {
 
@@ -11,12 +8,12 @@ namespace MewtocolTests {
 
         private readonly ITestOutputHelper output;
 
-        public TestLinkedLists (ITestOutputHelper output) {
+        public TestLinkedLists(ITestOutputHelper output) {
             this.output = output;
         }
 
         [Fact(DisplayName = "Linked error list")]
-        public void NumericRegisterMewtocolIdentifiers () {
+        public void NumericRegisterMewtocolIdentifiers() {
 
             var expectedData = new Dictionary<int, string> {
 
@@ -53,7 +50,7 @@ namespace MewtocolTests {
 
             };
 
-            Assert.Equal(expectedData, LinkedData.ErrorCodes);
+            Assert.Equal(expectedData, CodeDescriptions.Error);
 
         }
 

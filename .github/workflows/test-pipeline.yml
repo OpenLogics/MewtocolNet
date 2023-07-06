@@ -9,31 +9,15 @@ on:
             required: false
             type: string
     push:
-      branches:
-        - main
-        - master
       paths-ignore:
         - '**.md'
 
 permissions: write-all      
 jobs:
-  
-  #Check the online status of the test PLCs first
-  check-plcs-online: 
-    name: 'Test PLC online status'
-    runs-on: [self-hosted, linux, x64, womed-local-linux]
-    steps:
-      - name: 'Ping FPX-H-C30T'
-        run: ping 192.168.115.210 -w 5
-      - name: 'Ping FPX-H-C14R'
-        run: ping 192.168.115.212 -w 5
-      - name: 'Ping FPX-C30T'
-        run: ping 192.168.115.213 -w 5
 
   #Run unit tests on the test PLCs
   run-unit-tests:
-    name: 'Run unit tests'
-    needs: check-plcs-online
+    name: 'Run tests and documentation'
     runs-on: [self-hosted, linux, x64, womed-local-linux]
     steps:
       - uses: actions/checkout@v3
@@ -44,58 +28,44 @@ jobs:
           dotnet-version: '6.0.x'
 
       - name: 'Run tests'
-        run: |
-          cd './MewtocolTests'
-          dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/coverage.opencover.xml
-          cd ../
+        run: dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=../Builds/TestResults/coverage.opencover.xml
 
       - name: Report Generator
         uses: danielpalme/ReportGenerator-GitHub-Action@5.1.22
         with:
-            reports: './MewtocolTests/TestResults/coverage.opencover.xml'
-            targetdir: './MewtocolTests/TestResults'
+            reports: './Builds/TestResults/coverage.opencover.xml'
+            targetdir: './Builds/TestResults'
             reporttypes: HtmlSummary;MarkdownSummaryGithub;Badges
-            historydir: './MewtocolTests/Hist'
+            historydir: './Builds/Hist'
             title: Report
     
       - name: Markdown report and copy for badges branch
         run: |
-            cat './MewtocolTests/TestResults/SummaryGithub.md' >> $GITHUB_STEP_SUMMARY
-            cp ./MewtocolTests/TestResults/badge_combined.svg ~/badge_combined.svg
-            cp ./MewtocolTests/TestResults/summary.html ~/summary.html
+            cat './Builds/TestResults/SummaryGithub.md' >> $GITHUB_STEP_SUMMARY
+            cp ./Builds/TestResults/badge_combined.svg ~/badge_combined.svg
+            cp ./Builds/TestResults/summary.html ~/summary.html
             ls -l ~
-            
-        #Upload to codecov
-      # - name: Upload coverage reports to Codecov
-      #  uses: codecov/codecov-action@v3
-      #  env: 
-      #      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-      #- uses: actions/upload-artifact@v3
-      #  with:
-      #      name: test-results
-      #      path: ./MewtocolTests/TestResults/
-
+          
       - name: Cache test results
         if: ${{ github.event_name == 'workflow_call' }}
         uses: actions/cache/save@v3
         with:
-          key: ${{ inputs.cache-id }}
+          key: ${{ inputs.cache-id }}-${{ GITHUB_REF##*/ }}
           path: |
-            ${{ github.workspace }}/MewtocolTests/TestResults
+            ${{ github.workspace }}/Builds/TestResults
             
       - name: Commit badge
         continue-on-error: true
         run: |
             git fetch
             git checkout badges
-            cp ~/summary.html ./MewtocolTests/TestResults/summary.html
-            cp ~/badge_combined.svg ./MewtocolTests/TestResults/badge_combined.svg
+            cp ~/summary.html ./Builds/TestResults/summary_${{ GITHUB_REF##*/ }}.html
+            cp ~/badge_combined.svg ./Builds/TestResults/badge_combined_${{ GITHUB_REF##*/ }}.svg
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
-            git add "./MewtocolTests/TestResults/badge_combined.svg" -f
-            git add "./MewtocolTests/TestResults/summary.html" -f
-            git commit -m "Add/Update badge"
+            git add "./Builds/TestResults/badge_combined_${{ GITHUB_REF##*/ }}.svg" -f
+            git add "./Builds/TestResults/summary_${{ GITHUB_REF##*/ }}.html" -f
+            git commit -m "Add/Update badge for branch ${{ GITHUB_REF##*/ }}"
             
       - name: Push badge commit
         uses: ad-m/github-push-action@master
