@@ -17,8 +17,19 @@ Console.WriteLine("Building docs for PLC types...");
 var entryLoc = Assembly.GetEntryAssembly();
 ArgumentNullException.ThrowIfNull(entryLoc);
 
-string filePath = Path.Combine(entryLoc.Location, @"..\..\..\..\Docs\plctypes.md");
-Console.WriteLine($"{filePath}");   
+string filePath = null!; 
+
+if(args.Length == 0) {
+
+    filePath = Path.Combine(entryLoc.Location, @"..\..\..\..\Docs\plctypes.md");
+    
+} else {
+
+    filePath = args[0]; 
+
+}
+
+Console.WriteLine($"{filePath}");
 
 StringBuilder markdownBuilder = new StringBuilder(); 
 
