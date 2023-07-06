@@ -9,6 +9,8 @@ on:
             required: false
             type: string
     push:
+      branches-ignore:
+        - badges
       paths-ignore:
         - '**.md'
 
