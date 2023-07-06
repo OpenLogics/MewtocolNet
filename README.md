@@ -1,7 +1,7 @@
 [![Publish pipeline](https://github.com/WOmed/MewtocolNet/actions/workflows/publish-pipeline.yml/badge.svg)](https://github.com/WOmed/MewtocolNet/actions/workflows/publish-pipeline.yml)
 [![Test pipeline](https://github.com/WOmed/MewtocolNet/actions/workflows/test-pipeline.yml/badge.svg)](https://github.com/WOmed/MewtocolNet/actions/workflows/test-pipeline.yml)
 [![GitHub tag](https://img.shields.io/github/v/tag/WOmed/MewtocolNet?label=Package%20Version)](https://github.com/WOmed/MewtocolNet/pkgs/nuget/Mewtocol.NET)
-[![gencov](https://github.com/WOmed/MewtocolNet/blob/badges/Builds/TestResults/badge_combined_master.svg)](https://htmlpreview.github.io/?https://github.com/WOmed/MewtocolNet/blob/badges/MewtocolTests/TestResults/summary.html)
+[![gencov](https://github.com/WOmed/MewtocolNet/blob/badges/Builds/TestResults/badge_combined_master.svg)](https://htmlpreview.github.io/?https://github.com/WOmed/MewtocolNet/blob/badges/Builds/TestResults/summary_master.html)
 ![GitHub](https://img.shields.io/github/license/WOmed/MewtocolNet?label=License)
 ![Status](https://img.shields.io/badge/Status-In%20dev-orange)
 
@@ -37,13 +37,7 @@ For a full list of supported .NET clrs see [this page](https://docs.microsoft.co
 > This library was only tested with a few PLCs, other types that support the Panasonic Mewtocol protocol might work. 
 > Use at your own risk, others might follow with community feedback
 
-|PLC Type|Supported|Tested|
-|--------|---------|------|
-FPX C14  |✔        |✔   |
-FPX C30  |✔        |✔   |
-FPX-H C14|✔        |✔   |
-FPX-H C30|✔        |✔   |
-FP Sigma |✔        |❌  |
+For a **Support List** check [this table](DocBuilder/Docs/plctypes.md)
 
 Where is the RS232/Serial support?
 
