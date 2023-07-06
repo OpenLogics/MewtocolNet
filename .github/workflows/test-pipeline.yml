@@ -40,11 +40,11 @@ jobs:
         run: dotnet test "./MewtocolTests" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=../Builds/TestResults/coverage.opencover.xml
 
       - name: 'Run docbuilder'
-        if: always()
+        continue-on-error: true
         run: dotnet run --project "./DocBuilder/DocBuilder.csproj" "./DocBuilder/Docs/plctypes.md"
 
       - name: 'Commit generated docs to branch'
-        if: always()
+        continue-on-error: true
         run: |
             git fetch
             git checkout ${{ steps.extract_branch.outputs.branch }}
@@ -55,7 +55,7 @@ jobs:
 
       - name: 'Push docs commit'
         uses: ad-m/github-push-action@master
-        if: ${{ success() }}
+        continue-on-error: true
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ steps.extract_branch.outputs.branch }}
