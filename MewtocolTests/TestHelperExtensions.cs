@@ -66,16 +66,6 @@ namespace MewtocolTests {
 
         }
 
-        [Fact(DisplayName = nameof(MewtocolHelpers.BuildBCCFrame))]
-        public void BuildBCCFrameGeneration() {
-
-            string test = "%01#RCSX0000";
-            string expect = "%01#RCSX00001D";
-
-            Assert.Equal(expect, test.BuildBCCFrame());
-
-        }
-
         [Fact(DisplayName = nameof(MewtocolHelpers.ParseDTByteString))]
         public void ParseDTByteStringGeneration() {
 
@@ -87,7 +77,7 @@ namespace MewtocolTests {
 
             foreach (var item in testList) {
 
-                Assert.Equal(item, $"%01$RD{item}".BuildBCCFrame().ParseDTByteString());
+                Assert.Equal(item, $"%01$RD{item}".BCC_Mew().ParseDTByteString());
 
             }
 
@@ -96,8 +86,8 @@ namespace MewtocolTests {
         [Fact(DisplayName = nameof(MewtocolHelpers.ParseRCSingleBit))]
         public void ParseRCSingleBitGeneration() {
 
-            Assert.True($"%01$RC1".BuildBCCFrame().ParseRCSingleBit());
-            Assert.False($"%01$RC0".BuildBCCFrame().ParseRCSingleBit());
+            Assert.True($"%01$RC1".BCC_Mew().ParseRCSingleBit());
+            Assert.False($"%01$RC0".BCC_Mew().ParseRCSingleBit());
 
         }
 

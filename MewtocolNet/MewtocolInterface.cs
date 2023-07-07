@@ -39,6 +39,8 @@ namespace MewtocolNet {
         private protected Stopwatch speedStopwatchDownstr;
         private protected Task firstPollTask = new Task(() => { });
 
+        private protected MewtocolVersion mewtocolVersion;
+
         #endregion
 
         #region Internal fields 
@@ -111,6 +113,15 @@ namespace MewtocolNet {
             get { return bytesPerSecondDownstream; }
             private protected set {
                 bytesPerSecondDownstream = value;
+                OnPropChange();
+            }
+        }
+
+        /// <inheritdoc/>
+        public MewtocolVersion MewtocolVersion {
+            get => mewtocolVersion;
+            private protected set {
+                mewtocolVersion = value;
                 OnPropChange();
             }
         }
@@ -213,7 +224,7 @@ namespace MewtocolNet {
                 if (stream == null) return MewtocolFrameResponse.NotIntialized;
 
                 if (useBcc)
-                    frame = $"{frame.BuildBCCFrame()}";
+                    frame = $"{frame.BCC_Mew()}";
 
                 if (useCr)
                     frame = $"{frame}\r";

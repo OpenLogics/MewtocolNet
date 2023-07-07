@@ -8,7 +8,7 @@ namespace MewtocolNet {
     //MISSING! FP7 and EcoLogix
 
     /// <summary>
-    /// The type of the PLC
+    /// The type of the PLC, only appliable for non Mewtocol7-Com PLCs
     /// </summary>
     public enum PlcType {
 

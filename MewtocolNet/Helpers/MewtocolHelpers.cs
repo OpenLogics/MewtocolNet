@@ -95,22 +95,6 @@ namespace MewtocolNet {
         }
 
         /// <summary>
-        /// Builds the BCC / Checksum for the mewtocol command
-        /// </summary>
-        /// <param name="asciiArr">The mewtocol command (%01#RCS0001)</param>
-        /// <returns>The mewtocol command with the appended checksum</returns>
-        public static string BuildBCCFrame(this string asciiArr) {
-
-            Encoding ae = Encoding.ASCII;
-            byte[] b = ae.GetBytes(asciiArr);
-            byte xorTotalByte = 0;
-            for (int i = 0; i < b.Length; i++)
-                xorTotalByte ^= b[i];
-            return asciiArr.Insert(asciiArr.Length, xorTotalByte.ToString("X2"));
-
-        }
-
-        /// <summary>
         /// Parses the byte string from a incoming RD message
         /// </summary>
         internal static string ParseDTByteString(this string _onString, int _blockSize = 4) {
