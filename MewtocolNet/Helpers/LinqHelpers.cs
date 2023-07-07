@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace MewtocolNet.Helpers {
+namespace MewtocolNet {
 
     internal static class LinqHelpers {
 
