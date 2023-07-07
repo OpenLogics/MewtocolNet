@@ -8,7 +8,8 @@ namespace MewtocolNet {
     //MISSING! FP7 and EcoLogix
 
     /// <summary>
-    /// The type of the PLC, only appliable for non Mewtocol7-Com PLCs
+    /// The type of the PLC. Plcs that don't use the Mewtocol-7-Com protocol have only 2 hex digits,
+    /// All newer ones have 4 hex digits where the first byte defines the series type
     /// </summary>
     public enum PlcType {
 
@@ -314,6 +315,49 @@ namespace MewtocolNet {
         /// </summary>
         [PlcEXRT]
         FP0H_32k__C32ETsEP = 0xB1,
+
+        #endregion
+
+        #region FP7 Family
+
+        /// <summary>
+        /// FP7 CPS41E (Series code 7)
+        /// </summary>
+        FP7_196k__CPS41E = 0x0703,
+        /// <summary>
+        /// FP7 CPS31E (Series code 7)
+        /// </summary>
+        FP7_120k__CPS31E = 0x0704,
+        /// <summary>
+        /// FP7 CPS31 (Series code 7)
+        /// </summary>
+        FP7_120k__CPS31 = 0x0705,
+        /// <summary>
+        /// FP7 CPS41ES (Series code 7)
+        /// </summary>
+        FP7_196k__CPS41ES = 0x0706,
+        /// <summary>
+        /// FP7 CPS31ES (Series code 7)
+        /// </summary>
+        FP7_120k__CPS31ES = 0x0707,
+        /// <summary>
+        /// FP7 CPS31S (Series code 7)
+        /// </summary>
+        FP7_120k__CPS31S = 0x0708,
+        /// <summary>
+        /// FP7 CPS21 (Series code 7)
+        /// </summary>
+        FP7_64k__CPS21 = 0x0709,
+
+        #endregion
+
+        #region EcoLogicX Family
+
+        /// <summary>
+        /// EcoLogiX (Series code 7)
+        /// </summary>
+        [PlcLegacy]
+        ECOLOGIX_0k__ELC500 = 0x0710,
 
         #endregion
 

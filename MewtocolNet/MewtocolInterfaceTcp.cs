@@ -1,22 +1,9 @@
 using MewtocolNet.Exceptions;
 using MewtocolNet.Logging;
-using MewtocolNet.Queue;
 using MewtocolNet.RegisterAttributes;
-using MewtocolNet.Registers;
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.ComponentModel.Design;
-using System.Diagnostics;
-using System.IO;
-using System.IO.Ports;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace MewtocolNet {

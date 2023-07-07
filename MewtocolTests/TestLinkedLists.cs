@@ -2,6 +2,8 @@ using MewtocolNet;
 using Xunit;
 using Xunit.Abstractions;
 
+using MewtocolNet.Helpers;
+
 namespace MewtocolTests {
 
     public class TestLinkedLists {

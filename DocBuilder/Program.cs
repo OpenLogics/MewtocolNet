@@ -63,7 +63,7 @@ void WritePlcTypeTable(IEnumerable<PlcType> vals) {
 
             decomposed = enu.ToNameDecompose();
 
-            cpuOrMachCode = ((int)enu).ToString("X2");
+            cpuOrMachCode = ((int)enu).ToString("X4");
             ArgumentNullException.ThrowIfNull(decomposed);
 
             //first iteration
@@ -146,6 +146,5 @@ markdownBuilder.AppendLine($"> <b>EXRT PLCs</b><br>");
 markdownBuilder.AppendLine($"> These are PLCs that utilize the basic `%EE#RT` and `%EE#EX00RT` command. All newer models do this. Old models only use the `%EE#RT` command.\n");
 
 WritePlcTypeTable(plcs);
-
 
 File.WriteAllText(filePath, markdownBuilder.ToString());

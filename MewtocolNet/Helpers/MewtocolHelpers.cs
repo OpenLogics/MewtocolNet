@@ -305,7 +305,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Converts the enum to a plc name string
         /// </summary>
-        public static string ToName(this PlcType plcT) {
+        public static string ToName (this PlcType plcT) {
 
             if (plcT == 0) return "Unknown";
 
@@ -316,11 +316,11 @@ namespace MewtocolNet {
         /// <summary>
         /// Converts the enum to a decomposed <see cref="ParsedPlcName"/> struct
         /// </summary>
-        public static ParsedPlcName[] ToNameDecompose (this PlcType legacyT) {
+        public static ParsedPlcName[] ToNameDecompose (this PlcType plcT) {
 
-            if ((int)legacyT == 0) return Array.Empty<ParsedPlcName>();
+            if ((int)plcT == 0) return Array.Empty<ParsedPlcName>();
 
-            return ParsedPlcName.PlcDeconstruct(legacyT);
+            return ParsedPlcName.PlcDeconstruct(plcT);
 
         }
 
