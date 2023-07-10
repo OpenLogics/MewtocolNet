@@ -6,7 +6,7 @@
 
         public string hardFailReason;
 
-        public RegisterBuilderStep stepData;
+        public BuilderStep stepData;
 
     }
 

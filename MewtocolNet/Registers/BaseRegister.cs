@@ -13,10 +13,10 @@ namespace MewtocolNet.Registers {
         public event Action<object> ValueChanged;
 
         internal MewtocolInterface attachedInterface;
-        internal object lastValue;
+        internal object lastValue = null;
         internal Type collectionType;
         internal string name;
-        internal int memoryAddress;
+        internal uint memoryAddress;
 
         /// <inheritdoc/>
         public MewtocolInterface AttachedInterface => attachedInterface;
@@ -34,18 +34,16 @@ namespace MewtocolNet.Registers {
         public string Name => name;
 
         /// <inheritdoc/>
-        public string PLCAddressName => GetRegisterPLCName();
+        public string PLCAddressName => GetMewName();
 
         /// <inheritdoc/>
-        public int MemoryAddress => memoryAddress;
+        public uint MemoryAddress => memoryAddress;
 
         #region Trigger update notify
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        internal void TriggerChangedEvnt(object changed) => ValueChanged?.Invoke(changed);
-
-        public void TriggerNotifyChange() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Value"));
+        public void TriggerNotifyChange() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
 
         #endregion
 
@@ -53,9 +51,14 @@ namespace MewtocolNet.Registers {
 
         public virtual void SetValueFromPLC(object val) {
 
-            lastValue = val;
-            TriggerChangedEvnt(this);
-            TriggerNotifyChange();
+            if(lastValue?.ToString() != val?.ToString()) {
+
+                lastValue = val;
+
+                TriggerNotifyChange();
+                attachedInterface.InvokeRegisterChanged(this);
+
+            }
 
         }
 
@@ -90,7 +93,11 @@ namespace MewtocolNet.Registers {
 
         public virtual string GetContainerName() => $"{(CollectionType != null ? $"{CollectionType.Name}" : "")}";
 
-        public virtual string GetRegisterPLCName() => $"{GetRegisterString()}{MemoryAddress}";
+        public virtual string GetMewName() => $"{GetRegisterString()}{MemoryAddress}";
+
+        public virtual uint GetRegisterAddressLen() => throw new NotImplementedException();
+
+        public string GetRegisterWordRangeString() => $"{GetMewName()} - {MemoryAddress + GetRegisterAddressLen() - 1}"; 
 
         #endregion
 
@@ -102,14 +109,24 @@ namespace MewtocolNet.Registers {
 
         #endregion
 
-        public override string ToString() => $"{GetRegisterPLCName()}{(Name != null ? $" ({Name})" : "")} - Value: {GetValueString()}";
+        protected virtual void CheckAddressOverflow (uint addressStart, uint addressLen) {
+
+            if (addressStart < 0)
+                throw new NotSupportedException("The area address can't be negative");
+
+            if (addressStart + addressLen > 99999)
+                throw new NotSupportedException($"Memory adresses cant be greater than 99999 (DT{addressStart}-{addressStart + addressLen})");
+
+        }
+
+        public override string ToString() => $"{GetMewName()}{(Name != null ? $" ({Name})" : "")} - Value: {GetValueString()}";
 
         public virtual string ToString(bool additional) {
 
             if (!additional) return this.ToString();
 
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine($"PLC Naming: {GetRegisterPLCName()}");
+            sb.AppendLine($"PLC Naming: {GetMewName()}");
             sb.AppendLine($"Name: {Name ?? "Not named"}");
             sb.AppendLine($"Value: {GetValueString()}");
             sb.AppendLine($"Register Type: {RegisterType}");

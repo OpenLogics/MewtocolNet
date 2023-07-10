@@ -64,12 +64,8 @@ namespace MewtocolNet {
 
         #region Operation mode changing 
 
-        /// <summary>
-        /// Changes the PLCs operation mode to the given one
-        /// </summary>
-        /// <param name="mode">The mode to change to</param>
-        /// <returns>The success state of the write operation</returns>
-        public async Task<bool> SetOperationMode (bool setRun) {
+        /// <inheritdoc/>
+        public async Task<bool> SetOperationModeAsync (bool setRun) {
 
             string modeChar = setRun ? "R" : "P";
 
@@ -77,7 +73,7 @@ namespace MewtocolNet {
             var result = await SendCommandAsync(requeststring);
 
             if (result.Success) {
-                Logger.Log($"operation mode was changed to {(setRun ? "Run" : "Prog")}", LogLevel.Info, this);
+                Logger.Log($"Operation mode was changed to {(setRun ? "Run" : "Prog")}", LogLevel.Info, this);
             } else {
                 Logger.Log("Operation mode change failed", LogLevel.Error, this);
             }
@@ -116,14 +112,15 @@ namespace MewtocolNet {
         }
 
         /// <summary>
-        /// Reads the bytes from the start adress for counts byte length
+        /// Reads the bytes from the start adress for counts byte length, 
+        /// doesn't block the receive thread
         /// </summary>
         /// <param name="start">Start adress</param>
         /// <param name="count">Number of bytes to get</param>
         /// <param name="flipBytes">Flips bytes from big to mixed endian</param>
         /// <param name="onProgress">Gets invoked when the progress changes, contains the progress as a double</param>
         /// <returns>A byte array or null of there was an error</returns>
-        public async Task<byte[]> ReadByteRange(int start, int count, bool flipBytes = true, Action<double> onProgress = null) {
+        public async Task<byte[]> ReadByteRangeNonBlocking (int start, int count, bool flipBytes = true, Action<double> onProgress = null) {
 
             var byteList = new List<byte>();
 
@@ -131,12 +128,13 @@ namespace MewtocolNet {
             if (count % 2 != 0)
                 wordLength++;
 
+            int blockSize = 8;
 
             //read blocks of max 4 words per msg
-            for (int i = 0; i < wordLength; i += 8) {
+            for (int i = 0; i < wordLength; i += blockSize) {
 
                 int curWordStart = start + i;
-                int curWordEnd = curWordStart + 7;
+                int curWordEnd = curWordStart + blockSize - 1;
 
                 string startStr = curWordStart.ToString().PadLeft(5, '0');
                 string endStr = (curWordEnd).ToString().PadLeft(5, '0');
@@ -146,7 +144,7 @@ namespace MewtocolNet {
 
                 if (result.Success && !string.IsNullOrEmpty(result.Response)) {
 
-                    var bytes = result.Response.ParseDTByteString(8 * 4).HexStringToByteArray();
+                    var bytes = result.Response.ParseDTByteString(blockSize * 4).HexStringToByteArray();
 
                     if (bytes == null) return null;
 
@@ -246,38 +244,15 @@ namespace MewtocolNet {
             //returns a byte array 1 long and with the byte beeing 0 or 1
             if (toWriteType == typeof(BoolRegister)) {
 
-                string requeststring = $"%{GetStationNumber()}#WCS{_toWrite.BuildMewtocolQuery()}{(data[0] == 1 ? "1" : "0")}";
-                var result = await SendCommandAsync(requeststring);
-                return result.Success;
+                string reqStr = $"%{GetStationNumber()}#WCS{_toWrite.BuildMewtocolQuery()}{(data[0] == 1 ? "1" : "0")}";
+                var res = await SendCommandAsync(reqStr);
+                return res.Success;
 
             }
 
-            //writes a byte array 2 bytes or 4 bytes long depending on the data size
-            if (toWriteType.IsGenericType && toWriteType.GetGenericTypeDefinition() == typeof(NumberRegister<>)) {
-
-                string requeststring = $"%{GetStationNumber()}#WD{_toWrite.BuildMewtocolQuery()}{data.ToHexString()}";
-                var result = await SendCommandAsync(requeststring);
-                return result.Success;
-
-            }
-
-            //returns a byte array with variable size
-            if (toWriteType == typeof(BytesRegister)) {
-
-                throw new NotImplementedException("Not imp");
-
-            }
-
-            //writes to the string area
-            if (toWriteType == typeof(StringRegister)) {
-
-                string requeststring = $"%{GetStationNumber()}#WD{_toWrite.BuildMewtocolQuery()}{data.ToHexString()}";
-                var result = await SendCommandAsync(requeststring);
-                return result.Success;
-
-            }
-
-            return false;
+            string requeststring = $"%{GetStationNumber()}#WD{_toWrite.BuildMewtocolQuery()}{data.ToHexString()}";
+            var result = await SendCommandAsync(requeststring);
+            return result.Success;
 
         }
 

@@ -19,13 +19,20 @@ namespace MewtocolNet.Exceptions {
 
         internal static MewtocolException DupeRegister (IRegisterInternal register) {
 
-            return new MewtocolException($"The mewtocol interface already contains this register: {register.GetRegisterPLCName()}");
+            return new MewtocolException($"The mewtocol interface already contains this register: {register.GetMewName()}");
 
         }
 
         internal static MewtocolException DupeNameRegister (IRegisterInternal register) {
 
-            return new MewtocolException($"The mewtocol interface registers already contains a register with the name: {register.GetRegisterPLCName()}");
+            return new MewtocolException($"The mewtocol interface registers already contains a register with the name: {register.GetMewName()}");
+
+        }
+
+        internal static MewtocolException OverlappingRegister (IRegisterInternal registerA, IRegisterInternal registerB) {
+
+            throw new MewtocolException($"The register: {registerA.GetRegisterWordRangeString()} " +
+                        $"has overlapping addresses with: {registerB.GetRegisterWordRangeString()}");
 
         }
 

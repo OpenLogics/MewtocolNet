@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MewtocolNet.Registers;
+using System;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -37,7 +38,7 @@ namespace MewtocolNet {
         /// <summary>
         /// The plc memory address of the register
         /// </summary>
-        int MemoryAddress { get; }
+        uint MemoryAddress { get; }
 
         /// <summary>
         /// Gets the value of the register as the plc representation string
@@ -66,7 +67,6 @@ namespace MewtocolNet {
         /// </summary>
         /// <returns>True if successfully set</returns>
         Task<bool> WriteAsync(object data);
-
 
     }
 

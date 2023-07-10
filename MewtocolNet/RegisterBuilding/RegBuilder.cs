@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
@@ -18,6 +19,7 @@ namespace MewtocolNet.RegisterBuilding {
 
             (x) => TryBuildBoolean(x),
             (x) => TryBuildNumericBased(x),
+            (x) => TryBuildByteRangeBased(x),
 
         };
 
@@ -32,7 +34,7 @@ namespace MewtocolNet.RegisterBuilding {
         public static RegBuilder Factory { get; private set; } = new RegBuilder();
 
 
-        public RegisterBuilderStep FromPlcRegName (string plcAddrName, string name = null) {
+        public BuilderStep FromPlcRegName (string plcAddrName, string name = null) {
 
             foreach (var method in parseMethods) {
 
@@ -45,6 +47,7 @@ namespace MewtocolNet.RegisterBuilding {
 
                     res.stepData.OriginalInput = plcAddrName;
                     res.stepData.forInterface = forInterface;
+
                     return res.stepData;
 
                 } else if(res.state == ParseResultState.FailedHard) {
@@ -77,7 +80,7 @@ namespace MewtocolNet.RegisterBuilding {
             string special = match.Groups["special"].Value;
 
             IOType regType;
-            int areaAdd = 0;
+            uint areaAdd = 0;
             byte specialAdd = 0x0;
 
             //try cast the prefix
@@ -90,7 +93,7 @@ namespace MewtocolNet.RegisterBuilding {
 
             } 
 
-            if(!string.IsNullOrEmpty(area) && !int.TryParse(area, out areaAdd) ) {
+            if(!string.IsNullOrEmpty(area) && !uint.TryParse(area, out areaAdd) ) {
 
                 return new ParseResult {
                     state = ParseResultState.FailedHard,
@@ -102,7 +105,7 @@ namespace MewtocolNet.RegisterBuilding {
             //special address not given
             if(string.IsNullOrEmpty(special) && !string.IsNullOrEmpty(area)) {
 
-                var isAreaInt = int.TryParse(area, NumberStyles.Number, CultureInfo.InvariantCulture, out var areaInt);
+                var isAreaInt = uint.TryParse(area, NumberStyles.Number, CultureInfo.InvariantCulture, out var areaInt);
 
                 if (isAreaInt && areaInt >= 0 && areaInt <= 9) {
 
@@ -142,7 +145,11 @@ namespace MewtocolNet.RegisterBuilding {
 
             return new ParseResult {
                 state = ParseResultState.Success,
-                stepData = new RegisterBuilderStep ((RegisterType)(int)regType, areaAdd, specialAdd),
+                stepData = new BuilderStep {
+                    RegType = (RegisterType)(int)regType,
+                    MemAddress = areaAdd,
+                    SpecialAddress = specialAdd,
+                }
             };
 
         }
@@ -150,7 +157,7 @@ namespace MewtocolNet.RegisterBuilding {
         // one to two word registers
         private static ParseResult TryBuildNumericBased (string plcAddrName) {
 
-            var patternByte = new Regex(@"(?<prefix>DT|DDT)(?<area>[0-9]{1,5})");
+            var patternByte = new Regex(@"^(?<prefix>DT|DDT)(?<area>[0-9]{1,5})$");
 
             var match = patternByte.Match(plcAddrName);
 
@@ -159,12 +166,11 @@ namespace MewtocolNet.RegisterBuilding {
                     state = ParseResultState.FailedSoft
                 };
 
-
             string prefix = match.Groups["prefix"].Value;
             string area = match.Groups["area"].Value;
 
             RegisterType regType;
-            int areaAdd = 0;
+            uint areaAdd = 0;
 
             //try cast the prefix
             if (!Enum.TryParse(prefix, out regType)) {
@@ -176,7 +182,7 @@ namespace MewtocolNet.RegisterBuilding {
 
             }
 
-            if (!string.IsNullOrEmpty(area) && !int.TryParse(area, out areaAdd)) {
+            if (!string.IsNullOrEmpty(area) && !uint.TryParse(area, out areaAdd)) {
 
                 return new ParseResult {
                     state = ParseResultState.FailedHard,
@@ -187,7 +193,76 @@ namespace MewtocolNet.RegisterBuilding {
 
             return new ParseResult {
                 state = ParseResultState.Success,
-                stepData = new RegisterBuilderStep(regType, areaAdd),
+                stepData = new BuilderStep {
+                    RegType = regType,
+                    MemAddress = areaAdd,
+                },
+            };
+
+        }
+
+        // one to two word registers
+        private static ParseResult TryBuildByteRangeBased (string plcAddrName) {
+
+            var split = plcAddrName.Split('-');
+
+            if(split.Length > 2)
+                return new ParseResult {
+                    state = ParseResultState.FailedHard,
+                    hardFailReason = $"Cannot parse '{plcAddrName}', to many delimters '-'"
+                };
+
+            uint[] addresses = new uint[2];
+
+            for (int i = 0; i < split.Length; i++) {
+
+                string addr = split[i];
+                var patternByte = new Regex(@"(?<prefix>DT|DDT)(?<area>[0-9]{1,5})");
+
+                var match = patternByte.Match(addr);
+
+                if (!match.Success)
+                    return new ParseResult {
+                        state = ParseResultState.FailedSoft
+                    };
+
+                string prefix = match.Groups["prefix"].Value;
+                string area = match.Groups["area"].Value;
+
+                RegisterType regType;
+                uint areaAdd = 0;
+
+                //try cast the prefix
+                if (!Enum.TryParse(prefix, out regType) || regType != RegisterType.DT) {
+
+                    return new ParseResult {
+                        state = ParseResultState.FailedHard,
+                        hardFailReason = $"Cannot parse '{plcAddrName}', the prefix is not allowed for word range registers"
+                    };
+
+                }
+
+                if (!string.IsNullOrEmpty(area) && !uint.TryParse(area, out areaAdd)) {
+
+                    return new ParseResult {
+                        state = ParseResultState.FailedHard,
+                        hardFailReason = $"Cannot parse '{plcAddrName}', the area address: '{area}' is wrong"
+                    };
+
+                }
+
+                addresses[i] = areaAdd;
+
+            }
+
+            return new ParseResult {
+                state = ParseResultState.Success,
+                stepData = new BuilderStep {
+                    RegType = RegisterType.DT_BYTE_RANGE,
+                    dotnetVarType = typeof(byte[]),
+                    MemAddress = addresses[0],
+                    MemByteSize = (addresses[1] - addresses[0] + 1) * 2, 
+                }
             };
 
         }

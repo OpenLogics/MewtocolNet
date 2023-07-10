@@ -3,6 +3,7 @@ using MewtocolNet.Logging;
 using MewtocolNet.RegisterBuilding;
 using MewtocolNet.Registers;
 using MewtocolTests.EncapsulatedTests;
+using System.Collections;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -41,14 +42,50 @@ namespace MewtocolTests
             new RegisterReadWriteTest {
                 TargetRegister = new BoolRegister(IOType.R, 0xA, 10),
                 RegisterPlcAddressName = "R10A",
-                IntialValue = false,
+                IntermediateValue = false,
                 AfterWriteValue = true,
             },
             new RegisterReadWriteTest {
                 TargetRegister = new NumberRegister<short>(3000),
                 RegisterPlcAddressName = "DT3000",
-                IntialValue = (short)0,
+                IntermediateValue = (short)0,
                 AfterWriteValue = (short)-513,
+            },
+            new RegisterReadWriteTest {
+                TargetRegister = new NumberRegister<CurrentState>(3001),
+                RegisterPlcAddressName = "DT3001",
+                IntermediateValue = CurrentState.Undefined,
+                AfterWriteValue = CurrentState.State4,
+            },
+            new RegisterReadWriteTest {
+                TargetRegister = new NumberRegister<CurrentState32>(3002),
+                RegisterPlcAddressName = "DDT3002",
+                IntermediateValue = CurrentState32.Undefined,
+                AfterWriteValue = CurrentState32.StateBetween,
+            },
+            new RegisterReadWriteTest {
+                TargetRegister = new NumberRegister<TimeSpan>(3004),
+                RegisterPlcAddressName = "DDT3004",
+                IntermediateValue = TimeSpan.Zero,
+                AfterWriteValue = TimeSpan.FromSeconds(11),
+            },
+            new RegisterReadWriteTest {
+                TargetRegister = new NumberRegister<TimeSpan>(3006),
+                RegisterPlcAddressName = "DDT3006",
+                IntermediateValue = TimeSpan.Zero,
+                AfterWriteValue = PlcFormat.ParsePlcTime("T#50m"),
+            },
+            new RegisterReadWriteTest {
+                TargetRegister = new StringRegister(40),
+                RegisterPlcAddressName = "DT40",
+                IntermediateValue = "Hello",
+                AfterWriteValue = "TestV",
+            },
+            new RegisterReadWriteTest {
+                TargetRegister = RegBuilder.Factory.FromPlcRegName("DT3008").AsBits(5).Build(),
+                RegisterPlcAddressName = "DT3008",
+                IntermediateValue = new BitArray(new bool[] { false, false, false, false, false }),
+                AfterWriteValue = new BitArray(new bool[] { false, true, false, false, false }),
             },
 
         };
@@ -57,16 +94,9 @@ namespace MewtocolTests
 
             this.output = output;
 
-            Logger.LogLevel = LogLevel.Critical;
-            Logger.OnNewLogMessage((d, l, m) => {
-
-                output.WriteLine($"Mewtocol Logger: {d} {m}");
-
-            });
-
         }
 
-        [Fact(DisplayName = "Connection cycle client to PLC")]
+        [Fact(DisplayName = "Connection cycle client to PLC (Ethernet)")]
         public async void TestClientConnection() {
 
             foreach (var plc in testPlcInformationData) {
@@ -87,7 +117,7 @@ namespace MewtocolTests
 
         }
 
-        [Fact(DisplayName = "Reading basic information from PLC")]
+        [Fact(DisplayName = "Reading basic status from PLC (Ethernet)")]
         public async void TestClientReadPLCStatus() {
 
             foreach (var plc in testPlcInformationData) {
@@ -111,41 +141,55 @@ namespace MewtocolTests
 
         }
 
-        [Fact(DisplayName = "Reading basic information from PLC")]
+        [Fact(DisplayName = "Reading / Writing registers from PLC (Ethernet)")]
         public async void TestRegisterReadWriteAsync() {
 
-            foreach (var plc in testPlcInformationData) {
+            Logger.LogLevel = LogLevel.Verbose;
+            Logger.OnNewLogMessage((d, l, m) => {
 
-                output.WriteLine($"Testing: {plc.PLCName}\n");
+                output.WriteLine($"{d:HH:mm:ss:fff} {m}");
 
-                var client = Mewtocol.Ethernet(plc.PLCIP, plc.PLCPort);
+            });
 
-                foreach (var testRW in testRegisterRW) {
+            var plc = testPlcInformationData[0];
 
-                    client.AddRegister(testRW.TargetRegister);
+            output.WriteLine($"\n\n --- Testing: {plc.PLCName} ---\n");
 
-                }
+            var client = Mewtocol.Ethernet(plc.PLCIP, plc.PLCPort);
 
-                await client.ConnectAsync();
-                Assert.True(client.IsConnected);
+            foreach (var testRW in testRegisterRW) {
 
-                foreach (var testRW in testRegisterRW) {
-
-                    var testRegister = client.Registers.First(x => x.PLCAddressName == testRW.RegisterPlcAddressName);
-
-                    //test inital val
-                    Assert.Equal(testRW.IntialValue, testRegister.Value);
-
-                    await testRegister.WriteAsync(testRW.AfterWriteValue);
-
-                    //test after write val
-                    Assert.Equal(testRW.AfterWriteValue, testRegister.Value);
-
-                }
-
-                client.Disconnect();
+                client.AddRegister(testRW.TargetRegister);
 
             }
+
+            await client.ConnectAsync();
+            Assert.True(client.IsConnected);
+
+            //cycle run mode to reset registers to inital
+            await client.SetOperationModeAsync(false);
+            await client.SetOperationModeAsync(true);
+
+            foreach (var testRW in testRegisterRW) {
+
+                var testRegister = client.Registers.First(x => x.PLCAddressName == testRW.RegisterPlcAddressName);
+
+                //test inital val
+                Assert.Null(testRegister.Value);
+
+                await testRegister.ReadAsync();
+
+                Assert.Equal(testRW.IntermediateValue, testRegister.Value);
+
+                await testRegister.WriteAsync(testRW.AfterWriteValue);
+                await testRegister.ReadAsync();
+
+                //test after write val
+                Assert.Equal(testRW.AfterWriteValue, testRegister.Value);
+
+            }
+
+            client.Disconnect();
 
         }
 

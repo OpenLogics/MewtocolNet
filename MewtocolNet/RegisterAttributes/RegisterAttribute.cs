@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MewtocolNet.RegisterBuilding;
+using System;
 
 namespace MewtocolNet.RegisterAttributes {
 
@@ -10,31 +11,39 @@ namespace MewtocolNet.RegisterAttributes {
 
         internal RegisterType? RegisterType;
 
-        internal int MemoryArea = 0;
-        internal int ByteLength = 2;
+        internal uint MemoryArea = 0;
+        internal uint ByteLength = 2;
         internal byte SpecialAddress = 0x0;
 
         internal BitCount BitCount;
         internal int AssignedBitIndex = -1;
 
+        internal string MewAddress = null;
+
+        public RegisterAttribute(string mewAddress) {
+
+            MewAddress = mewAddress;    
+
+        }
+
         /// <summary>
         /// Attribute for string type or numeric registers 
         /// </summary>
         /// <param name="memoryArea">The area in the plcs memory</param>
-        public RegisterAttribute(int memoryArea) {
+        public RegisterAttribute(uint memoryArea) {
 
             MemoryArea = memoryArea;
 
         }
 
-        public RegisterAttribute(int memoryArea, int byteLength) {
+        public RegisterAttribute(uint memoryArea, uint byteLength) {
 
             MemoryArea = memoryArea;
             ByteLength = byteLength;        
 
         }
 
-        public RegisterAttribute(int memoryArea, BitCount bitCount) {
+        public RegisterAttribute(uint memoryArea, BitCount bitCount) {
 
             MemoryArea = memoryArea;
             BitCount = bitCount;
@@ -44,7 +53,7 @@ namespace MewtocolNet.RegisterAttributes {
 
         }
 
-        public RegisterAttribute(int memoryArea, BitCount bitCount, int bitIndex) {
+        public RegisterAttribute(uint memoryArea, BitCount bitCount, int bitIndex) {
 
             MemoryArea = memoryArea;
             BitCount = bitCount;
@@ -68,7 +77,7 @@ namespace MewtocolNet.RegisterAttributes {
         /// <summary>
         /// Attribute for boolean registers
         /// </summary>
-        public RegisterAttribute(IOType type, int memoryArea, byte spAdress = 0x0) {
+        public RegisterAttribute(IOType type, uint memoryArea, byte spAdress = 0x0) {
 
             MemoryArea = memoryArea;
             RegisterType = (RegisterType)(int)type;

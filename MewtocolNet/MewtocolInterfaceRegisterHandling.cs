@@ -168,7 +168,6 @@ namespace MewtocolNet {
 
                     if((bool)register.Value != resultBitArray[k]) {
                         register.SetValueFromPLC(resultBitArray[k]);
-                        InvokeRegisterChanged(register);
                     }
 
                 }
@@ -192,7 +191,6 @@ namespace MewtocolNet {
 
                     if (lastVal != readout) {
                         rwReg.SetValueFromPLC(readout);
-                        InvokeRegisterChanged(reg);
                     }
 
                 }
@@ -218,16 +216,21 @@ namespace MewtocolNet {
                 string propName = prop.Name;
                 foreach (var attr in attributes) {
 
-                    if (attr is RegisterAttribute cAttribute && prop.PropertyType.IsAllowedPlcCastingType()) {
+                    if (attr is RegisterAttribute cAttribute) {
+
+                        if(!prop.PropertyType.IsAllowedPlcCastingType()) {
+                            throw new MewtocolException($"The register attribute property type is not allowed ({prop.PropertyType})");
+                        }
 
                         var dotnetType = prop.PropertyType;
 
                         AddRegister(new RegisterBuildInfo {
+                            mewAddress = cAttribute.MewAddress,
                             memoryAddress = cAttribute.MemoryArea,
                             specialAddress = cAttribute.SpecialAddress,
                             memorySizeBytes = cAttribute.ByteLength,
                             registerType = cAttribute.RegisterType,
-                            dotnetCastType = dotnetType,
+                            dotnetCastType = dotnetType.IsEnum ? dotnetType.UnderlyingSystemType : dotnetType,
                             collectionType = collection.GetType(),
                             name = prop.Name,
                         });
@@ -346,6 +349,9 @@ namespace MewtocolNet {
         #region Register Adding
 
         /// <inheritdoc/>
+        public void AddRegister(IRegister register) => AddRegister(register as BaseRegister);
+
+        /// <inheritdoc/>
         public void AddRegister(BaseRegister register) {
 
             if (CheckDuplicateRegister(register))
@@ -354,13 +360,13 @@ namespace MewtocolNet {
             if (CheckDuplicateNameRegister(register))
                 throw MewtocolException.DupeNameRegister(register);
 
+            if (CheckOverlappingRegister(register, out var regB))
+                throw MewtocolException.OverlappingRegister(register, regB);
+
             register.attachedInterface = this;
             RegistersUnderlying.Add(register);
 
         }
-
-        /// <inheritdoc/>
-        public void AddRegister(IRegister register) => AddRegister(register as BaseRegister);
 
         internal void AddRegister (RegisterBuildInfo buildInfo) {
 
@@ -378,6 +384,9 @@ namespace MewtocolNet {
 
             if(CheckDuplicateNameRegister(builtRegister))
                 throw MewtocolException.DupeNameRegister(builtRegister);
+
+            if (CheckOverlappingRegister(builtRegister, out var regB))
+                throw MewtocolException.OverlappingRegister(builtRegister, regB);
 
             builtRegister.attachedInterface = this;
             RegistersUnderlying.Add(builtRegister);
@@ -406,6 +415,38 @@ namespace MewtocolNet {
 
         }
 
+        private bool CheckOverlappingRegister (IRegisterInternal instance, out IRegisterInternal regB) {
+
+            //ignore bool registers, they have their own address spectrum
+            regB = null;
+            if (instance is BoolRegister) return false;
+
+            uint addressFrom = instance.MemoryAddress;
+            uint addressTo = addressFrom + instance.GetRegisterAddressLen();
+
+            var foundOverlapping = RegistersInternal.FirstOrDefault(x => {
+
+                //ignore bool registers, they have their own address spectrum
+                if (x is BoolRegister) return false;
+
+                uint addressF = x.MemoryAddress;
+                uint addressT = addressF + x.GetRegisterAddressLen();
+
+                bool matchingBaseAddress = addressFrom < addressT && addressF < addressTo;
+
+                return matchingBaseAddress;
+
+            });
+
+            if (foundOverlapping != null) {
+                regB = foundOverlapping;
+                return true;
+            }
+
+            return false;
+
+        }
+
         #endregion
 
         #region Register accessing
@@ -427,6 +468,18 @@ namespace MewtocolNet {
         #endregion
 
         #region Event Invoking 
+
+        private protected void ClearRegisterVals() {
+
+            for (int i = 0; i < RegistersUnderlying.Count; i++) {
+
+                var reg = (IRegisterInternal)RegistersUnderlying[i];
+                reg.ClearValue();
+
+            }
+
+        }
+
 
         internal void PropertyRegisterWasSet(string propName, object value) {
 

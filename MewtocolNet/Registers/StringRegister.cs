@@ -1,6 +1,9 @@
-﻿using System;
+﻿using MewtocolNet.Exceptions;
+using MewtocolNet.Logging;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,19 +19,22 @@ namespace MewtocolNet.Registers {
 
         internal short UsedSize { get; set; }   
 
-        internal int WordsSize { get; set; }  
+        internal uint WordsSize { get; set; }  
 
-        private bool isCalibrated = false;
+        private bool isCalibratedFromPlc = false;
 
         /// <summary>
         /// Defines a register containing a string
         /// </summary>
-        public StringRegister (int _address, string _name = null) {
+        public StringRegister (uint _address, string _name = null) {
 
-            if (_address > 99999) throw new NotSupportedException("Memory adresses cant be greater than 99999");
             name = _name;
             memoryAddress = _address;
             RegisterType = RegisterType.DT_BYTE_RANGE;
+
+            CheckAddressOverflow(memoryAddress, 0);
+
+            lastValue = null;
 
         }
 
@@ -38,7 +44,7 @@ namespace MewtocolNet.Registers {
             StringBuilder asciistring = new StringBuilder("D");
 
             asciistring.Append(MemoryAddress.ToString().PadLeft(5, '0'));
-            asciistring.Append((MemoryAddress + WordsSize - 1).ToString().PadLeft(5, '0'));
+            asciistring.Append((MemoryAddress + Math.Max(1, WordsSize) - 1).ToString().PadLeft(5, '0'));
 
             return asciistring.ToString();
         }
@@ -49,10 +55,14 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public override void SetValueFromPLC (object val) {
 
-            lastValue = (string)val;
+            if (!val.Equals(lastValue)) {
 
-            TriggerChangedEvnt(this);
-            TriggerNotifyChange();
+                lastValue = (string)val;
+
+                TriggerNotifyChange();
+                attachedInterface.InvokeRegisterChanged(this);
+
+            }
 
         }
 
@@ -63,31 +73,48 @@ namespace MewtocolNet.Registers {
         public override void ClearValue() => SetValueFromPLC("");
 
         /// <inheritdoc/>
+        public override uint GetRegisterAddressLen() => Math.Max(1, WordsSize);
+
+        /// <inheritdoc/>
         public override async Task<object> ReadAsync() {
 
             if (!attachedInterface.IsConnected) return null;
 
             //get the string params first
 
-            if(!isCalibrated) await Calibrate();
+            if(!isCalibratedFromPlc) await CalibrateFromPLC();
 
             var read = await attachedInterface.ReadRawRegisterAsync(this);
             if (read == null) return null;
 
-            return PlcValueParser.Parse<string>(this, read);
+            var parsed = PlcValueParser.Parse<string>(this, read);
+
+            SetValueFromPLC(parsed);
+
+            return parsed;
 
         }
 
-        private async Task Calibrate () {
+        private async Task CalibrateFromPLC () {
+
+            Logger.Log($"Calibrating string ({PLCAddressName}) from PLC source", LogLevel.Verbose, attachedInterface);
 
             //get the string describer bytes
-            var bytes = await attachedInterface.ReadByteRange(MemoryAddress, 4, false);
+            var bytes = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, 4, false);
+
+            if (bytes == null || bytes.Length == 0 || bytes.All(x => x == 0x0)) {
+
+                throw new MewtocolException($"The string register ({PLCAddressName}) doesn't exist in the PLC program");
+
+            }
 
             ReservedSize = BitConverter.ToInt16(bytes, 0);
             UsedSize = BitConverter.ToInt16(bytes, 2);
-            WordsSize = 2 + (ReservedSize + 1) / 2;
+            WordsSize = Math.Max(0, (uint)(2 + (ReservedSize + 1) / 2));
 
-            isCalibrated = true;
+            CheckAddressOverflow(memoryAddress, WordsSize);
+
+            isCalibratedFromPlc = true;
 
         }
 
@@ -96,10 +123,18 @@ namespace MewtocolNet.Registers {
 
             if (!attachedInterface.IsConnected) return false;
 
+            if (!isCalibratedFromPlc) {
+
+                //try to calibrate from plc
+                await CalibrateFromPLC();
+
+            }
+
             var res = await attachedInterface.WriteRawRegisterAsync(this, PlcValueParser.Encode(this, (string)data));
+            
             if (res) {
-                UsedSize = (short)((string)Value).Length;
                 SetValueFromPLC(data);
+                UsedSize = (short)((string)Value).Length;
             }
             
             return res;

@@ -13,7 +13,9 @@ internal class RegisterReadWriteTest {
 
     public object IntialValue { get; set; }
 
-    public object AfterWriteValue { get; set; } 
+    public object IntermediateValue { get; set; } 
+
+    public object AfterWriteValue { get; set; }
 
     public string RegisterPlcAddressName { get; set; }
 

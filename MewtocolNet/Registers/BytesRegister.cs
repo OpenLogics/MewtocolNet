@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
@@ -12,35 +13,75 @@ namespace MewtocolNet.Registers {
     /// </summary>
     public class BytesRegister : BaseRegister {
 
-        internal int addressLength;
+        internal uint addressLength;
         /// <summary>
         /// The rgisters memory length
         /// </summary>
-        public int AddressLength => addressLength;
+        public uint AddressLength => addressLength;
 
-        internal short ReservedSize { get; set; }
+        internal uint ReservedBytesSize { get; private set; }
+
+        internal ushort? ReservedBitSize { get; private set; }  
 
         /// <summary>
-        /// Defines a register containing a string
+        /// Defines a register containing bytes
         /// </summary>
-        public BytesRegister(int _address, int _reservedByteSize, string _name = null) {
+        public BytesRegister(uint _address, uint _reservedByteSize, string _name = null) {
 
-            if (_address > 99999) throw new NotSupportedException("Memory adresses cant be greater than 99999");
             name = _name;
             memoryAddress = _address;
-            ReservedSize = (short)_reservedByteSize;
+            ReservedBytesSize = _reservedByteSize;
 
             //calc mem length 
             //because one register is always 1 word (2 bytes) long, if the bytecount is uneven we get the trailing word too
-            var byteSize = _reservedByteSize;
-            if (_reservedByteSize % 2 != 0) byteSize++;
+            var byteSize = ReservedBytesSize;
+            if (ReservedBytesSize % 2 != 0) byteSize++;
 
             RegisterType = RegisterType.DT_BYTE_RANGE;
-            addressLength = (byteSize / 2) - 1;
+            addressLength = Math.Max((byteSize / 2), 1);
+
+            CheckAddressOverflow(memoryAddress, addressLength);
+
+            lastValue = null;
 
         }
 
-        public override string GetValueString() => Value == null ? "null" : ((byte[])Value).ToHexString("-");
+        public BytesRegister(uint _address, ushort _reservedBitSize, string _name = null) {
+
+            name = _name;
+            memoryAddress = _address;
+            ReservedBytesSize = (uint)Math.Max(1, _reservedBitSize / 8);
+            ReservedBitSize = _reservedBitSize;
+
+            //calc mem length 
+            //because one register is always 1 word (2 bytes) long, if the bytecount is uneven we get the trailing word too
+            var byteSize = ReservedBytesSize;
+            if (ReservedBytesSize % 2 != 0) byteSize++;
+
+            RegisterType = RegisterType.DT_BYTE_RANGE;
+            addressLength = Math.Max((byteSize / 2), 1);
+
+            CheckAddressOverflow(memoryAddress, addressLength);
+
+            lastValue = null;
+
+        }
+
+        public override string GetValueString() {
+
+            if (Value == null) return "null";
+
+            if(Value != null && Value is BitArray bitArr) {
+
+                return bitArr.ToBitString();
+
+            } else {
+
+                return ((byte[])Value).ToHexString("-");
+
+            }
+
+        }
 
         /// <inheritdoc/>
         public override string BuildMewtocolQuery() {
@@ -48,7 +89,7 @@ namespace MewtocolNet.Registers {
             StringBuilder asciistring = new StringBuilder("D");
 
             asciistring.Append(MemoryAddress.ToString().PadLeft(5, '0'));
-            asciistring.Append((MemoryAddress + AddressLength).ToString().PadLeft(5, '0'));
+            asciistring.Append((MemoryAddress + AddressLength - 1).ToString().PadLeft(5, '0'));
 
             return asciistring.ToString();
         }
@@ -56,10 +97,20 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public override void SetValueFromPLC (object val) {
 
-            lastValue = (byte[])val;
+            bool changeTriggerBitArr = val is BitArray bitArr &&
+                                 lastValue is BitArray bitArr2 &&
+                                 (bitArr.ToBitString() != bitArr2.ToBitString());
 
-            TriggerChangedEvnt(this);
-            TriggerNotifyChange();
+            bool changeTriggerGeneral = (lastValue?.ToString() != val?.ToString());
+
+            if (changeTriggerBitArr || changeTriggerGeneral) {
+
+                lastValue = val;
+
+                TriggerNotifyChange();
+                attachedInterface.InvokeRegisterChanged(this);
+
+            }
 
         }
 
@@ -70,6 +121,9 @@ namespace MewtocolNet.Registers {
         public override void ClearValue() => SetValueFromPLC(null);
 
         /// <inheritdoc/>
+        public override uint GetRegisterAddressLen() => AddressLength;
+
+        /// <inheritdoc/>
         public override async Task<object> ReadAsync() {
 
             if (!attachedInterface.IsConnected) return null;
@@ -77,7 +131,13 @@ namespace MewtocolNet.Registers {
             var read = await attachedInterface.ReadRawRegisterAsync(this);
             if (read == null) return null;
 
-            var parsed = PlcValueParser.Parse<byte[]>(this, read);
+            object parsed;
+
+            if(ReservedBitSize != null) {
+                parsed = PlcValueParser.Parse<BitArray>(this, read);
+            } else {
+                parsed = PlcValueParser.Parse<byte[]>(this, read);
+            }
 
             SetValueFromPLC(parsed);
             return parsed;
@@ -89,8 +149,17 @@ namespace MewtocolNet.Registers {
 
             if (!attachedInterface.IsConnected) return false;
 
-            var res = await attachedInterface.WriteRawRegisterAsync(this, (byte[])data);
+            byte[] encoded;
+
+            if (ReservedBitSize != null) {
+                encoded = PlcValueParser.Encode(this, (BitArray)data);
+            } else {
+                encoded = PlcValueParser.Encode(this, (byte[])data);
+            }
+
+            var res = await attachedInterface.WriteRawRegisterAsync(this, encoded);
             if (res) SetValueFromPLC(data);
+
             return res;
 
         }

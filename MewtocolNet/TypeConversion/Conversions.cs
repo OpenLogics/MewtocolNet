@@ -26,10 +26,11 @@ namespace MewtocolNet.TypeConversion {
         };
 
         /// <summary>
-        /// All conversions for reading dataf from and to the plc
+        /// All conversions for reading data from and to the plc, excluding Enum types
         /// </summary>
         internal static List<IPlcTypeConverter> items = new List<IPlcTypeConverter> {
 
+            //default bool R conversion
             new PlcTypeConversion<bool>(RegisterType.R) {
                 HoldingRegisterType = typeof(BoolRegister),
                 PlcVarType = PlcVarType.BOOL,
@@ -43,6 +44,7 @@ namespace MewtocolNet.TypeConversion {
 
                 },
             },
+            //default bool X conversion
             new PlcTypeConversion<bool>(RegisterType.X) {
                 HoldingRegisterType = typeof(BoolRegister),
                 PlcVarType = PlcVarType.BOOL,
@@ -56,6 +58,7 @@ namespace MewtocolNet.TypeConversion {
 
                 },
             },
+            //default bool Y conversion
             new PlcTypeConversion<bool>(RegisterType.Y) {
                 HoldingRegisterType = typeof(BoolRegister),
                 PlcVarType = PlcVarType.BOOL,
@@ -69,6 +72,7 @@ namespace MewtocolNet.TypeConversion {
 
                 },
             },
+            //default short DT conversion
             new PlcTypeConversion<short>(RegisterType.DT) {
                 HoldingRegisterType = typeof(NumberRegister<short>),
                 PlcVarType = PlcVarType.INT,
@@ -82,6 +86,7 @@ namespace MewtocolNet.TypeConversion {
 
                 },
             },
+            //default ushort DT conversion
             new PlcTypeConversion<ushort>(RegisterType.DT) {
                 HoldingRegisterType = typeof(NumberRegister<ushort>),
                 PlcVarType = PlcVarType.UINT,
@@ -95,6 +100,7 @@ namespace MewtocolNet.TypeConversion {
 
                 },
             },
+            //default int DDT conversion
             new PlcTypeConversion<int>(RegisterType.DDT) {
                 HoldingRegisterType = typeof(NumberRegister<int>),
                 PlcVarType = PlcVarType.DINT,
@@ -108,6 +114,7 @@ namespace MewtocolNet.TypeConversion {
 
                 },
             },
+            //default uint DDT conversion
             new PlcTypeConversion<uint>(RegisterType.DDT) {
                 HoldingRegisterType = typeof(NumberRegister<uint>),
                 PlcVarType = PlcVarType.UDINT,
@@ -121,6 +128,7 @@ namespace MewtocolNet.TypeConversion {
 
                 },
             },
+            //default float DDT conversion
             new PlcTypeConversion<float>(RegisterType.DDT) {
                 HoldingRegisterType = typeof(NumberRegister<float>),
                 PlcVarType = PlcVarType.REAL,
@@ -139,6 +147,7 @@ namespace MewtocolNet.TypeConversion {
 
                 },
             },
+            //default TimeSpan DDT conversion
             new PlcTypeConversion<TimeSpan>(RegisterType.DDT) {
                 HoldingRegisterType = typeof(NumberRegister<TimeSpan>),
                 PlcVarType = PlcVarType.TIME,
@@ -157,11 +166,13 @@ namespace MewtocolNet.TypeConversion {
 
                 },
             },
-            new PlcTypeConversion<byte[]>(RegisterType.DT) {
+            //default byte array DT Range conversion
+            new PlcTypeConversion<byte[]>(RegisterType.DT_BYTE_RANGE) {
                 HoldingRegisterType = typeof(BytesRegister),
                 FromRaw = (reg, bytes) => bytes,
                 ToRaw = (reg, value) => value,
             },
+            //default string DT Range conversion
             new PlcTypeConversion<string>(RegisterType.DT_BYTE_RANGE) {
                 HoldingRegisterType = typeof(StringRegister),
                 PlcVarType = PlcVarType.STRING,
@@ -195,12 +206,16 @@ namespace MewtocolNet.TypeConversion {
 
                 },
             },
-            new PlcTypeConversion<BitArray>(RegisterType.DT) {
+            //default bitn array DT conversion
+            new PlcTypeConversion<BitArray>(RegisterType.DT_BYTE_RANGE) {
                 HoldingRegisterType = typeof(BytesRegister),
-                PlcVarType = PlcVarType.WORD,
                 FromRaw = (reg, bytes) => {
 
+                    var byteReg = (BytesRegister)reg;
+
                     BitArray bitAr = new BitArray(bytes);
+                    bitAr.Length = (int)byteReg.ReservedBitSize;
+
                     return bitAr;
 
                 },
@@ -208,6 +223,15 @@ namespace MewtocolNet.TypeConversion {
 
                     byte[] ret = new byte[(value.Length - 1) / 8 + 1];
                     value.CopyTo(ret, 0);
+
+                    if(ret.Length % 2 != 0) {
+
+                        var lst = ret.ToList();
+                        lst.Add(0);
+                        ret = lst.ToArray();
+
+                    }
+
                     return ret;
 
                 },

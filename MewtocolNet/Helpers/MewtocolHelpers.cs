@@ -14,50 +14,6 @@ namespace MewtocolNet {
     /// </summary>
     public static class MewtocolHelpers {
 
-        #region Value PLC Humanizers
-
-        /// <summary>
-        /// Gets the TimeSpan as a PLC representation string fe.
-        /// <code>
-        /// T#1h10m30s20ms
-        /// </code>
-        /// </summary>
-        /// <param name="timespan"></param>
-        /// <returns></returns>
-        public static string AsPLCTime (this TimeSpan timespan) {
-
-            if (timespan == null || timespan == TimeSpan.Zero)
-                return $"T#0s";
-
-            StringBuilder sb = new StringBuilder("T#");
-
-            int millis = timespan.Milliseconds;
-            int seconds = timespan.Seconds;
-            int minutes = timespan.Minutes;
-            int hours = timespan.Hours;
-
-            if (hours > 0) sb.Append($"{hours}h");
-            if (minutes > 0) sb.Append($"{minutes}m");
-            if (seconds > 0) sb.Append($"{seconds}s");
-            if (millis > 0) sb.Append($"{millis}ms");
-
-            return sb.ToString();
-
-        }
-
-        /// <summary>
-        /// Turns a bit array into a 0 and 1 string
-        /// </summary>
-        public static string ToBitString(this BitArray arr) {
-
-            var bits = new bool[arr.Length];
-            arr.CopyTo(bits, 0);
-            return string.Join("", bits.Select(x => x ? "1" : "0"));
-
-        }
-
-        #endregion
-
         #region Byte and string operation helpers
 
         /// <summary>

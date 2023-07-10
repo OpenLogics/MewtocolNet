@@ -13,7 +13,7 @@ namespace MewtocolTests {
             this.output = output;
         }
 
-        [Fact(DisplayName = nameof(MewtocolHelpers.ToBitString))]
+        [Fact(DisplayName = nameof(PlcFormat.ToBitString))]
         public void ToBitStringGeneration() {
 
             var bitarr = new BitArray(16);
@@ -88,6 +88,25 @@ namespace MewtocolTests {
 
             Assert.True($"%01$RC1".BCC_Mew().ParseRCSingleBit());
             Assert.False($"%01$RC0".BCC_Mew().ParseRCSingleBit());
+
+        }
+
+        [Fact(DisplayName = nameof(PlcFormat.ParsePlcTime))]
+        public void ParsePlcTime () {
+
+            Assert.Equal(new TimeSpan(5, 30, 30, 15, 10), PlcFormat.ParsePlcTime("T#5d30h30m15s10ms"));
+            Assert.Equal(new TimeSpan(0, 30, 30, 15, 10), PlcFormat.ParsePlcTime("T#30h30m15s10ms"));
+            Assert.Equal(new TimeSpan(0, 1, 30, 15, 10), PlcFormat.ParsePlcTime("T#1h30m15s10ms"));
+            Assert.Equal(new TimeSpan(0, 0, 5, 30, 10), PlcFormat.ParsePlcTime("T#5m30s10ms"));
+            Assert.Throws<NotSupportedException>(() => PlcFormat.ParsePlcTime("T#5m30s5ms"));
+
+        }
+
+        [Fact(DisplayName = nameof(PlcFormat.ToPlcTime))]
+        public void ToPlcTime() {
+
+            Assert.Equal("T#1d6h5m30s10ms", PlcFormat.ToPlcTime(new TimeSpan(0, 30, 5, 30, 10)));
+            Assert.Equal("T#6d5h30m10s", PlcFormat.ToPlcTime(new TimeSpan(6, 5, 30, 10)));
 
         }
 

@@ -143,6 +143,7 @@ namespace MewtocolNet {
         private protected MewtocolInterface () {
 
             Connected += MewtocolInterface_Connected;
+            RegisterChanged += OnRegisterChanged;
 
             void MewtocolInterface_Connected(PLCInfo obj) {
 
@@ -153,16 +154,15 @@ namespace MewtocolNet {
 
             }
 
-            RegisterChanged += (o) => {
+        }
 
-                var asInternal = (IRegisterInternal)o;
+        private void OnRegisterChanged(IRegister o) {
 
-                string address = $"{asInternal.GetRegisterString()}{asInternal.GetStartingMemoryArea()}".PadRight(5, (char)32);
+            var asInternal = (IRegisterInternal)o;
 
-                Logger.Log($"{address} " +
-                           $"{(o.Name != null ? $"({o.Name}) " : "")}" +
-                           $"changed to \"{asInternal.GetValueString()}\"", LogLevel.Change, this);
-            };
+            Logger.Log($"{asInternal.GetMewName()} " +
+                       $"{(o.Name != null ? $"({o.Name}) " : "")}" +
+                       $"changed to \"{asInternal.GetValueString()}\"", LogLevel.Change, this);
 
         }
 
@@ -195,15 +195,15 @@ namespace MewtocolNet {
         }
 
         /// <inheritdoc/>
-        public virtual string GetConnectionInfo() => throw new NotImplementedException();
+        public virtual string GetConnectionInfo () => throw new NotImplementedException();
 
         /// <inheritdoc/>
-        public async Task<MewtocolFrameResponse> SendCommandAsync(string _msg, bool withTerminator = true, int timeoutMs = -1) {
+        public async Task<MewtocolFrameResponse> SendCommandAsync (string _msg, bool withTerminator = true, int timeoutMs = -1, Action<double> onReceiveProgress = null) {
 
             //send request
             queuedMessages++;
 
-            var tempResponse = queue.Enqueue(async () => await SendFrameAsync(_msg, withTerminator, withTerminator));
+            var tempResponse = queue.Enqueue(async () => await SendFrameAsync(_msg, withTerminator, withTerminator, onReceiveProgress));
 
             if (await Task.WhenAny(tempResponse, Task.Delay(timeoutMs)) != tempResponse) {
                 // timeout logic
@@ -217,7 +217,7 @@ namespace MewtocolNet {
 
         }
 
-        private protected async Task<MewtocolFrameResponse> SendFrameAsync (string frame, bool useBcc = true, bool useCr = true) {
+        private protected async Task<MewtocolFrameResponse> SendFrameAsync (string frame, bool useBcc = true, bool useCr = true, Action<double> onReceiveProgress = null) {
 
             try {
 
@@ -236,13 +236,27 @@ namespace MewtocolNet {
                 byte[] writeBuffer = Encoding.UTF8.GetBytes(frame);
                 stream.Write(writeBuffer, 0, writeBuffer.Length);
 
+                //calculate the expected number of frames from the message request
+                int? wordsCountRequested = null;
+                if(onReceiveProgress != null) {
+
+                    var match = Regex.Match(frame, @"RDD(?<from>[0-9]{5})(?<to>[0-9]{5})");
+
+                    if (match.Success) {
+                        var from = int.Parse(match.Groups["from"].Value);
+                        var to = int.Parse(match.Groups["to"].Value);
+                        wordsCountRequested = (to - from) + 1; 
+                    }
+                    
+                }
+
                 //calc upstream speed
                 CalcUpstreamSpeed(writeBuffer.Length);
 
                 Logger.Log($"[---------CMD START--------]", LogLevel.Critical, this);
                 Logger.Log($"--> OUT MSG: {frame.Replace("\r", "(CR)")}", LogLevel.Critical, this);
 
-                var readResult = await ReadCommandAsync();
+                var readResult = await ReadCommandAsync(wordsCountRequested, onReceiveProgress);
 
                 //did not receive bytes but no errors, the com port was not configured right
                 if (readResult.Item1.Length == 0) {
@@ -294,7 +308,7 @@ namespace MewtocolNet {
 
         }
 
-        private protected async Task<(byte[], bool)> ReadCommandAsync () {
+        private protected async Task<(byte[], bool)> ReadCommandAsync (int? wordsCountRequested = null, Action<double> onReceiveProgress = null) {
 
             //read total
             List<byte> totalResponse = new List<byte>();
@@ -303,6 +317,7 @@ namespace MewtocolNet {
             try {
 
                 bool needsRead = false;
+                int readFrames = 0;
 
                 do {
 
@@ -327,12 +342,23 @@ namespace MewtocolNet {
 
                     if (commandRes == CommandState.RequestedNextFrame) {
 
+                        //calc frame progress
+                        if(onReceiveProgress != null && wordsCountRequested != null) {
+
+                            var frameBytesCount = tempMsg.Length - 6;
+                            double prog = (double)frameBytesCount / wordsCountRequested.Value;
+                            onReceiveProgress(prog);
+
+                        }
+
                         //request next frame
                         var writeBuffer = Encoding.UTF8.GetBytes("%01**&\r");
                         await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length);
                         wasMultiFramedResponse = true;
 
                     }
+
+                    readFrames++;
 
                 } while (needsRead);
 
@@ -342,7 +368,7 @@ namespace MewtocolNet {
 
         }
 
-        private protected CommandState ParseBufferFrame(byte[] received) {
+        private protected CommandState ParseBufferFrame (byte[] received) {
 
             const char CR = '\r';
             const char DELIMITER = '&';
@@ -405,8 +431,8 @@ namespace MewtocolNet {
 
         private protected virtual void OnConnected (PLCInfo plcinf) {
 
-            Logger.Log("Connected", LogLevel.Info, this);
-            Logger.Log($"\n\n{plcinf.ToString()}\n\n", LogLevel.Verbose, this);
+            Logger.Log("Connected to PLC", LogLevel.Info, this);
+            Logger.Log($"{plcinf.ToString()}", LogLevel.Verbose, this);
 
             IsConnected = true;
 
@@ -437,17 +463,6 @@ namespace MewtocolNet {
 
             Disconnected?.Invoke();
             KillPoller();
-
-        }
-
-        private protected void ClearRegisterVals() {
-
-            for (int i = 0; i < RegistersUnderlying.Count; i++) {
-
-                var reg = (IRegisterInternal)RegistersUnderlying[i];
-                reg.ClearValue();
-
-            }
 
         }
 

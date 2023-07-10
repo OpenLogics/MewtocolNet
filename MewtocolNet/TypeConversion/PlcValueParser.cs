@@ -12,9 +12,22 @@ namespace MewtocolNet {
 
         private static List<IPlcTypeConverter> conversions => Conversions.items;
 
-        public static T Parse<T>(IRegister register, byte[] bytes) {
+        internal static T Parse<T> (IRegister register, byte[] bytes) {
 
-            var converter = conversions.FirstOrDefault(x => x.GetDotnetType() == typeof(T));
+            IPlcTypeConverter converter;
+
+            //special case for enums
+            if(typeof(T).IsEnum) {
+
+                var underlyingNumberType = typeof(T).GetEnumUnderlyingType();
+
+                converter = conversions.FirstOrDefault(x => x.GetDotnetType() == underlyingNumberType);
+
+            } else {
+
+                converter = conversions.FirstOrDefault(x => x.GetDotnetType() == typeof(T));
+
+            }
 
             if (converter == null)
                 throw new MewtocolException($"A converter for the dotnet type {typeof(T)} doesn't exist");
@@ -23,9 +36,22 @@ namespace MewtocolNet {
 
         }
 
-        public static byte[] Encode <T>(IRegister register, T value) {
+        internal static byte[] Encode<T> (IRegister register, T value) {
 
-            var converter = conversions.FirstOrDefault(x => x.GetDotnetType() == typeof(T));
+            IPlcTypeConverter converter;
+
+            //special case for enums
+            if (typeof(T).IsEnum) {
+
+                var underlyingNumberType = typeof(T).GetEnumUnderlyingType();
+
+                converter = conversions.FirstOrDefault(x => x.GetDotnetType() == underlyingNumberType);
+
+            } else {
+
+                converter = conversions.FirstOrDefault(x => x.GetDotnetType() == typeof(T));
+
+            }
 
             if (converter == null)
                 throw new MewtocolException($"A converter for the dotnet type {typeof(T)} doesn't exist");

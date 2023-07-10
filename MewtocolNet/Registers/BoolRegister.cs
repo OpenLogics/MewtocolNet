@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -25,21 +26,9 @@ namespace MewtocolNet.Registers {
         /// <param name="_name">The custom name</param>
         /// <exception cref="NotSupportedException"></exception>
         /// <exception cref="Exception"></exception>
-        public BoolRegister(IOType _io, byte _spAddress = 0x0, int _areaAdress = 0, string _name = null) {
+        public BoolRegister(IOType _io, byte _spAddress = 0x0, uint _areaAdress = 0, string _name = null) {
 
-            if (_areaAdress < 0)
-                throw new NotSupportedException("The area address cant be negative");
-
-            if (_io == IOType.R && _areaAdress >= 512)
-                throw new NotSupportedException("R area addresses cant be greater than 511");
-
-            if ((_io == IOType.X || _io == IOType.Y) && _areaAdress >= 110)
-                throw new NotSupportedException("XY area addresses cant be greater than 110");
-
-            if (_spAddress > 0xF)
-                throw new NotSupportedException("Special address cant be greater 15 or 0xF");
-
-            lastValue = false;
+            lastValue = null;
 
             memoryAddress = _areaAdress;
             specialAddress = _spAddress;
@@ -47,17 +36,26 @@ namespace MewtocolNet.Registers {
 
             RegisterType = (RegisterType)(int)_io;
 
+            CheckAddressOverflow(memoryAddress, 0);
+
+        }
+
+        protected override void CheckAddressOverflow(uint addressStart, uint addressLen) {
+
+            if ((int)RegisterType == (int)IOType.R && addressStart >= 512)
+                throw new NotSupportedException("R area addresses cant be greater than 511");
+
+            if (((int)RegisterType == (int)IOType.X || (int)RegisterType == (int)IOType.Y) && addressStart >= 110)
+                throw new NotSupportedException("XY area addresses cant be greater than 110");
+
+            if (specialAddress > 0xF)
+                throw new NotSupportedException("Special address cant be greater 15 or 0xF");
+
+            base.CheckAddressOverflow(addressStart, addressLen);
+
         }
 
         #region Read / Write
-
-        public override void SetValueFromPLC(object val) {
-
-            lastValue = (bool)val;
-            TriggerChangedEvnt(this);
-            TriggerNotifyChange();
-
-        }
 
         /// <inheritdoc/>
         public override async Task<object> ReadAsync() {
@@ -111,7 +109,7 @@ namespace MewtocolNet.Registers {
         public override void ClearValue() => SetValueFromPLC(false);
 
         /// <inheritdoc/>
-        public override string GetRegisterPLCName() {
+        public override string GetMewName() {
 
             var spAdressEnd = SpecialAddress.ToString("X1");
 
@@ -132,12 +130,15 @@ namespace MewtocolNet.Registers {
         }
 
         /// <inheritdoc/>
+        public override uint GetRegisterAddressLen () => 1;
+
+        /// <inheritdoc/>
         public override string ToString(bool additional) {
 
             if (!additional) return this.ToString();
 
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine($"PLC Naming: {GetRegisterPLCName()}");
+            sb.AppendLine($"PLC Naming: {GetMewName()}");
             sb.AppendLine($"Name: {Name ?? "Not named"}");
             sb.AppendLine($"Value: {GetValueString()}");
             sb.AppendLine($"Register Type: {RegisterType}");

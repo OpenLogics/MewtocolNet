@@ -17,7 +17,7 @@ namespace MewtocolNet {
 
         object Value { get; }
 
-        int MemoryAddress { get; }
+        uint MemoryAddress { get; }
 
         // setters
 
@@ -37,7 +37,7 @@ namespace MewtocolNet {
 
         string GetContainerName();
 
-        string GetRegisterPLCName();
+        string GetMewName();
 
         byte? GetSpecialAddress();
 
@@ -47,6 +47,9 @@ namespace MewtocolNet {
 
         string BuildMewtocolQuery();
 
+        uint GetRegisterAddressLen();
+
+        string GetRegisterWordRangeString();
 
         //others
 

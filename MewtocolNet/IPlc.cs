@@ -77,7 +77,14 @@ namespace MewtocolNet {
         /// <param name="withTerminator">Append the checksum and bcc automatically</param>
         /// <param name="timeoutMs">Timout to wait for a response</param>
         /// <returns>Returns the result</returns>
-        Task<MewtocolFrameResponse> SendCommandAsync(string _msg, bool withTerminator = true, int timeoutMs = -1);
+        Task<MewtocolFrameResponse> SendCommandAsync(string _msg, bool withTerminator = true, int timeoutMs = -1, Action<double> onReceiveProgress = null);
+
+        /// <summary>
+        /// Changes the PLCs operation mode to the given one
+        /// </summary>
+        /// <param name="setRun">True for run mode, false for prog mode</param>
+        /// <returns>The success state of the write operation</returns>
+        Task<bool> SetOperationModeAsync(bool setRun);
 
         /// <summary>
         /// Use this to await the first poll iteration after connecting,

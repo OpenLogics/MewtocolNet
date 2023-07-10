@@ -14,66 +14,63 @@ namespace MewtocolNet.Registers {
     /// <typeparam name="T">The type of the numeric value</typeparam>
     public class NumberRegister<T> : BaseRegister {
 
-        internal Type enumType { get; set; }
-
         /// <summary>
         /// Defines a register containing a number
         /// </summary>
         /// <param name="_address">Memory start adress max 99999</param>
         /// <param name="_name">Name of the register</param>
-        public NumberRegister (int _address, string _name = null) {
-
-            if (_address > 99999) throw new NotSupportedException("Memory adresses cant be greater than 99999");
+        public NumberRegister (uint _address, string _name = null) {
 
             memoryAddress = _address;
             name = _name;
 
             Type numType = typeof(T);
+            uint areaLen = 0;
 
-            var allowedTypes = PlcValueParser.GetAllowDotnetTypes();
-            if (!allowedTypes.Contains(numType))
-                throw new NotSupportedException($"The type {numType} is not allowed for Number Registers");
+            if (typeof(T).IsEnum) {
 
-            var areaLen = (Marshal.SizeOf(numType) / 2) - 1;
-            RegisterType = areaLen >= 1 ? RegisterType.DDT : RegisterType.DT;
+                //for enums
 
-            lastValue = default(T);
+                var underlyingType = typeof(T).GetEnumUnderlyingType(); //the numeric type
+                areaLen = (uint)(Marshal.SizeOf(underlyingType) / 2) - 1;
 
-        }
+                if (areaLen == 0) RegisterType = RegisterType.DT;
+                if (areaLen == 1) RegisterType = RegisterType.DDT;
+                if (areaLen >= 2) RegisterType = RegisterType.DT_BYTE_RANGE;
 
-        /// <summary>
-        /// Defines a register containing a number
-        /// </summary>
-        /// <param name="_address">Memory start adress max 99999</param>
-        /// <param name="_enumType">Enum type to parse as</param>
-        /// <param name="_name">Name of the register</param>
-        public NumberRegister(int _address, Type _enumType, string _name = null) {
+                lastValue = null;
+                Console.WriteLine();
 
-            if (_address > 99999) throw new NotSupportedException("Memory adresses cant be greater than 99999");
+            } else {
 
-            memoryAddress = _address;
-            name = _name;
+                //for all others known pre-defined numeric structs
 
-            Type numType = typeof(T);
+                var allowedTypes = PlcValueParser.GetAllowDotnetTypes();
+                if (!allowedTypes.Contains(numType))
+                    throw new NotSupportedException($"The type {numType} is not allowed for Number Registers");
 
-            var allowedTypes = PlcValueParser.GetAllowDotnetTypes();
-            if (!allowedTypes.Contains(numType))
-                throw new NotSupportedException($"The type {numType} is not allowed for Number Registers");
+                areaLen = (uint)(Marshal.SizeOf(numType) / 2) - 1;
+                RegisterType = areaLen >= 1 ? RegisterType.DDT : RegisterType.DT;
 
-            var areaLen = (Marshal.SizeOf(numType) / 2) - 1;
-            RegisterType = areaLen >= 1 ? RegisterType.DDT : RegisterType.DT;
+                lastValue = null;
 
-            enumType = _enumType;
-            lastValue = default(T);
+            }
+
+            CheckAddressOverflow(memoryAddress, areaLen);
 
         }
 
         /// <inheritdoc/>
         public override void SetValueFromPLC(object val) {
 
-            lastValue = (T)val;
-            TriggerChangedEvnt(this);
-            TriggerNotifyChange();
+            if (lastValue?.ToString() != val?.ToString()) {
+
+                lastValue = (T)val;
+
+                TriggerNotifyChange();
+                attachedInterface.InvokeRegisterChanged(this);
+
+            }
 
         }
 
@@ -93,70 +90,41 @@ namespace MewtocolNet.Registers {
         }
 
         /// <inheritdoc/>
-        public override string GetAsPLC() => ((TimeSpan)Value).AsPLCTime();
+        public override string GetAsPLC() {
 
-        /// <inheritdoc/>
-        public override string GetValueString() {
-
-            if(typeof(T) == typeof(TimeSpan)) {
-
-                return $"{Value} [{((TimeSpan)Value).AsPLCTime()}]";
-
-            } 
-
-            //is number or bitwise
-            if (enumType == null) {
-
-                return $"{Value}";
-
-            }
-
-            //is enum
-            var dict = new Dictionary<int, string>();
-
-            foreach (var name in Enum.GetNames(enumType)) {
-
-                int enumKey = (int)Enum.Parse(enumType, name);
-                if (!dict.ContainsKey(enumKey)) {
-                    dict.Add(enumKey, name);
-                }
-
-            }
-
-            if (enumType != null && Value is short shortVal) {
-
-                if (dict.ContainsKey(shortVal)) {
-
-                    return $"{Value} ({dict[shortVal]})";
-
-                } else {
-
-                    return $"{Value} (Missing Enum)";
-
-                }
-
-            }
-
-            if (enumType != null && Value is int intVal) {
-
-                if (dict.ContainsKey(intVal)) {
-
-                    return $"{Value} ({dict[intVal]})";
-
-                } else {
-
-                    return $"{Value} (Missing Enum)";
-
-                }
-
-            }
+            if (typeof(T) == typeof(TimeSpan)) return ((TimeSpan)Value).ToPlcTime();
 
             return Value.ToString();
 
         }
 
         /// <inheritdoc/>
+        public override string GetValueString() {
+
+            if(Value != null && typeof(T) == typeof(TimeSpan)) {
+
+                return $"{Value} [{((TimeSpan)Value).ToPlcTime()}]";
+
+            } 
+
+            if (Value != null && typeof(T).IsEnum) {
+
+                var underlying = Enum.GetUnderlyingType(typeof(T));
+                object val = Convert.ChangeType(Value, underlying);
+
+                return $"{Value} [{val}]";
+
+            }
+
+            return Value?.ToString() ?? "null";
+
+        }
+
+        /// <inheritdoc/>
         public override void ClearValue() => SetValueFromPLC(default(T));
+
+        /// <inheritdoc/>
+        public override uint GetRegisterAddressLen() => (uint)(RegisterType == RegisterType.DT ? 1 : 2);
 
         /// <inheritdoc/>
         public override async Task<object> ReadAsync() {

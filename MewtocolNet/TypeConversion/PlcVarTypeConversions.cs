@@ -22,17 +22,23 @@ namespace MewtocolNet {
 
         internal static bool IsAllowedPlcCastingType<T>() {
 
+            if (typeof(T).IsEnum) return true;
+
             return allowedCastingTypes.Contains(typeof(T));
 
         }
 
         internal static bool IsAllowedPlcCastingType(this Type type) {
 
+            if (type.IsEnum) return true;
+
             return allowedCastingTypes.Contains(type);
 
         }
 
         internal static RegisterType ToRegisterTypeDefault(this Type type) {
+
+            if (type.IsEnum) return RegisterType.DT;
 
             var found = PlcValueParser.GetDefaultRegisterType(type);
 

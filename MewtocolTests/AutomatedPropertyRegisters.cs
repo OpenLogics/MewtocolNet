@@ -1,13 +1,12 @@
 using MewtocolNet;
-using MewtocolNet.RegisterAttributes;
 using MewtocolNet.Registers;
-using System.Collections;
+using MewtocolTests.EncapsulatedTests;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace MewtocolTests {
 
-    public class AutomatedPropertyRegisters {
+    public partial class AutomatedPropertyRegisters {
 
         private readonly ITestOutputHelper output;
 
@@ -15,90 +14,14 @@ namespace MewtocolTests {
             this.output = output;
         }
 
-        public class TestRegisterCollection : RegisterCollection {
-
-            //corresponds to a R100 boolean register in the PLC
-            //can also be written as R1000 because the last one is a special address
-            [Register(IOType.R, memoryArea: 85, spAdress: 0)]
-            public bool TestBool1 { get; private set; }
-
-            //corresponds to a XD input of the PLC
-            [Register(IOType.X, (byte)0xD)]
-            public bool TestBoolInputXD { get; private set; }
-
-            //corresponds to a DT1101 - DT1104 string register in the PLC with (STRING[4])
-            //[Register(1101, 4)]
-            //public string TestString1 { get; private set; }
-
-            //corresponds to a DT7000 16 bit int register in the PLC
-            [Register(899)]
-            public short TestInt16 { get; private set; }
-
-            [Register(342)]
-            public ushort TestUInt16 { get; private set; }
-
-            //corresponds to a DTD7001 - DTD7002 32 bit int register in the PLC
-            [Register(7001)]
-            public int TestInt32 { get; private set; }
-
-            [Register(765)]
-            public uint TestUInt32 { get; private set; }
-
-            //corresponds to a DTD7001 - DTD7002 32 bit float register in the PLC (REAL)
-            [Register(7003)]
-            public float TestFloat32 { get; private set; }
-
-            //corresponds to a DT7005 - DT7009 string register in the PLC with (STRING[5])
-            [Register(7005, 5)]
-            public string TestString2 { get; private set; }
-
-            //corresponds to a DT7010 as a 16bit word/int and parses the word as single bits
-            [Register(7010)]
-            public BitArray TestBitRegister { get; private set; }
-
-            [Register(8010, BitCount.B32)]
-            public BitArray TestBitRegister32 { get; private set; }
-
-            //corresponds to a DT1204 as a 16bit word/int takes the bit at index 9 and writes it back as a boolean
-            [Register(1204, BitCount.B16, 9)]
-            public bool BitValue { get; private set; }
-
-            [Register(1204, BitCount.B32, 5)]
-            public bool FillTest { get; private set; }
-
-            //corresponds to a DT7012 - DT7013 as a 32bit time value that gets parsed as a timespan (TIME)
-            //the smallest value to communicate to the PLC is 10ms
-            [Register(7012)]
-            public TimeSpan TestTime { get; private set; }
-
-            public enum CurrentState {
-                Undefined = 0,
-                State1 = 1,
-                State2 = 2,
-                //State3 = 3,
-                State4 = 4,
-                State5 = 5,
-                StateBetween = 100,
-                State6 = 6,
-                State7 = 7,
-            }
-
-            [Register(50)]
-            public CurrentState TestEnum16 { get; private set; }
-
-            [Register(51, BitCount.B32)]
-            public CurrentState TestEnum32 { get; private set; }
-
-        }
-
-        private void TestBasicGeneration(IRegisterInternal reg, string propName, object expectValue, int expectAddr, string expectPlcName) {
+        private void Test(IRegisterInternal reg, string propName, uint expectAddr, string expectPlcName) {
 
             Assert.NotNull(reg);
             Assert.Equal(propName, reg.Name);
-            Assert.Equal(expectValue, reg.Value);
+            Assert.Null(reg.Value);
 
             Assert.Equal(expectAddr, reg.MemoryAddress);
-            Assert.Equal(expectPlcName, reg.GetRegisterPLCName());
+            Assert.Equal(expectPlcName, reg.GetMewName());
 
             output.WriteLine(reg.ToString());
 
@@ -106,107 +29,86 @@ namespace MewtocolTests {
 
         //actual tests
 
-        [Fact(DisplayName = "Boolean R generation")]
+        [Fact(DisplayName = "Boolean generation")]
         public void BooleanGen() {
 
             var interf = Mewtocol.Ethernet("192.168.0.1");
-            interf.AddRegisterCollection(new TestRegisterCollection()).WithPoller();
+            interf.AddRegisterCollection(new TestBoolRegisters());
 
-            var register = interf.GetRegister(nameof(TestRegisterCollection.TestBool1));
+            var register1 = interf.GetRegister(nameof(TestBoolRegisters.RType));
+            var register2 = interf.GetRegister(nameof(TestBoolRegisters.XType));
 
-            //test generic properties
-            TestBasicGeneration((IRegisterInternal)register, nameof(TestRegisterCollection.TestBool1), false, 85, "R85");
+            var register3 = interf.GetRegister(nameof(TestBoolRegisters.RType_MewString));
 
-        }
+            Test((IRegisterInternal)register1, nameof(TestBoolRegisters.RType), 85, "R85A");
+            Test((IRegisterInternal)register2, nameof(TestBoolRegisters.XType), 0, "XD");
 
-        [Fact(DisplayName = "Boolean input XD generation")]
-        public void BooleanInputGen() {
-
-            var interf = Mewtocol.Ethernet("192.168.0.1");
-            interf.AddRegisterCollection(new TestRegisterCollection()).WithPoller();
-
-            var register = interf.GetRegister(nameof(TestRegisterCollection.TestBoolInputXD));
-
-            //test generic properties
-            TestBasicGeneration((IRegisterInternal)register, nameof(TestRegisterCollection.TestBoolInputXD), false, 0, "XD");
+            Test((IRegisterInternal)register3, nameof(TestBoolRegisters.RType_MewString), 85, "R85B");
 
         }
 
-        [Fact(DisplayName = "Int16 generation")]
-        public void Int16Gen() {
+        [Fact(DisplayName = "Number 16 bit generation")]
+        public void N16BitGen () {
 
             var interf = Mewtocol.Ethernet("192.168.0.1");
-            interf.AddRegisterCollection(new TestRegisterCollection()).WithPoller();
+            interf.AddRegisterCollection(new Nums16Bit());
 
-            var register = interf.GetRegister(nameof(TestRegisterCollection.TestInt16));
+            var register1 = interf.GetRegister(nameof(Nums16Bit.Int16Type));
+            var register2 = interf.GetRegister(nameof(Nums16Bit.UInt16Type));
+            var register3 = interf.GetRegister(nameof(Nums16Bit.Enum16Type));
+
+            var register4 = interf.GetRegister(nameof(Nums16Bit.Int16Type_MewString));
+            var register5 = interf.GetRegister(nameof(Nums16Bit.Enum16Type_MewString));
 
             //test generic properties
-            TestBasicGeneration((IRegisterInternal)register, nameof(TestRegisterCollection.TestInt16), (short)0, 899, "DT899");
+            Test((IRegisterInternal)register1, nameof(Nums16Bit.Int16Type), 899, "DT899");
+            Test((IRegisterInternal)register2, nameof(Nums16Bit.UInt16Type), 342, "DT342");
+            Test((IRegisterInternal)register3, nameof(Nums16Bit.Enum16Type), 50, "DT50");
+
+            Test((IRegisterInternal)register4, nameof(Nums16Bit.Int16Type_MewString), 900, "DT900");
+            Test((IRegisterInternal)register5, nameof(Nums16Bit.Enum16Type_MewString), 51, "DT51");
 
         }
 
-        [Fact(DisplayName = "UInt16 generation")]
-        public void UInt16Gen() {
+        [Fact(DisplayName = "Number 32 bit generation")]
+        public void N32BitGen () {
 
             var interf = Mewtocol.Ethernet("192.168.0.1");
-            interf.AddRegisterCollection(new TestRegisterCollection()).WithPoller();
+            interf.AddRegisterCollection(new Nums32Bit());
 
-            var register = interf.GetRegister(nameof(TestRegisterCollection.TestUInt16));
+            var register1 = interf.GetRegister(nameof(Nums32Bit.Int32Type));
+            var register2 = interf.GetRegister(nameof(Nums32Bit.UInt32Type));
+            var register3 = interf.GetRegister(nameof(Nums32Bit.Enum32Type));
+            var register4 = interf.GetRegister(nameof(Nums32Bit.FloatType));
+            var register5 = interf.GetRegister(nameof(Nums32Bit.TimeSpanType));
+
+            var register6 = interf.GetRegister(nameof(Nums32Bit.Enum32Type_MewString));
+            var register7 = interf.GetRegister(nameof(Nums32Bit.TimeSpanType_MewString));
 
             //test generic properties
-            TestBasicGeneration((IRegisterInternal)register, nameof(TestRegisterCollection.TestUInt16), (ushort)0, 342, "DT342");
+            Test((IRegisterInternal)register1, nameof(Nums32Bit.Int32Type), 7001, "DDT7001");
+            Test((IRegisterInternal)register2, nameof(Nums32Bit.UInt32Type), 765, "DDT765");
+            Test((IRegisterInternal)register3, nameof(Nums32Bit.Enum32Type), 51, "DDT51");
+            Test((IRegisterInternal)register4, nameof(Nums32Bit.FloatType), 7003, "DDT7003");
+            Test((IRegisterInternal)register5, nameof(Nums32Bit.TimeSpanType), 7012, "DDT7012");
+
+            Test((IRegisterInternal)register6, nameof(Nums32Bit.Enum32Type_MewString), 53, "DDT53");
+            Test((IRegisterInternal)register7, nameof(Nums32Bit.TimeSpanType_MewString), 7014, "DDT7014");
 
         }
 
-        [Fact(DisplayName = "Int32 generation")]
-        public void Int32Gen() {
+        [Fact(DisplayName = "String generation")]
+        public void StringGen() {
 
             var interf = Mewtocol.Ethernet("192.168.0.1");
-            interf.AddRegisterCollection(new TestRegisterCollection()).WithPoller();
+            interf.AddRegisterCollection(new TestStringRegisters());
 
-            var register = interf.GetRegister(nameof(TestRegisterCollection.TestInt32));
-
-            //test generic properties
-            TestBasicGeneration((IRegisterInternal)register, nameof(TestRegisterCollection.TestInt32), (int)0, 7001, "DDT7001");
-
-        }
-
-        [Fact(DisplayName = "UInt32 generation")]
-        public void UInt32Gen() {
-
-            var interf = Mewtocol.Ethernet("192.168.0.1");
-            interf.AddRegisterCollection(new TestRegisterCollection()).WithPoller();
-
-            var register = interf.GetRegister(nameof(TestRegisterCollection.TestUInt32));
+            var register1 = interf.GetRegister(nameof(TestStringRegisters.StringType));
+            var register2 = interf.GetRegister(nameof(TestStringRegisters.StringType_MewString));
 
             //test generic properties
-            TestBasicGeneration((IRegisterInternal)register, nameof(TestRegisterCollection.TestUInt32), (uint)0, 765, "DDT765");
-
-        }
-
-        [Fact(DisplayName = "Float32 generation")]
-        public void Float32Gen() {
-
-            var interf = Mewtocol.Ethernet("192.168.0.1");
-            interf.AddRegisterCollection(new TestRegisterCollection()).WithPoller();
-
-            var register = interf.GetRegister(nameof(TestRegisterCollection.TestFloat32));
-
-            //test generic properties
-            TestBasicGeneration((IRegisterInternal)register, nameof(TestRegisterCollection.TestFloat32), (float)0, 7003, "DDT7003");
-
-        }
-
-        [Fact(DisplayName = "TimeSpan generation")]
-        public void TimespanGen() {
-
-            var interf = Mewtocol.Ethernet("192.168.0.1");
-            interf.AddRegisterCollection(new TestRegisterCollection()).WithPoller();
-
-            var register = interf.GetRegister(nameof(TestRegisterCollection.TestTime));
-
-            //test generic properties
-            TestBasicGeneration((IRegisterInternal)register, nameof(TestRegisterCollection.TestTime), TimeSpan.Zero, 7012, "DDT7012");
+            Test((IRegisterInternal)register1, nameof(TestStringRegisters.StringType), 7005, "DT7005");
+            Test((IRegisterInternal)register2, nameof(TestStringRegisters.StringType_MewString), 7050, "DT7050");
 
         }
 

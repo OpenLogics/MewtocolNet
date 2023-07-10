@@ -23,8 +23,8 @@ namespace MewtocolTests {
                 new NumberRegister<uint>(50),
                 new NumberRegister<float>(50),
                 new NumberRegister<TimeSpan>(50),
-                new BytesRegister(50, 30),
-                new BytesRegister(50, 31),
+                new BytesRegister(50, (uint)30),
+                new BytesRegister(50, (uint)31),
             };
 
             List<string> expectedIdents = new List<string> {
@@ -103,7 +103,7 @@ namespace MewtocolTests {
                 IRegisterInternal? reg = registers[i];
                 string expect = expcectedIdents[i];
 
-                Assert.Equal(expect, reg.GetRegisterPLCName());
+                Assert.Equal(expect, reg.GetMewName());
 
             }
 
