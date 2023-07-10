@@ -3,6 +3,7 @@ using CommandLine.Text;
 using MewTerminal.Commands;
 using MewtocolNet.Logging;
 using Spectre.Console;
+using System.Globalization;
 using System.Reflection;
 
 namespace MewTerminal;
@@ -10,6 +11,11 @@ namespace MewTerminal;
 internal class Program {
     
     static void Main(string[] args) {
+
+        Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+        Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
+
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
 
         Logger.OnNewLogMessage((dt, lv, msg) => {
 

@@ -56,7 +56,7 @@ namespace MewtocolNet {
                     string additionalStr = match.Groups["additional"].Value;
                     string[] subTypes = additionalStr.Split('_').Select(x => SanitizePlcEncodedString(x)).ToArray();
 
-                    string wholeName = $"{groupStr} {sizeFl:0.##}k{(subTypes.Length > 1 ? " " : "")}{string.Join(",", subTypes)}";
+                    string wholeName = $"{groupStr} {sizeFl:0.##}k{(subTypes.Length > 0 ? " " : "")}{string.Join(",", subTypes)}";
 
                     if (string.IsNullOrEmpty(subTypes[0]))
                         subTypes = Array.Empty<string>();   

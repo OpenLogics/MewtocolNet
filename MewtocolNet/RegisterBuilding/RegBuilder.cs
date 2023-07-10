@@ -29,14 +29,6 @@ namespace MewtocolNet.RegisterBuilding {
 
         }
 
-        public static RegBuilder ForInterface(IPlcSerial interf) {
-
-            var rb = new RegBuilder();
-            rb.forInterface = interf as MewtocolInterface;
-            return rb;
-
-        }
-
         public static RegBuilder Factory { get; private set; } = new RegBuilder();
 
 

@@ -6,6 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 	<PublishAot>true</PublishAot>
+	<ApplicationManifest>app.manifest</ApplicationManifest>
+	<NoWarn>IL2026,IL2027,IL2090</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,9 +20,12 @@
   </ItemGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
-		
+
+	<AssemblyName>mewcmd</AssemblyName>
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+	<TrimmerRemoveSymbols>true</TrimmerRemoveSymbols>
+	<TrimMode>partial</TrimMode>
     <SelfContained>True</SelfContained>
     <DebugType>None</DebugType>
     <DebugSymbols>False</DebugSymbols>

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace MewTerminal;
@@ -24,7 +25,7 @@ internal static class Helpers {
 
             foreach (var prop in props) {
 
-                if(isFirst) table.AddColumn(prop.Name);
+                if(isFirst) table.AddColumn(prop.Name.SplitCamelCase());
 
                 var propVal = prop.GetValue(item);
 
@@ -32,6 +33,10 @@ internal static class Helpers {
 
                 if (propVal is byte[] bArr) {
                     strVal = string.Join(" ", bArr.Select(x => x.ToString("X2")));
+                }
+
+                if (propVal is string[] sArr) {
+                    strVal = string.Join(", ", sArr);
                 }
 
                 strVal = strVal.Replace("[", "");
@@ -48,6 +53,12 @@ internal static class Helpers {
         }
 
         return table;
+
+    }
+
+    private static string SplitCamelCase (this string str) {
+
+        return Regex.Replace(Regex.Replace(str, @"(\P{Ll})(\P{Ll}\p{Ll})", "$1 $2"), @"(\p{Ll})(\P{Ll})", "$1 $2");
 
     }
 
