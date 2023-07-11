@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using MewtocolNet.Helpers;
 
 namespace MewtocolNet.TypeConversion {
     
@@ -134,9 +135,9 @@ namespace MewtocolNet.TypeConversion {
                 PlcVarType = PlcVarType.REAL,
                 FromRaw = (reg, bytes) => {
 
-                    var val = BitConverter.ToUInt32(bytes, 0);
-                    byte[] floatVals = BitConverter.GetBytes(val);
-                    float finalFloat = BitConverter.ToSingle(floatVals, 0);
+                    //bytes = new byte[] { 0xCD, 0xCC, 0x8C, 0x40 };
+
+                    float finalFloat = BitConverter.ToSingle(bytes, 0);
 
                     return finalFloat;
 

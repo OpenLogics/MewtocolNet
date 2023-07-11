@@ -14,7 +14,7 @@ using MewtocolNet.RegisterAttributes;
 
 namespace MewtocolNet {
     
-    public class MewtocolInterfaceSerial : MewtocolInterface, IPlcSerial {
+    public sealed class MewtocolInterfaceSerial : MewtocolInterface, IPlcSerial {
 
         private bool autoSerial;
 
@@ -46,13 +46,6 @@ namespace MewtocolNet {
         public IPlcSerial WithPoller () {
              
             usePoller = true;
-            return this;
-
-        }
-
-        public IPlcSerial AddRegisterCollection (RegisterCollection collection) {
-
-            WithRegisterCollection(collection);
             return this;
 
         }

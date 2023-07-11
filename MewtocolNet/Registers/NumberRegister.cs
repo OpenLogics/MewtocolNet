@@ -1,4 +1,6 @@
-﻿using System;
+﻿using MewtocolNet.Exceptions;
+using MewtocolNet.UnderlyingRegisters;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -131,11 +133,18 @@ namespace MewtocolNet.Registers {
 
             if (!attachedInterface.IsConnected) return null;
 
-            var read = await attachedInterface.ReadRawRegisterAsync(this);
-            if (read == null) return null;
+            var res = await underlyingMemory.ReadRegisterAsync(this);
+            if (!res) return null;
 
-            var parsed = PlcValueParser.Parse<T>(this, read);
+            var bytes = underlyingMemory.GetUnderlyingBytes(this);
+            
+            return SetValueFromBytes(bytes);
 
+        }
+
+        internal override object SetValueFromBytes(byte[] bytes) {
+
+            var parsed = PlcValueParser.Parse<T>(this, bytes);
             SetValueFromPLC(parsed);
             return parsed;
 
@@ -146,8 +155,13 @@ namespace MewtocolNet.Registers {
 
             if (!attachedInterface.IsConnected) return false;
 
-            var res = await attachedInterface.WriteRawRegisterAsync(this, PlcValueParser.Encode(this, (T)data));
-            if (res) SetValueFromPLC(data);
+            var encoded = PlcValueParser.Encode(this, (T)data);
+            var res = await underlyingMemory.WriteRegisterAsync(this, encoded);
+
+            if (res) {
+                SetValueFromPLC(data);
+            }
+
             return res;
 
         }

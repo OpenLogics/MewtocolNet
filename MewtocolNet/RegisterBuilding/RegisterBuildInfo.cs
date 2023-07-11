@@ -1,4 +1,5 @@
 ﻿using MewtocolNet.Exceptions;
+using MewtocolNet.RegisterAttributes;
 using MewtocolNet.Registers;
 using System;
 using System.Collections;
@@ -20,13 +21,19 @@ namespace MewtocolNet.RegisterBuilding {
         internal byte? specialAddress;
 
         internal RegisterType? registerType;
+
         internal Type dotnetCastType;
-        internal Type collectionType;
+
+        internal RegisterCollection collectionTarget;
+        internal PropertyInfo boundPropTarget;
+
+        internal BaseRegister BuildForCollectionAttribute () {
+
+            return (BaseRegister)RegBuilder.Factory.FromPlcRegName(mewAddress, name).AsType(dotnetCastType).Build();
+
+        }
 
         internal BaseRegister Build () {
-
-            //Has mew address use this before the default checks
-            if (mewAddress != null) return BuildFromMewAddress();
 
             //parse enums 
             if (dotnetCastType.IsEnum) {
@@ -46,8 +53,8 @@ namespace MewtocolNet.RegisterBuilding {
                 var parameters = new object[] { memoryAddress, name };
                 var instance = (BaseRegister)constr.Invoke(parameters);
 
-                if (collectionType != null)
-                    instance.WithCollectionType(collectionType);
+                if (collectionTarget != null)
+                    instance.WithRegisterCollection(collectionTarget);
 
                 return instance;
 
@@ -56,22 +63,18 @@ namespace MewtocolNet.RegisterBuilding {
             //parse all others where the type is known
             RegisterType regType = registerType ?? dotnetCastType.ToRegisterTypeDefault();
             Type registerClassType = dotnetCastType.GetDefaultRegisterHoldingType();
-            bool isBytesRegister = !registerClassType.IsGenericType && registerClassType == typeof(BytesRegister);
+
+            bool isBoolRegister = regType.IsBoolean();
+
+            bool isBytesArrRegister = !registerClassType.IsGenericType && registerClassType == typeof(BytesRegister) && dotnetCastType == typeof(byte[]);
+
+            bool isBytesBitsRegister = !registerClassType.IsGenericType && registerClassType == typeof(BytesRegister) && dotnetCastType == typeof(BitArray);
+
             bool isStringRegister = !registerClassType.IsGenericType && registerClassType == typeof(StringRegister);
 
-            if (regType.IsNumericDTDDT() && (dotnetCastType == typeof(bool))) {
+            bool isNormalNumericResiter = regType.IsNumericDTDDT() && !isBytesArrRegister && !isBytesBitsRegister && !isStringRegister;
 
-                //-------------------------------------------
-                //as numeric register with boolean bit target
-                //create a new bregister instance
-                var instance = new BytesRegister(memoryAddress, memorySizeBytes.Value, name);
-
-                if (collectionType != null)
-                    instance.WithCollectionType(collectionType);
-
-                return instance;
-
-            } else if (regType.IsNumericDTDDT() && !isBytesRegister && !isStringRegister) {
+            if (isNormalNumericResiter) {
 
                 //-------------------------------------------
                 //as numeric register
@@ -83,28 +86,43 @@ namespace MewtocolNet.RegisterBuilding {
                 var parameters = new object[] { memoryAddress, name };
                 var instance = (BaseRegister)Activator.CreateInstance(registerClassType, flags, null, parameters, null);
 
-                if(collectionType != null)
-                    instance.WithCollectionType(collectionType);
+                if(collectionTarget != null)
+                    instance.WithRegisterCollection(collectionTarget);
 
                 return instance;
 
             }
 
-            if(isBytesRegister) {
+            if(isBytesArrRegister) {
 
                 //-------------------------------------------
                 //as byte range register
 
+                BytesRegister instance = new BytesRegister(memoryAddress, memorySizeBytes.Value, name);
+                instance.ReservedBytesSize = (ushort)memorySizeBytes.Value; 
+
+                if (collectionTarget != null)
+                    instance.WithRegisterCollection(collectionTarget);
+
+                return instance;
+
+            }
+
+            if(isBytesBitsRegister) {
+
+                //-------------------------------------------
+                //as bit range register
+
                 BytesRegister instance;
 
-                if(memorySizeBits != null) {
+                if (memorySizeBits != null) {
                     instance = new BytesRegister(memoryAddress, memorySizeBits.Value, name);
                 } else {
-                    instance = new BytesRegister(memoryAddress, memorySizeBytes.Value, name);
+                    instance = new BytesRegister(memoryAddress, 16, name);
                 }
 
-                if (collectionType != null)
-                    instance.WithCollectionType(collectionType);
+                if (collectionTarget != null)
+                    instance.WithRegisterCollection(collectionTarget);
 
                 return instance;
 
@@ -116,14 +134,14 @@ namespace MewtocolNet.RegisterBuilding {
                 //as byte range register
                 var instance = (BaseRegister)new StringRegister(memoryAddress, name);   
 
-                if (collectionType != null)
-                    instance.WithCollectionType(collectionType);
+                if (collectionTarget != null)
+                    instance.WithRegisterCollection(collectionTarget);
 
                 return instance;
 
             }
 
-            if (regType.IsBoolean()) {
+            if (isBoolRegister) {
 
                 //-------------------------------------------
                 //as boolean register
@@ -134,20 +152,14 @@ namespace MewtocolNet.RegisterBuilding {
 
                 var instance = new BoolRegister(io, spAddr.Value, areaAddr, name);
 
-                if (collectionType != null)
-                    ((IRegisterInternal)instance).WithCollectionType(collectionType);
+                if (collectionTarget != null)
+                    instance.WithRegisterCollection(collectionTarget);
 
                 return instance;
 
             }
 
             throw new Exception("Failed to build register");
-
-        }
-
-        private BaseRegister BuildFromMewAddress () {
-
-            return (BaseRegister)RegBuilder.Factory.FromPlcRegName(mewAddress, name).AsType(dotnetCastType).Build();
 
         }
 

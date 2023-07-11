@@ -45,7 +45,7 @@ internal class ScanCommand : CommandLineExcecuteable {
                     ctx.Status($"Getting cassette PLC {item.Cassette.IPAddress}:{item.Cassette.Port}")
                        .Spinner(Spinner.Known.Dots);
 
-                    var dev = Mewtocol.Ethernet(item.Cassette.IPAddress, item.Cassette.Port);
+                    var dev = Mewtocol.Ethernet(item.Cassette.IPAddress, item.Cassette.Port).Build();
                     dev.ConnectTimeout = 1000;
                     await dev.ConnectAsync();
                     item.PLCInf = dev.PlcInfo;

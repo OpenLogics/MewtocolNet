@@ -1,4 +1,5 @@
 ﻿using MewtocolNet.DocAttributes;
+using MewtocolNet.Registers;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -118,7 +119,9 @@ namespace MewtocolNet {
         /// <returns>A <see cref="T:byte[]"/> or null of failed</returns>
         internal static byte[] ParseDTRawStringAsBytes (this string _onString) {
 
-            var res = new Regex(@"\%([0-9]{2})\$RD(?<data>.*)(?<csum>..)..").Match(_onString);
+            _onString = _onString.Replace("\r", "");
+
+            var res = new Regex(@"\%([0-9]{2})\$RD(?<data>.*)(?<csum>..)").Match(_onString);
             if (res.Success) {
 
                 string val = res.Groups["data"].Value;
@@ -242,6 +245,16 @@ namespace MewtocolNet {
 
             bool valCompare = reg1.RegisterType == compare.RegisterType &&
                               reg1.MemoryAddress == compare.MemoryAddress && 
+                              reg1.GetSpecialAddress() == compare.GetSpecialAddress();
+
+            return valCompare;
+
+        }
+
+        internal static bool CompareIsDuplicateNonCast (this BaseRegister reg1, BaseRegister compare) {
+
+            bool valCompare = reg1.GetType() != compare.GetType() &&
+                              reg1.MemoryAddress == compare.MemoryAddress &&
                               reg1.GetSpecialAddress() == compare.GetSpecialAddress();
 
             return valCompare;

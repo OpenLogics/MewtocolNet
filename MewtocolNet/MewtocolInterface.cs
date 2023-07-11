@@ -11,10 +11,11 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using MewtocolNet.UnderlyingRegisters;
 
 namespace MewtocolNet {
 
-    public partial class MewtocolInterface : IPlc, INotifyPropertyChanged, IDisposable {
+    public abstract partial class MewtocolInterface : IPlc, INotifyPropertyChanged, IDisposable {
 
         #region Private fields
 
@@ -49,6 +50,7 @@ namespace MewtocolNet {
         internal volatile bool pollerTaskStopped = true;
         internal volatile bool pollerFirstCycle;
         internal bool usePoller = false;
+        internal MemoryAreaManager memoryManager;
 
         internal List<BaseRegister> RegistersUnderlying { get; private set; } = new List<BaseRegister>();
         internal IEnumerable<IRegisterInternal> RegistersInternal => RegistersUnderlying.Cast<IRegisterInternal>();
@@ -142,6 +144,8 @@ namespace MewtocolNet {
 
         private protected MewtocolInterface () {
 
+            memoryManager = new MemoryAreaManager(this);
+
             Connected += MewtocolInterface_Connected;
             RegisterChanged += OnRegisterChanged;
 
@@ -163,6 +167,8 @@ namespace MewtocolNet {
             Logger.Log($"{asInternal.GetMewName()} " +
                        $"{(o.Name != null ? $"({o.Name}) " : "")}" +
                        $"changed to \"{asInternal.GetValueString()}\"", LogLevel.Change, this);
+
+            OnRegisterChangedUpdateProps((IRegisterInternal)o);
 
         }
 
@@ -352,8 +358,9 @@ namespace MewtocolNet {
                         }
 
                         //request next frame
-                        var writeBuffer = Encoding.UTF8.GetBytes("%01**&\r");
+                        var writeBuffer = Encoding.UTF8.GetBytes($"%{GetStationNumber()}**&\r");
                         await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length);
+                        Logger.Log($">> Requested next frame", LogLevel.Critical, this);
                         wasMultiFramedResponse = true;
 
                     }
@@ -520,6 +527,8 @@ namespace MewtocolNet {
         }
 
         #endregion
+
+        public string Explain() => memoryManager.ExplainLayout();
 
     }
 

@@ -30,10 +30,10 @@ namespace MewtocolTests.EncapsulatedTests {
 
     public class TestBoolRegisters : RegisterCollection {
 
-        [Register(IOType.R, memoryArea: 85, spAdress: 0xA)]
+        [Register("R85A")]
         public bool RType { get; set; }
 
-        [Register(IOType.X, (byte)0xD)]
+        [Register("XD")]
         public bool XType { get; set; }
 
         [Register("R85B")]
@@ -44,71 +44,62 @@ namespace MewtocolTests.EncapsulatedTests {
     public class Nums16Bit : RegisterCollection {
 
 
-        [Register(899)]
+        [Register("DT899")]
         public short Int16Type { get; set; }
 
-        [Register(342)]
+        [Register("DT342")]
         public ushort UInt16Type { get; set; }
 
-        [Register(50)]
+        [Register("DT50")]
         public CurrentState Enum16Type { get; set; }
-
-        [Register("DT900")]
-        public short Int16Type_MewString { get; set; }
-
-        [Register("DT51")]
-        public CurrentState Enum16Type_MewString { get; set; }
 
     }
 
     public class Nums32Bit : RegisterCollection {
 
-        [Register(7001)]
+        [Register("DDT7000")]
         public int Int32Type { get; set; }
 
-        [Register(765)]
+        [Register("DDT7002")]
         public uint UInt32Type { get; set; }
 
-        [Register(51)]
+        [Register("DDT7004")]
         public CurrentState32 Enum32Type { get; set; }
 
-        [Register(7003)]
+        [Register("DDT7006")]
         public float FloatType { get; set; }
 
-        [Register(7012)]
+        [Register("DDT7006")]
+        public float FloatType2 { get; set; } // this is legal, because the cast type is the same
+
+        //[Register("DDT7006")]
+        //public int FloatType3 { get; set; } // this is not legal
+
+        [Register("DDT7010")]
         public TimeSpan TimeSpanType { get; set; }
 
-        [Register("DDT53")]
-        public CurrentState32 Enum32Type_MewString { get; set; }
+        [Register("DDT7008")]
+        public TimeSpan TimeSpanType2 { get; set; }
 
-        [Register("DDT7014")]
-        public TimeSpan TimeSpanType_MewString { get; set; }
+        [Register("DDT7013")]
+        public TimeSpan TimeSpanType3 { get; set; }
 
     }
 
     public class TestStringRegisters : RegisterCollection {
 
-        [Register(7005, 5)]
+        [Register("DT7005")]
         public string? StringType { get; set; }
-
-        [Register("DT7050")]
-        public string? StringType_MewString { get; set; }
 
     }
 
     public class TestBitwiseRegisters : RegisterCollection {
 
-        [Register(7010)]
-        public BitArray TestBitRegister { get; set; }
+        [Register("DT7000")]
+        public BitArray BitArr16 { get; set; }
 
-        [Register(8010, BitCount.B32)]
-        public BitArray TestBitRegister32 { get; set; }
-
-        [Register(1204, BitCount.B16, 9)]
-        public bool BitValue { get; set; }
-
-        [Register(1204, BitCount.B32, 5)]
-        public bool FillTest { get; set; }
+        //[Register("DT7001")]
+        //public BitArray BitArr32 { get; set; }
 
     }
 

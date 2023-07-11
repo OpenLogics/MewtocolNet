@@ -58,18 +58,6 @@ namespace MewtocolNet {
         /// </summary>
         Task ConnectAsync(Action onTryingConfig);
 
-        /// <summary>
-        /// Attaches a poller to the interface
-        /// </summary>
-        IPlcSerial WithPoller();
-
-        /// <summary>
-        /// Attaches a register collection object to 
-        /// the interface that can be updated automatically.
-        /// </summary>
-        /// <param name="collection">The type of the collection base class</param>
-        IPlcSerial AddRegisterCollection(RegisterCollection collection);
-
     }
 
 }

@@ -11,7 +11,7 @@ namespace MewtocolNet {
     /// <summary>
     /// The PLC com interface class
     /// </summary>
-    public class MewtocolInterfaceTcp : MewtocolInterface, IPlcEthernet {
+    public sealed class MewtocolInterfaceTcp : MewtocolInterface, IPlcEthernet {
 
         //TCP
         internal TcpClient client;
@@ -28,22 +28,6 @@ namespace MewtocolNet {
         public IPEndPoint HostEndpoint { get; set; }
 
         internal MewtocolInterfaceTcp () : base() { }
-
-        /// <inheritdoc/>
-        public IPlcEthernet WithPoller () {
-
-            usePoller = true;   
-            return this;
-       
-        }
-
-        /// <inheritdoc/>
-        public IPlcEthernet AddRegisterCollection (RegisterCollection collection) {
-
-            WithRegisterCollection(collection);
-            return this;
-
-        }
 
         #region TCP connection state handling
 

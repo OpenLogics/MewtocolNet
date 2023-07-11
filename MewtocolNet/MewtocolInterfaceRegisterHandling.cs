@@ -3,9 +3,11 @@ using MewtocolNet.Logging;
 using MewtocolNet.RegisterAttributes;
 using MewtocolNet.RegisterBuilding;
 using MewtocolNet.Registers;
+using MewtocolNet.UnderlyingRegisters;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
@@ -18,7 +20,7 @@ namespace MewtocolNet {
     /// <summary>
     /// The PLC com interface class
     /// </summary>
-    public partial class MewtocolInterface {
+    public abstract partial class MewtocolInterface {
 
         internal Task pollCycleTask;
 
@@ -30,13 +32,15 @@ namespace MewtocolNet {
         /// <summary>
         /// Current poller cycle duration
         /// </summary>
-        public int PollerCycleDurationMs { 
-            get => pollerCycleDurationMs; 
+        public int PollerCycleDurationMs {
+            get => pollerCycleDurationMs;
             private set {
                 pollerCycleDurationMs = value;
                 OnPropChange();
             }
         }
+
+        private List<RegisterCollection> registerCollections = new List<RegisterCollection>();
 
         #region Register Polling
 
@@ -70,7 +74,7 @@ namespace MewtocolNet {
         /// useful if you want to use a custom update frequency
         /// </summary>
         /// <returns>The number of inidvidual mewtocol commands sent</returns>
-        public async Task<int> RunPollerCylceManual () {
+        public async Task<int> RunPollerCylceManual() {
 
             if (!pollerTaskStopped)
                 throw new NotSupportedException($"The poller is already running, " +
@@ -86,7 +90,7 @@ namespace MewtocolNet {
         }
 
         //polls all registers one by one (slow)
-        internal async Task Poll () {
+        internal async Task Poll() {
 
             Logger.Log("Poller is attaching", LogLevel.Info, this);
 
@@ -111,13 +115,15 @@ namespace MewtocolNet {
 
         }
 
-        private async Task OnMultiFrameCycle () {
+        private async Task OnMultiFrameCycle() {
 
             var sw = Stopwatch.StartNew();
 
-            await UpdateRCPRegisters();
+            //await UpdateRCPRegisters();
 
-            await UpdateDTRegisters();
+            //await UpdateDTRegisters();
+
+            await memoryManager.PollAllAreasAsync();
 
             await GetPLCInfoAsync();
 
@@ -130,7 +136,7 @@ namespace MewtocolNet {
 
         #region Smart register polling methods
 
-        private async Task UpdateRCPRegisters () {
+        private async Task UpdateRCPRegisters() {
 
             //build booleans
             var rcpList = RegistersUnderlying.Where(x => x.GetType() == typeof(BoolRegister))
@@ -145,7 +151,7 @@ namespace MewtocolNet {
 
                 int toReadRegistersCount = 8;
 
-                if(i == rcpFrameCount - 1) toReadRegistersCount = rcpLastFrameRemainder;
+                if (i == rcpFrameCount - 1) toReadRegistersCount = rcpLastFrameRemainder;
 
                 var rcpString = new StringBuilder($"%{GetStationNumber()}#RCP{toReadRegistersCount}");
 
@@ -166,23 +172,23 @@ namespace MewtocolNet {
 
                     var register = rcpList[i + k];
 
-                    if((bool)register.Value != resultBitArray[k]) {
+                    if ((bool)register.Value != resultBitArray[k]) {
                         register.SetValueFromPLC(resultBitArray[k]);
                     }
 
                 }
-                    
+
             }
 
         }
 
-        private async Task UpdateDTRegisters () {
+        private async Task UpdateDTRegisters() {
 
             foreach (var reg in RegistersUnderlying) {
 
                 var type = reg.GetType();
 
-                if(reg.RegisterType.IsNumericDTDDT() || reg.RegisterType == RegisterType.DT_BYTE_RANGE) {
+                if (reg.RegisterType.IsNumericDTDDT() || reg.RegisterType == RegisterType.DT_BYTE_RANGE) {
 
                     var lastVal = reg.Value;
                     var rwReg = (IRegisterInternal)reg;
@@ -203,144 +209,81 @@ namespace MewtocolNet {
 
         #region Register Colleciton adding
 
-        internal MewtocolInterface WithRegisterCollection (RegisterCollection collection) {
+        /// <summary>
+        /// Adds the given register collection and all its registers with attributes to the register list
+        /// </summary>
+        internal void WithRegisterCollections(List<RegisterCollection> collections) {
 
-            collection.PLCInterface = this;
+            if (registerCollections.Count != 0)
+                throw new NotSupportedException("Register collections can only be build once");
 
-            var props = collection.GetType().GetProperties();
+            List<RegisterBuildInfo> buildInfos = new List<RegisterBuildInfo>();
 
-            foreach (var prop in props) {
+            foreach (var collection in collections) {
 
-                var attributes = prop.GetCustomAttributes(true);
+                collection.PLCInterface = this;
 
-                string propName = prop.Name;
-                foreach (var attr in attributes) {
+                var props = collection.GetType().GetProperties();
 
-                    if (attr is RegisterAttribute cAttribute) {
+                foreach (var prop in props) {
 
-                        if(!prop.PropertyType.IsAllowedPlcCastingType()) {
-                            throw new MewtocolException($"The register attribute property type is not allowed ({prop.PropertyType})");
+                    var attributes = prop.GetCustomAttributes(true);
+
+                    string propName = prop.Name;
+                    foreach (var attr in attributes) {
+
+                        if (attr is RegisterAttribute cAttribute) {
+
+                            if (!prop.PropertyType.IsAllowedPlcCastingType()) {
+                                throw new MewtocolException($"The register attribute property type is not allowed ({prop.PropertyType})");
+                            }
+
+                            var dotnetType = prop.PropertyType;
+
+                            buildInfos.Add(new RegisterBuildInfo {
+                                mewAddress = cAttribute.MewAddress,
+                                dotnetCastType = dotnetType.IsEnum ? dotnetType.UnderlyingSystemType : dotnetType,
+                                collectionTarget = collection,
+                                boundPropTarget = prop,
+                            });
+
                         }
-
-                        var dotnetType = prop.PropertyType;
-
-                        AddRegister(new RegisterBuildInfo {
-                            mewAddress = cAttribute.MewAddress,
-                            memoryAddress = cAttribute.MemoryArea,
-                            specialAddress = cAttribute.SpecialAddress,
-                            memorySizeBytes = cAttribute.ByteLength,
-                            registerType = cAttribute.RegisterType,
-                            dotnetCastType = dotnetType.IsEnum ? dotnetType.UnderlyingSystemType : dotnetType,
-                            collectionType = collection.GetType(),
-                            name = prop.Name,
-                        });
 
                     }
 
                 }
+
+                if (collection != null) {
+                    registerCollections.Add(collection);
+                    collection.OnInterfaceLinked(this);
+                }
+
+                Connected += (i) => {
+                    if (collection != null)
+                        collection.OnInterfaceLinkedAndOnline(this);
+                };
 
             }
 
-            RegisterChanged += (reg) => {
+            AddRegisters(buildInfos);
 
-                //register is used bitwise
-                if (reg.GetType() == typeof(BytesRegister)) {
+        }
 
-                    for (int i = 0; i < props.Length; i++) {
+        /// <summary>
+        /// Writes back the values changes of the underlying registers to the corrosponding property
+        /// </summary>
+        private void OnRegisterChangedUpdateProps(IRegisterInternal reg) {
 
-                        var prop = props[i];
-                        var bitWiseFound = prop.GetCustomAttributes(true)
-                        .FirstOrDefault(y => y.GetType() == typeof(RegisterAttribute) && ((RegisterAttribute)y).MemoryArea == reg.MemoryAddress);
+            var collection = reg.ContainedCollection;
+            if (collection == null) return;
 
-                        if (bitWiseFound != null) {
+            var props = collection.GetType().GetProperties();
 
-                            var casted = (RegisterAttribute)bitWiseFound;
-                            var bitIndex = casted.AssignedBitIndex;
+            //set the specific bit array if needed
+            //prop.SetValue(collection, bitAr);
+            //collection.TriggerPropertyChanged(prop.Name);
 
-                            BitArray bitAr = null;
 
-                            if (reg is NumberRegister<short> reg16) {
-                                var bytes = BitConverter.GetBytes((short)reg16.Value);
-                                bitAr = new BitArray(bytes);
-                            } else if (reg is NumberRegister<int> reg32) {
-                                var bytes = BitConverter.GetBytes((int)reg32.Value);
-                                bitAr = new BitArray(bytes);
-                            }
-
-                            if (bitAr != null && bitIndex < bitAr.Length && bitIndex >= 0) {
-
-                                //set the specific bit index if needed
-                                prop.SetValue(collection, bitAr[bitIndex]);
-                                collection.TriggerPropertyChanged(prop.Name);
-
-                            } else if (bitAr != null) {
-
-                                //set the specific bit array if needed
-                                prop.SetValue(collection, bitAr);
-                                collection.TriggerPropertyChanged(prop.Name);
-
-                            }
-
-                        }
-
-                    }
-
-                }
-
-                //updating normal properties
-                var foundToUpdate = props.FirstOrDefault(x => x.Name == reg.Name);
-
-                if (foundToUpdate != null) {
-
-                    var foundAttributes = foundToUpdate.GetCustomAttributes(true);
-                    var foundAttr = foundAttributes.FirstOrDefault(x => x.GetType() == typeof(RegisterAttribute));
-
-                    if (foundAttr == null)
-                        return;
-
-                    var registerAttr = (RegisterAttribute)foundAttr;
-
-                    //check if bit parse mode
-                    if (registerAttr.AssignedBitIndex == -1) {
-
-                        HashSet<Type> NumericTypes = new HashSet<Type> {
-                            typeof(bool),
-                            typeof(short),
-                            typeof(ushort),
-                            typeof(int),
-                            typeof(uint),
-                            typeof(float),
-                            typeof(TimeSpan),
-                            typeof(string)
-                        };
-
-                        var regValue = ((IRegister)reg).Value;
-
-                        if (NumericTypes.Any(x => foundToUpdate.PropertyType == x)) {
-                            foundToUpdate.SetValue(collection, regValue);
-                        }
-
-                        if (foundToUpdate.PropertyType.IsEnum) {
-                            foundToUpdate.SetValue(collection, regValue);
-                        }
-
-                    }
-
-                    collection.TriggerPropertyChanged(foundToUpdate.Name);
-
-                }
-
-            };
-
-            if (collection != null)
-                collection.OnInterfaceLinked(this);
-
-            Connected += (i) => {
-                if (collection != null)
-                    collection.OnInterfaceLinkedAndOnline(this);
-            };
-
-            return this;
 
         }
 
@@ -349,10 +292,10 @@ namespace MewtocolNet {
         #region Register Adding
 
         /// <inheritdoc/>
-        public void AddRegister(IRegister register) => AddRegister(register as BaseRegister);
+        public void AddRegister (IRegister register) => AddRegister(register as BaseRegister);
 
         /// <inheritdoc/>
-        public void AddRegister(BaseRegister register) {
+        public void AddRegister (BaseRegister register) {
 
             if (CheckDuplicateRegister(register))
                 throw MewtocolException.DupeRegister(register);
@@ -368,28 +311,56 @@ namespace MewtocolNet {
 
         }
 
-        internal void AddRegister (RegisterBuildInfo buildInfo) {
+        // Used for internal property based register building
+        internal void AddRegisters (List<RegisterBuildInfo> buildInfos) {
 
-            var builtRegister = buildInfo.Build();
+            //build all from attribute
+            List<BaseRegister> registers = new List<BaseRegister>();
 
-            //is bitwise and the register list already contains that area register
-            if(builtRegister.GetType() == typeof(BytesRegister) && CheckDuplicateRegister(builtRegister, out var existing)) {
+            foreach (var buildInfo in buildInfos) {
 
-                return;
+                var builtRegister = buildInfo.BuildForCollectionAttribute();
+
+                int? linkLen = null;
+
+                if(builtRegister is BytesRegister bReg) {
+
+                    linkLen = (int?)bReg.ReservedBytesSize ?? bReg.ReservedBitSize;
+
+                }
+
+                //attach the property and collection
+                builtRegister.WithBoundProperty(new RegisterPropTarget {
+                    BoundProperty = buildInfo.boundPropTarget,
+                    LinkLength = linkLen,
+                });
+
+                builtRegister.WithRegisterCollection(buildInfo.collectionTarget);
+
+                builtRegister.attachedInterface = this;
+                registers.Add(builtRegister);
 
             }
 
-            if (CheckDuplicateRegister(builtRegister))
-                throw MewtocolException.DupeRegister(builtRegister);
+            //order by address
+            registers = registers.OrderBy(x => x.GetSpecialAddress()).ToList();
+            registers = registers.OrderBy(x => x.MemoryAddress).ToList();
 
-            if(CheckDuplicateNameRegister(builtRegister))
-                throw MewtocolException.DupeNameRegister(builtRegister);
+            //link to memory manager
+            for (int i = 0, j = 0; i < registers.Count; i++) {
 
-            if (CheckOverlappingRegister(builtRegister, out var regB))
-                throw MewtocolException.OverlappingRegister(builtRegister, regB);
+                BaseRegister reg = registers[i];
+                reg.name = $"auto_prop_register_{j + 1}";
 
-            builtRegister.attachedInterface = this;
-            RegistersUnderlying.Add(builtRegister);
+                //link the memory area to the register
+                if (memoryManager.LinkRegister(reg)) {
+
+                    RegistersUnderlying.Add(reg);
+                    j++;
+
+                }
+
+            }
 
         }
 
@@ -479,7 +450,6 @@ namespace MewtocolNet {
             }
 
         }
-
 
         internal void PropertyRegisterWasSet(string propName, object value) {
 

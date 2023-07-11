@@ -25,7 +25,7 @@ internal class OnlineCommand : CommandLineExcecuteable {
                 string ip = split[0];
                 int port = int.Parse(split[1]);
 
-                using (var plc = Mewtocol.Ethernet(ip, port)) {
+                using (var plc = Mewtocol.Ethernet(ip, port).Build()) {
 
                     await AfterSetup(plc);
 

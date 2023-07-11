@@ -1,4 +1,5 @@
-﻿using MewtocolNet.Registers;
+﻿using MewtocolNet.RegisterAttributes;
+using MewtocolNet.Registers;
 using System;
 using System.Threading.Tasks;
 
@@ -19,17 +20,15 @@ namespace MewtocolNet {
 
         uint MemoryAddress { get; }
 
-        // setters
+        RegisterCollection ContainedCollection { get; } 
 
-        void WithCollectionType(Type colType);
+        // setters
 
         void SetValueFromPLC(object value);
 
         void ClearValue();
 
         // Accessors
-
-        Type GetCollectionType();
 
         string GetRegisterString();
 

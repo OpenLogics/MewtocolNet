@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace MewtocolNet {
 
-    public partial class MewtocolInterface {
+    public abstract partial class MewtocolInterface {
 
         #region PLC info getters
 

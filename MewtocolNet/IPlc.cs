@@ -124,6 +124,11 @@ namespace MewtocolNet {
         /// </summary>
         IEnumerable<IRegister> GetAllRegisters();
 
+        /// <summary>
+        /// Explains the register internal layout at this moment in time
+        /// </summary>
+        string Explain();
+
     }
 
 }

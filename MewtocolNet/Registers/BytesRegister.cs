@@ -19,9 +19,9 @@ namespace MewtocolNet.Registers {
         /// </summary>
         public uint AddressLength => addressLength;
 
-        internal uint ReservedBytesSize { get; private set; }
+        internal uint ReservedBytesSize { get; set; }
 
-        internal ushort? ReservedBitSize { get; private set; }  
+        internal ushort? ReservedBitSize { get; set; }  
 
         /// <summary>
         /// Defines a register containing bytes
@@ -128,15 +128,22 @@ namespace MewtocolNet.Registers {
 
             if (!attachedInterface.IsConnected) return null;
 
-            var read = await attachedInterface.ReadRawRegisterAsync(this);
-            if (read == null) return null;
+            var res = await underlyingMemory.ReadRegisterAsync(this);
+            if (!res) return null;
+
+            var bytes = underlyingMemory.GetUnderlyingBytes(this);
+
+            return SetValueFromBytes(bytes);
+
+        }
+
+        internal override object SetValueFromBytes(byte[] bytes) {
 
             object parsed;
-
-            if(ReservedBitSize != null) {
-                parsed = PlcValueParser.Parse<BitArray>(this, read);
+            if (ReservedBitSize != null) {
+                parsed = PlcValueParser.Parse<BitArray>(this, bytes);
             } else {
-                parsed = PlcValueParser.Parse<byte[]>(this, read);
+                parsed = PlcValueParser.Parse<byte[]>(this, bytes);
             }
 
             SetValueFromPLC(parsed);
@@ -157,8 +164,10 @@ namespace MewtocolNet.Registers {
                 encoded = PlcValueParser.Encode(this, (byte[])data);
             }
 
-            var res = await attachedInterface.WriteRawRegisterAsync(this, encoded);
-            if (res) SetValueFromPLC(data);
+            var res = await underlyingMemory.WriteRegisterAsync(this, encoded);
+            if (res) {
+                SetValueFromPLC(data);
+            }
 
             return res;
 

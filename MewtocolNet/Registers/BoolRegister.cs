@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MewtocolNet.UnderlyingRegisters;
+using System;
 using System.ComponentModel;
 using System.Net;
 using System.Text;
@@ -63,7 +64,8 @@ namespace MewtocolNet.Registers {
             if (!attachedInterface.IsConnected) return null;
 
             var read = await attachedInterface.ReadRawRegisterAsync(this);
-            if(read == null) return null;   
+            if(read == null) return null;
+
             var parsed = PlcValueParser.Parse<bool>(this, read);
 
             SetValueFromPLC(parsed);
@@ -76,8 +78,13 @@ namespace MewtocolNet.Registers {
 
             if (!attachedInterface.IsConnected) return false;
 
-            var res = await attachedInterface.WriteRawRegisterAsync(this, PlcValueParser.Encode(this, (bool)data));
-            if (res) SetValueFromPLC(data);
+            var encoded = PlcValueParser.Encode(this, (bool)data);
+
+            var res = await attachedInterface.WriteRawRegisterAsync(this, encoded);
+            if (res) {
+                SetValueFromPLC(data);
+            }
+
             return res;
 
         }
@@ -131,23 +138,6 @@ namespace MewtocolNet.Registers {
 
         /// <inheritdoc/>
         public override uint GetRegisterAddressLen () => 1;
-
-        /// <inheritdoc/>
-        public override string ToString(bool additional) {
-
-            if (!additional) return this.ToString();
-
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine($"PLC Naming: {GetMewName()}");
-            sb.AppendLine($"Name: {Name ?? "Not named"}");
-            sb.AppendLine($"Value: {GetValueString()}");
-            sb.AppendLine($"Register Type: {RegisterType}");
-            sb.AppendLine($"Memory Address: {MemoryAddress}");
-            sb.AppendLine($"Special Address: {SpecialAddress:X1}");
-
-            return sb.ToString();
-
-        }
 
     }
 

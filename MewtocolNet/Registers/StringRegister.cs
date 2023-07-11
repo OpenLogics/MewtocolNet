@@ -130,7 +130,8 @@ namespace MewtocolNet.Registers {
 
             }
 
-            var res = await attachedInterface.WriteRawRegisterAsync(this, PlcValueParser.Encode(this, (string)data));
+            var encoded = PlcValueParser.Encode(this, (string)data);
+            var res = await attachedInterface.WriteRawRegisterAsync(this, encoded);
             
             if (res) {
                 SetValueFromPLC(data);

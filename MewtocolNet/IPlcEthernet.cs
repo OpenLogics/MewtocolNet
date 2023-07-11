@@ -38,18 +38,6 @@ namespace MewtocolNet {
         /// <param name="_station">Station Number of the PLC</param>
         void ConfigureConnection(string _ip, int _port = 9094, int _station = 1);
 
-        /// <summary>
-        /// Attaches a poller to the interface
-        /// </summary>
-        IPlcEthernet WithPoller();
-
-        /// <summary>
-        /// Attaches a register collection object to 
-        /// the interface that can be updated automatically.
-        /// </summary>
-        /// <param name="collection">The type of the collection base class</param>
-        IPlcEthernet AddRegisterCollection(RegisterCollection collection);
-
     }
 
 }

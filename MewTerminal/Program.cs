@@ -1,6 +1,7 @@
 ﻿using CommandLine;
 using CommandLine.Text;
 using MewTerminal.Commands;
+using MewTerminal.Commands.OnlineCommands;
 using MewtocolNet.Logging;
 using Spectre.Console;
 using System.Globalization;

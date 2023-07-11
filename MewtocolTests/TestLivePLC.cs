@@ -103,7 +103,7 @@ namespace MewtocolTests
 
                 output.WriteLine($"Testing: {plc.PLCName}");
 
-                var cycleClient = Mewtocol.Ethernet(plc.PLCIP, plc.PLCPort);
+                var cycleClient = Mewtocol.Ethernet(plc.PLCIP, plc.PLCPort).Build();
 
                 await cycleClient.ConnectAsync();
 
@@ -124,7 +124,7 @@ namespace MewtocolTests
 
                 output.WriteLine($"Testing: {plc.PLCName}\n");
 
-                var client = Mewtocol.Ethernet(plc.PLCIP, plc.PLCPort);
+                var client = Mewtocol.Ethernet(plc.PLCIP, plc.PLCPort).Build();
 
                 await client.ConnectAsync();
 
@@ -155,7 +155,7 @@ namespace MewtocolTests
 
             output.WriteLine($"\n\n --- Testing: {plc.PLCName} ---\n");
 
-            var client = Mewtocol.Ethernet(plc.PLCIP, plc.PLCPort);
+            var client = Mewtocol.Ethernet(plc.PLCIP, plc.PLCPort).Build();
 
             foreach (var testRW in testRegisterRW) {
 
