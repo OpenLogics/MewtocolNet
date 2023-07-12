@@ -175,7 +175,7 @@ namespace MewtocolNet {
         /// <inheritdoc/>
         public async Task DisconnectAsync () {
 
-            await pollCycleTask;
+            if(pollCycleTask != null) await pollCycleTask;
 
             Disconnect();
 
@@ -186,7 +186,7 @@ namespace MewtocolNet {
 
             if (!IsConnected) return;
 
-            if (!pollCycleTask.IsCompleted) pollCycleTask.Wait();
+            if (pollCycleTask != null && !pollCycleTask.IsCompleted) pollCycleTask.Wait();
 
             OnMajorSocketExceptionWhileConnected();
 

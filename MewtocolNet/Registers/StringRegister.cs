@@ -21,12 +21,13 @@ namespace MewtocolNet.Registers {
 
         internal uint WordsSize { get; set; }  
 
-        private bool isCalibratedFromPlc = false;
+        internal bool isCalibratedFromPlc = false;
 
-        /// <summary>
-        /// Defines a register containing a string
-        /// </summary>
-        public StringRegister (uint _address, string _name = null) {
+        [Obsolete("Creating registers directly is not supported use IPlc.Register instead")]
+        public StringRegister() =>
+        throw new NotSupportedException("Direct register instancing is not supported, use the builder pattern");
+
+        internal StringRegister (uint _address, string _name = null) {
 
             name = _name;
             memoryAddress = _address;
@@ -55,7 +56,7 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public override void SetValueFromPLC (object val) {
 
-            if (!val.Equals(lastValue)) {
+            if (val == null || !val.Equals(lastValue)) {
 
                 lastValue = (string)val;
 
@@ -72,27 +73,7 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public override uint GetRegisterAddressLen() => Math.Max(1, WordsSize);
 
-        /// <inheritdoc/>
-        public override async Task<object> ReadAsync() {
-
-            if (!attachedInterface.IsConnected) return null;
-
-            //get the string params first
-
-            if(!isCalibratedFromPlc) await CalibrateFromPLC();
-
-            var read = await attachedInterface.ReadRawRegisterAsync(this);
-            if (read == null) return null;
-
-            var parsed = PlcValueParser.Parse<string>(this, read);
-
-            SetValueFromPLC(parsed);
-
-            return parsed;
-
-        }
-
-        private async Task CalibrateFromPLC () {
+        internal async Task CalibrateFromPLC () {
 
             Logger.Log($"Calibrating string ({PLCAddressName}) from PLC source", LogLevel.Verbose, attachedInterface);
 
@@ -116,26 +97,75 @@ namespace MewtocolNet.Registers {
         }
 
         /// <inheritdoc/>
+        public override async Task<object> ReadAsync() {
+
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
+
+            if (!isCalibratedFromPlc) await CalibrateFromPLC();
+
+            var res = await underlyingMemory.ReadRegisterAsync(this);
+            if (!res) return null;
+
+            var bytes = underlyingMemory.GetUnderlyingBytes(this);
+
+            return SetValueFromBytes(bytes);
+
+        }
+
+        /// <inheritdoc/>
         public override async Task<bool> WriteAsync(object data) {
 
-            if (!attachedInterface.IsConnected) return false;
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
 
-            if (!isCalibratedFromPlc) {
-
-                //try to calibrate from plc
-                await CalibrateFromPLC();
-
-            }
+            if (!isCalibratedFromPlc) await CalibrateFromPLC();
 
             var encoded = PlcValueParser.Encode(this, (string)data);
-            var res = await attachedInterface.WriteRawRegisterAsync(this, encoded);
-            
+            var res = await underlyingMemory.WriteRegisterAsync(this, encoded);
+
             if (res) {
+                AddSuccessWrite();
                 SetValueFromPLC(data);
-                UsedSize = (short)((string)Value).Length;
             }
-            
+
             return res;
+
+        }
+
+        internal override object SetValueFromBytes(byte[] bytes) {
+
+            AddSuccessRead();
+
+            var parsed = PlcValueParser.Parse<string>(this, bytes);
+            SetValueFromPLC(parsed);
+            return parsed;
+
+        }
+
+        internal override async Task<bool> WriteToAnonymousAsync(object value) {
+
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
+
+            if (!isCalibratedFromPlc) await CalibrateFromPLC();
+
+            var encoded = PlcValueParser.Encode(this, (string)value);
+            return await attachedInterface.WriteByteRange((int)MemoryAddress, encoded);
+
+        }
+
+        internal override async Task<object> ReadFromAnonymousAsync() {
+
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
+
+            if (!isCalibratedFromPlc) await CalibrateFromPLC();
+
+            var res = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, (int)GetRegisterAddressLen() * 2);
+            if (res == null) return null;
+
+            return PlcValueParser.Parse<string>(this, res);
 
         }
 

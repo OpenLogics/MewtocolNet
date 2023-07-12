@@ -255,7 +255,7 @@ namespace MewtocolNet {
             }
 
             var assembler = new RegisterAssembler(this);
-            var registers = assembler.Assemble(regBuild);
+            var registers = assembler.AssembleAll(regBuild);
             AddRegisters(registers.ToArray());
 
         }

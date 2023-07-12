@@ -1,8 +1,11 @@
-﻿using MewtocolNet.UnderlyingRegisters;
+﻿using MewtocolNet.Exceptions;
+using MewtocolNet.RegisterBuilding;
+using MewtocolNet.UnderlyingRegisters;
 using System;
 using System.ComponentModel;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MewtocolNet.Registers {
@@ -18,16 +21,11 @@ namespace MewtocolNet.Registers {
         /// </summary>
         public byte SpecialAddress => specialAddress;
 
-        /// <summary>
-        /// Creates a new boolean register
-        /// </summary>
-        /// <param name="_io">The io type prefix</param>
-        /// <param name="_spAddress">The special address</param>
-        /// <param name="_areaAdress">The area special address</param>
-        /// <param name="_name">The custom name</param>
-        /// <exception cref="NotSupportedException"></exception>
-        /// <exception cref="Exception"></exception>
-        public BoolRegister(IOType _io, byte _spAddress = 0x0, uint _areaAdress = 0, string _name = null) {
+        [Obsolete("Creating registers directly is not supported use IPlc.Register instead")]
+        public BoolRegister() => 
+        throw new NotSupportedException("Direct register instancing is not supported, use the builder pattern");   
+        
+        internal BoolRegister(IOType _io, byte _spAddress = 0x0, uint _areaAdress = 0, string _name = null) {
 
             lastValue = null;
 
@@ -50,7 +48,7 @@ namespace MewtocolNet.Registers {
                 throw new NotSupportedException("XY area addresses cant be greater than 110");
 
             if (specialAddress > 0xF)
-                throw new NotSupportedException("Special address cant be greater 15 or 0xF");
+                throw new NotSupportedException("Special address cant be greater than 15 or 0xF");
 
             base.CheckAddressOverflow(addressStart, addressLen);
 
@@ -61,31 +59,47 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public override async Task<object> ReadAsync() {
 
-            if (!attachedInterface.IsConnected) return null;
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
 
-            var read = await attachedInterface.ReadRawRegisterAsync(this);
-            if(read == null) return null;
-
-            var parsed = PlcValueParser.Parse<bool>(this, read);
-
-            SetValueFromPLC(parsed);
-            return parsed;
+            return null;
 
         }
 
         /// <inheritdoc/>
         public override async Task<bool> WriteAsync(object data) {
 
-            if (!attachedInterface.IsConnected) return false;
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
 
-            var encoded = PlcValueParser.Encode(this, (bool)data);
+            return false;
 
-            var res = await attachedInterface.WriteRawRegisterAsync(this, encoded);
-            if (res) {
-                SetValueFromPLC(data);
-            }
+        }
 
-            return res;
+        internal override async Task<bool> WriteToAnonymousAsync (object value) {
+
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
+
+            var station = attachedInterface.GetStationNumber();
+            string reqStr = $"%{station}#WCS{BuildMewtocolQuery()}{((bool)value ? "1" : "0")}";
+            var res = await attachedInterface.SendCommandAsync(reqStr);
+
+            return res.Success;
+
+        }
+
+        internal override async Task<object> ReadFromAnonymousAsync() {
+
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
+
+            var station = attachedInterface.GetStationNumber();
+            string requeststring = $"%{station}#RCS{BuildMewtocolQuery()}";
+            var result = await attachedInterface.SendCommandAsync(requeststring);
+            if (!result.Success) return null;
+
+            return result.Response.ParseRCSingleBit();
 
         }
 

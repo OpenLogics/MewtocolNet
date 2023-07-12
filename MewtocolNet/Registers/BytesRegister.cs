@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MewtocolNet.Exceptions;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -21,12 +22,13 @@ namespace MewtocolNet.Registers {
 
         internal uint ReservedBytesSize { get; set; }
 
-        internal ushort? ReservedBitSize { get; set; }  
+        internal ushort? ReservedBitSize { get; set; }
 
-        /// <summary>
-        /// Defines a register containing bytes
-        /// </summary>
-        public BytesRegister(uint _address, uint _reservedByteSize, string _name = null) {
+        [Obsolete("Creating registers directly is not supported use IPlc.Register instead")]
+        public BytesRegister() =>
+        throw new NotSupportedException("Direct register instancing is not supported, use the builder pattern");
+
+        internal BytesRegister(uint _address, uint _reservedByteSize, string _name = null) {
 
             name = _name;
             memoryAddress = _address;
@@ -123,7 +125,8 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public override async Task<object> ReadAsync() {
 
-            if (!attachedInterface.IsConnected) return null;
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
 
             var res = await underlyingMemory.ReadRegisterAsync(this);
             if (!res) return null;
@@ -131,6 +134,30 @@ namespace MewtocolNet.Registers {
             var bytes = underlyingMemory.GetUnderlyingBytes(this);
 
             return SetValueFromBytes(bytes);
+
+        }
+
+        /// <inheritdoc/>
+        public override async Task<bool> WriteAsync(object data) {
+
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
+
+            byte[] encoded;
+
+            if (ReservedBitSize != null) {
+                encoded = PlcValueParser.Encode(this, (BitArray)data);
+            } else {
+                encoded = PlcValueParser.Encode(this, (byte[])data);
+            }
+
+            var res = await underlyingMemory.WriteRegisterAsync(this, encoded);
+            if (res) {
+                AddSuccessWrite();
+                SetValueFromPLC(data);
+            }
+
+            return res;
 
         }
 
@@ -150,24 +177,22 @@ namespace MewtocolNet.Registers {
 
         }
 
-        /// <inheritdoc/>
-        public override async Task<bool> WriteAsync(object data) {
+        internal override async Task<bool> WriteToAnonymousAsync(object value) {
 
-            if (!attachedInterface.IsConnected) return false;
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
 
-            byte[] encoded;
+            return await attachedInterface.WriteByteRange((int)MemoryAddress, (byte[])value);
 
-            if (ReservedBitSize != null) {
-                encoded = PlcValueParser.Encode(this, (BitArray)data);
-            } else {
-                encoded = PlcValueParser.Encode(this, (byte[])data);
-            }
+        }
 
-            var res = await underlyingMemory.WriteRegisterAsync(this, encoded);
-            if (res) {
-                AddSuccessWrite();
-                SetValueFromPLC(data);
-            }
+        internal override async Task<object> ReadFromAnonymousAsync() {
+
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
+
+            var res = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, (int)GetRegisterAddressLen() * 2, false);
+            if (res == null) return null;
 
             return res;
 

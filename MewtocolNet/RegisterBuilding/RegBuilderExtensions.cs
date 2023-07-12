@@ -12,7 +12,7 @@ namespace MewtocolNet.RegisterBuilding {
             builder.Invoke(regBuilder);
 
             var assembler = new RegisterAssembler((MewtocolInterface)plc);
-            var registers = assembler.Assemble(regBuilder);
+            var registers = assembler.AssembleAll(regBuilder);
 
             var interf = (MewtocolInterface)plc;
 

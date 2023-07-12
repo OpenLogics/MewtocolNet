@@ -253,6 +253,22 @@ namespace MewtocolNet.UnderlyingRegisters {
             
         }
 
+        internal void MergeAndSizeDataAreas () {
+
+            //merge gaps that the algorithm didn't catch be rerunning the register attachment
+
+            foreach (var pLevel in pollLevels) {
+
+                var allDataAreaRegisters = pLevel.dataAreas.SelectMany(x => x.linkedRegisters).ToList();
+                var dataAreas = new List<DTArea>(allDataAreaRegisters.Capacity);
+
+                foreach (var reg in allDataAreaRegisters)
+                    AddDTArea(reg);
+
+            }
+
+        }
+
         internal async Task PollAllAreasAsync () {
 
             foreach (var pollLevel in pollLevels) {

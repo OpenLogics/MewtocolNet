@@ -1,6 +1,4 @@
-﻿using MewtocolNet.Exceptions;
-using MewtocolNet.RegisterAttributes;
-using MewtocolNet.Registers;
+﻿using MewtocolNet.RegisterAttributes;
 using MewtocolNet.UnderlyingRegisters;
 using System;
 using System.Collections;
@@ -10,7 +8,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -76,6 +73,7 @@ namespace MewtocolNet.RegisterBuilding {
             //optional
             internal uint? byteSize;
             internal uint? bitSize;
+            internal int? stringSize;
 
             internal int pollLevel = 1;
 
@@ -88,11 +86,14 @@ namespace MewtocolNet.RegisterBuilding {
 
             public SBase() { }
 
-            internal SBase(SData data) {
+            internal SBase(SData data, RBuild bldr) {
                 Data = data;
+                builder = bldr;
             }
 
             internal SData Data { get; set; }
+
+            internal RBuild builder;
 
         }
 
@@ -311,6 +312,13 @@ namespace MewtocolNet.RegisterBuilding {
 
         }
 
+        /// <summary>
+        /// Starts the register builder for a new mewtocol address <br/>
+        /// Examples:
+        /// <code>Address("DT100") | Address("R10A") | Address("DDT50", "MyRegisterName")</code>
+        /// </summary>
+        /// <param name="plcAddrName">Address name formatted as FP-Address like in FP-Winpro</param>
+        /// <param name="name">Custom name for the register to referr to it later</param>
         public SAddress Address (string plcAddrName, string name = null) {
 
             foreach (var method in parseMethods) {
@@ -326,7 +334,8 @@ namespace MewtocolNet.RegisterBuilding {
                     unfinishedList.Add(res.stepData);
 
                     return new SAddress {
-                        Data = res.stepData
+                        Data = res.stepData,
+                        builder = this,
                     };
 
                 } else if(res.state == ParseResultState.FailedHard) {
@@ -347,6 +356,22 @@ namespace MewtocolNet.RegisterBuilding {
 
         public class SAddress : SBase {
 
+            /// <summary>
+            /// Sets the register as a dotnet <see cref="System"/> type for direct conversion
+            /// <list type="bullet">
+            /// <item><term><see cref="bool"/></term><description>Boolean R/X/Y registers</description></item>
+            /// <item><term><see cref="short"/></term><description>16 bit signed integer</description></item>
+            /// <item><term><see cref="ushort"/></term><description>16 bit un-signed integer</description></item>
+            /// <item><term><see cref="int"/></term><description>32 bit signed integer</description></item>
+            /// <item><term><see cref="uint"/></term><description>32 bit un-signed integer</description></item>
+            /// <item><term><see cref="float"/></term><description>32 bit floating point</description></item>
+            /// <item><term><see cref="TimeSpan"/></term><description>32 bit time from <see cref="PlcVarType.TIME"/> interpreted as <see cref="TimeSpan"/></description></item>
+            /// <item><term><see cref="Enum"/></term><description>16 or 32 bit enums</description></item>
+            /// <item><term><see cref="string"/></term><description>String of chars, the interface will automatically get the length</description></item>
+            /// <item><term><see cref="BitArray"/></term><description>As an array of bits</description></item>
+            /// <item><term><see cref="byte[]"/></term><description>As an array of bytes</description></item>
+            /// </list>
+            /// </summary>
             public TempRegister<T> AsType<T> () {
 
                 if (!typeof(T).IsAllowedPlcCastingType()) {
@@ -357,10 +382,11 @@ namespace MewtocolNet.RegisterBuilding {
 
                 Data.dotnetVarType = typeof(T);
 
-                return new TempRegister<T>(Data);
+                return new TempRegister<T>(Data, builder);
 
             }
 
+            ///<inheritdoc cref="AsType{T}()"/>
             public TempRegister AsType (Type type) {
 
                 if (!type.IsAllowedPlcCastingType()) {
@@ -371,10 +397,70 @@ namespace MewtocolNet.RegisterBuilding {
 
                 Data.dotnetVarType = type;
 
-                return new TempRegister(Data);
+                return new TempRegister(Data, builder);
 
             }
 
+            /// <summary>
+            /// Sets the register type as a predefined <see cref="PlcVarType"/>
+            /// </summary>
+            public TempRegister AsType (PlcVarType type) {
+
+                Data.dotnetVarType = type.GetDefaultDotnetType();
+
+                return new TempRegister(Data, builder);
+
+            }
+
+            /// <summary>
+            /// Sets the register type from the plc type string <br/>
+            /// <c>Supported types:</c>
+            /// <list type="bullet">
+            /// <item><term>BOOL</term><description>Boolean R/X/Y registers</description></item>
+            /// <item><term>INT</term><description>16 bit signed integer</description></item>
+            /// <item><term>UINT</term><description>16 bit un-signed integer</description></item>
+            /// <item><term>DINT</term><description>32 bit signed integer</description></item>
+            /// <item><term>UDINT</term><description>32 bit un-signed integer</description></item>
+            /// <item><term>REAL</term><description>32 bit floating point</description></item>
+            /// <item><term>TIME</term><description>32 bit time interpreted as <see cref="TimeSpan"/></description></item>
+            /// <item><term>STRING</term><description>String of chars, the interface will automatically get the length</description></item>
+            /// <item><term>STRING[N]</term><description>String of chars, pre capped to N</description></item>
+            /// <item><term>WORD</term><description>16 bit word interpreted as <see cref="ushort"/></description></item>
+            /// <item><term>DWORD</term><description>32 bit double word interpreted as <see cref="uint"/></description></item>
+            /// </list>
+            /// </summary>
+            public TempRegister AsType(string type) {
+
+                var stringMatch = Regex.Match(type, @"STRING *\[(?<len>[0-9]*)\]", RegexOptions.IgnoreCase);
+                var arrayMatch = Regex.Match(type, @"ARRAY *\[(?<S1>[0-9]*)..(?<E1>[0-9]*)(?:\,(?<S2>[0-9]*)..(?<E2>[0-9]*))?(?:\,(?<S3>[0-9]*)..(?<E3>[0-9]*))?\] *OF {1,}(?<t>.*)", RegexOptions.IgnoreCase);
+
+                if (Enum.TryParse<PlcVarType>(type, out var parsed)) {
+
+                    Data.dotnetVarType = parsed.GetDefaultDotnetType();
+
+                } else if (stringMatch.Success) {
+
+                    Data.dotnetVarType = typeof(string);
+                    Data.stringSize = int.Parse(stringMatch.Groups["len"].Value);
+
+                } else if (arrayMatch.Success) {
+
+                    throw new NotSupportedException("Arrays are currently not supported");
+
+                } else {
+
+                    throw new NotSupportedException($"The mewtocol type '{type}' was not recognized");
+                
+                }
+
+                return new TempRegister(Data, builder);
+
+            }
+
+            /// <summary>
+            /// Gets the data DT area as a <see cref="byte[]"/>
+            /// </summary>
+            /// <param name="byteLength">Bytes to assign</param>
             public TempRegister AsBytes (uint byteLength) {
 
                 if (Data.regType != RegisterType.DT) {
@@ -386,10 +472,14 @@ namespace MewtocolNet.RegisterBuilding {
                 Data.byteSize = byteLength;
                 Data.dotnetVarType = typeof(byte[]);
 
-                return new TempRegister(Data);
+                return new TempRegister(Data, builder);
 
             }
 
+            /// <summary>
+            /// Gets the data DT area as a <see cref="BitArray"/>
+            /// </summary>
+            /// <param name="bitCount">Number of bits to read</param>
             public TempRegister AsBits (ushort bitCount = 16) {
 
                 if (Data.regType != RegisterType.DT) {
@@ -401,10 +491,13 @@ namespace MewtocolNet.RegisterBuilding {
                 Data.bitSize = bitCount;
                 Data.dotnetVarType = typeof(BitArray);
 
-                return new TempRegister(Data);
+                return new TempRegister(Data, builder);
 
             }
 
+            /// <summary>
+            /// Automatically finds the best type for the register
+            /// </summary>
             public TempRegister AutoType() {
 
                 switch (Data.regType) {
@@ -424,7 +517,7 @@ namespace MewtocolNet.RegisterBuilding {
                     break;
                 }
 
-                return new TempRegister(Data);
+                return new TempRegister(Data, builder);
 
             }
 
@@ -436,8 +529,11 @@ namespace MewtocolNet.RegisterBuilding {
 
         public class TempRegister<T> : SBase {
 
-            internal TempRegister(SData data) : base(data) {}
+            internal TempRegister(SData data, RBuild bldr) : base(data, bldr) {}
 
+            /// <summary>
+            /// Sets the poll level of the register
+            /// </summary>
             public TempRegister<T> PollLevel (int level) {
 
                 Data.pollLevel = level;
@@ -446,14 +542,28 @@ namespace MewtocolNet.RegisterBuilding {
 
             }
 
-            public async Task WriteToAsync (T value) => throw new NotImplementedException();
+            /// <summary>
+            /// Writes data to the register and bypasses the memory manager <br/>
+            /// </summary>
+            /// <param name="value">The value to write</param>
+            /// <returns>True if success</returns>
+            public async Task<bool> WriteToAsync (T value) => await builder.WriteAnonymousAsync(this, value);
+
+            /// <summary>
+            /// Reads data from the register and bypasses the memory manager <br/>
+            /// </summary>
+            /// <returns>The value read or null if failed</returns>
+            public async Task<T> ReadFromAsync () => await builder.ReadAnonymousAsync(this);
 
         }
 
         public class TempRegister : SBase {
 
-            internal TempRegister(SData data) : base(data) { }
+            internal TempRegister(SData data, RBuild bldr) : base(data, bldr) { }
 
+            /// <summary>
+            /// Sets the poll level of the register
+            /// </summary>
             public TempRegister PollLevel (int level) {
 
                 Data.pollLevel = level;
@@ -462,7 +572,20 @@ namespace MewtocolNet.RegisterBuilding {
 
             }
 
-            internal TempRegister RegCollection (RegisterCollection col) {
+            /// <summary>
+            /// Writes data to the register and bypasses the memory manager <br/>
+            /// </summary>
+            /// <param name="value">The value to write</param>
+            /// <returns>True if success</returns>
+            public async Task<bool> WriteToAsync(object value) => await builder.WriteAnonymousAsync(this, value);
+
+            /// <summary>
+            /// Reads data from the register and bypasses the memory manager <br/>
+            /// </summary>
+            /// <returns>The value read or null if failed</returns>
+            public async Task<object> ReadFromAsync () => await builder.ReadAnonymousAsync(this);
+
+            internal TempRegister RegCollection(RegisterCollection col) {
 
                 Data.regCollection = col;
 
@@ -470,7 +593,7 @@ namespace MewtocolNet.RegisterBuilding {
 
             }
 
-            internal TempRegister BoundProp (PropertyInfo prop) {
+            internal TempRegister BoundProp(PropertyInfo prop) {
 
                 Data.boundProperty = prop;
 
@@ -478,131 +601,45 @@ namespace MewtocolNet.RegisterBuilding {
 
             }
 
-            public async Task WriteToAsync (object value) => throw new NotImplementedException();
-
         }
 
         #endregion
 
-    }
+        #region Anonymous read/write bindings
 
-    internal class RegisterAssembler {
+        private async Task<bool> WriteAnonymousAsync (TempRegister reg, object value) {
 
-        internal RegisterCollection collectionTarget;
-
-        internal MewtocolInterface onInterface;
-
-        internal RegisterAssembler (MewtocolInterface interf) {
-
-            onInterface = interf;
+            var assembler = new RegisterAssembler(attachedPLC);
+            var tempRegister = assembler.Assemble(reg.Data);
+            return await tempRegister.WriteToAnonymousAsync(value);
 
         }
 
-        internal List<BaseRegister> Assemble (RBuild rBuildData) {
+        private async Task<bool> WriteAnonymousAsync<T>(TempRegister<T> reg, object value) {
 
-            List<BaseRegister> generatedInstances = new List<BaseRegister>();       
+            var assembler = new RegisterAssembler(attachedPLC);
+            var tempRegister = assembler.Assemble(reg.Data);
+            return await tempRegister.WriteToAnonymousAsync(value);
 
-            foreach (var data in rBuildData.unfinishedList) {
+        }
 
-                //parse all others where the type is known
-                Type registerClassType = data.dotnetVarType.GetDefaultRegisterHoldingType();
+        private async Task<object> ReadAnonymousAsync (TempRegister reg) {
 
-                BaseRegister generatedInstance = null;
+            var assembler = new RegisterAssembler(attachedPLC);
+            var tempRegister = assembler.Assemble(reg.Data);
+            return await tempRegister.ReadFromAnonymousAsync();
 
-                if (data.dotnetVarType.IsEnum) {
+        }
 
-                    //-------------------------------------------
-                    //as numeric register with enum target
+        private async Task<T> ReadAnonymousAsync<T>(TempRegister<T> reg) {
 
-                    var underlying = Enum.GetUnderlyingType(data.dotnetVarType);
-                    var enuSize = Marshal.SizeOf(underlying);
+            var assembler = new RegisterAssembler(attachedPLC);
+            var tempRegister = assembler.Assemble(reg.Data);
+            return (T)await tempRegister.ReadFromAnonymousAsync();
 
-                    if (enuSize > 4)
-                        throw new NotSupportedException("Enums not based on 16 or 32 bit numbers are not supported");
+        }
 
-                    Type myParameterizedSomeClass = typeof(NumberRegister<>).MakeGenericType(data.dotnetVarType);
-                    ConstructorInfo constr = myParameterizedSomeClass.GetConstructor(new Type[] { typeof(uint), typeof(string) });
-
-                    var parameters = new object[] { data.memAddress, data.name };
-                    var instance = (BaseRegister)constr.Invoke(parameters);
-                    
-                    generatedInstance = instance;
-
-                } else if (registerClassType.IsGenericType) {
-
-                    //-------------------------------------------
-                    //as numeric register
-
-                    //create a new bregister instance
-                    var flags = BindingFlags.Public | BindingFlags.Instance;
-
-                    //int _adress, Type _enumType = null, string _name = null
-                    var parameters = new object[] { data.memAddress, data.name };
-                    var instance = (BaseRegister)Activator.CreateInstance(registerClassType, flags, null, parameters, null);
-                    instance.pollLevel = data.pollLevel;
-
-                    generatedInstance = instance;
-
-                } else if (registerClassType == typeof(BytesRegister) && data.byteSize != null) {
-
-                    //-------------------------------------------
-                    //as byte range register
-
-                    BytesRegister instance = new BytesRegister(data.memAddress, (uint)data.byteSize, data.name);
-
-                    generatedInstance = instance;
-
-                } else if (registerClassType == typeof(BytesRegister) && data.bitSize != null) {
-
-                    //-------------------------------------------
-                    //as bit range register
-
-                    BytesRegister instance = new BytesRegister(data.memAddress, (ushort)data.bitSize, data.name);
-
-                    generatedInstance = instance;
-
-                } else if (registerClassType == typeof(StringRegister)) {
-
-                    //-------------------------------------------
-                    //as byte range register
-                    var instance = (BaseRegister)new StringRegister(data.memAddress, data.name);
-
-                    generatedInstance = instance;
-
-                } else if (data.regType.IsBoolean()) {
-
-                    //-------------------------------------------
-                    //as boolean register
-
-                    var io = (IOType)(int)data.regType;
-                    var spAddr = data.specialAddress;
-                    var areaAddr = data.memAddress;
-
-                    var instance = new BoolRegister(io, spAddr, areaAddr, data.name);
-
-                    generatedInstance = instance;
-
-                }
-
-                //finalize set for every
-
-                if(generatedInstance == null)
-                    throw new MewtocolException("Failed to build register");
-
-                if (collectionTarget != null)
-                    generatedInstance.WithRegisterCollection(collectionTarget);
-
-                generatedInstance.attachedInterface = onInterface;
-
-                generatedInstance.pollLevel = data.pollLevel;
-
-                generatedInstances.Add(generatedInstance);
-
-            }
-
-            return generatedInstances;
-
-        } 
+        #endregion
 
     }
 

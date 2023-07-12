@@ -169,7 +169,8 @@ namespace MewtocolNet.Registers {
             sb.AppendLine($"Perf. Reads: {successfulReads}, Writes: {successfulWrites}");
             sb.AppendLine($"Register Type: {RegisterType}");
             sb.AppendLine($"Address: {GetRegisterWordRangeString()}");
-            if(GetSpecialAddress() != null) sb.AppendLine($"SPAddress: {GetSpecialAddress():X1}");
+            if(this is StringRegister sr) sb.AppendLine($"Reserved: {sr.ReservedSize}, Used: {sr.UsedSize}");
+            if (GetSpecialAddress() != null) sb.AppendLine($"SPAddress: {GetSpecialAddress():X1}");
             if (GetType().IsGenericType) sb.AppendLine($"Type: NumberRegister<{GetType().GenericTypeArguments[0]}>");
             else sb.AppendLine($"Type: {GetType()}");
             if(containedCollection != null) sb.AppendLine($"In collection: {containedCollection.GetType()}");

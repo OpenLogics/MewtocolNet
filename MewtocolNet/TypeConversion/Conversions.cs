@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using MewtocolNet.Helpers;
+using MewtocolNet.Exceptions;
 
 namespace MewtocolNet.TypeConversion {
     
@@ -35,119 +36,82 @@ namespace MewtocolNet.TypeConversion {
             new PlcTypeConversion<bool>(RegisterType.R) {
                 HoldingRegisterType = typeof(BoolRegister),
                 PlcVarType = PlcVarType.BOOL,
-                FromRaw = (reg, bytes) => {
-
-                    return (bool)(bytes[0] == 1);
-                },
-                ToRaw = (reg, value) => {
-
-                    return new byte[] { (byte)(value ? 1 : 0) };
-
-                },
+                FromRaw = (reg, bytes) => (bool)(bytes[0] == 1),
+                ToRaw = (reg, value) => new byte[] { (byte)(value ? 1 : 0) },
             },
+
             //default bool X conversion
             new PlcTypeConversion<bool>(RegisterType.X) {
                 HoldingRegisterType = typeof(BoolRegister),
                 PlcVarType = PlcVarType.BOOL,
-                FromRaw = (reg, bytes) => {
-
-                    return bytes[0] == 1;
-                },
-                ToRaw = (reg, value) => {
-
-                    return new byte[] { (byte)(value ? 1 : 0) };
-
-                },
+                FromRaw = (reg, bytes) => (bool)(bytes[0] == 1),
+                ToRaw = (reg, value) => new byte[] { (byte)(value ? 1 : 0) },
             },
+
             //default bool Y conversion
             new PlcTypeConversion<bool>(RegisterType.Y) {
                 HoldingRegisterType = typeof(BoolRegister),
                 PlcVarType = PlcVarType.BOOL,
-                FromRaw = (reg, bytes) => {
-
-                    return bytes[0] == 1;
-                },
-                ToRaw = (reg, value) => {
-
-                    return new byte[] { (byte)(value ? 1 : 0) };
-
-                },
+                FromRaw = (reg, bytes) => (bool)(bytes[0] == 1),
+                ToRaw = (reg, value) => new byte[] { (byte)(value ? 1 : 0) },
             },
+
             //default short DT conversion
             new PlcTypeConversion<short>(RegisterType.DT) {
                 HoldingRegisterType = typeof(NumberRegister<short>),
                 PlcVarType = PlcVarType.INT,
-                FromRaw = (reg, bytes) => {
-
-                    return BitConverter.ToInt16(bytes, 0);
-                },
-                ToRaw = (reg, value) => {
-
-                    return BitConverter.GetBytes(value);
-
-                },
+                FromRaw = (reg, bytes) => BitConverter.ToInt16(bytes, 0),
+                ToRaw = (reg, value) => BitConverter.GetBytes(value),
             },
+
             //default ushort DT conversion
             new PlcTypeConversion<ushort>(RegisterType.DT) {
                 HoldingRegisterType = typeof(NumberRegister<ushort>),
                 PlcVarType = PlcVarType.UINT,
-                FromRaw = (reg, bytes) => {
-
-                    return BitConverter.ToUInt16(bytes, 0);
-                },
-                ToRaw = (reg, value) => {
-
-                    return BitConverter.GetBytes(value);
-
-                },
+                FromRaw = (reg, bytes) => BitConverter.ToUInt16(bytes, 0),
+                ToRaw = (reg, value) => BitConverter.GetBytes(value),
             },
+
+            //default ushort DT conversion
+            new PlcTypeConversion<ushort>(RegisterType.DT) {
+                HoldingRegisterType = typeof(NumberRegister<ushort>),
+                PlcVarType = PlcVarType.WORD,
+                FromRaw = (reg, bytes) => BitConverter.ToUInt16(bytes, 0),
+                ToRaw = (reg, value) => BitConverter.GetBytes(value),
+            },
+
             //default int DDT conversion
             new PlcTypeConversion<int>(RegisterType.DDT) {
                 HoldingRegisterType = typeof(NumberRegister<int>),
                 PlcVarType = PlcVarType.DINT,
-                FromRaw = (reg, bytes) => {
-
-                    return BitConverter.ToInt32(bytes, 0);
-                },
-                ToRaw = (reg, value) => {
-
-                    return BitConverter.GetBytes(value);
-
-                },
+                FromRaw = (reg, bytes) => BitConverter.ToInt32(bytes, 0),
+                ToRaw = (reg, value) => BitConverter.GetBytes(value),
             },
+
             //default uint DDT conversion
             new PlcTypeConversion<uint>(RegisterType.DDT) {
                 HoldingRegisterType = typeof(NumberRegister<uint>),
                 PlcVarType = PlcVarType.UDINT,
-                FromRaw = (reg, bytes) => {
-
-                    return BitConverter.ToUInt32(bytes, 0);
-                },
-                ToRaw = (reg, value) => {
-
-                    return BitConverter.GetBytes(value);
-
-                },
+                FromRaw = (reg, bytes) => BitConverter.ToUInt32(bytes, 0),
+                ToRaw = (reg, value) => BitConverter.GetBytes(value),
             },
+
+            //default uint DDT conversion
+            new PlcTypeConversion<uint>(RegisterType.DDT) {
+                HoldingRegisterType = typeof(NumberRegister<uint>),
+                PlcVarType = PlcVarType.DWORD,
+                FromRaw = (reg, bytes) => BitConverter.ToUInt32(bytes, 0),
+                ToRaw = (reg, value) => BitConverter.GetBytes(value),
+            },
+
             //default float DDT conversion
             new PlcTypeConversion<float>(RegisterType.DDT) {
                 HoldingRegisterType = typeof(NumberRegister<float>),
                 PlcVarType = PlcVarType.REAL,
-                FromRaw = (reg, bytes) => {
-
-                    //bytes = new byte[] { 0xCD, 0xCC, 0x8C, 0x40 };
-
-                    float finalFloat = BitConverter.ToSingle(bytes, 0);
-
-                    return finalFloat;
-
-                },
-                ToRaw = (reg, value) => {
-
-                    return BitConverter.GetBytes(value);
-
-                },
+                FromRaw = (reg, bytes) => BitConverter.ToSingle(bytes, 0),
+                ToRaw = (reg, value) => BitConverter.GetBytes(value),
             },
+
             //default TimeSpan DDT conversion
             new PlcTypeConversion<TimeSpan>(RegisterType.DDT) {
                 HoldingRegisterType = typeof(NumberRegister<TimeSpan>),
@@ -167,17 +131,27 @@ namespace MewtocolNet.TypeConversion {
 
                 },
             },
-            //default byte array DT Range conversion
+
+            //default byte array DT Range conversion, direct pass through
             new PlcTypeConversion<byte[]>(RegisterType.DT_BYTE_RANGE) {
                 HoldingRegisterType = typeof(BytesRegister),
                 FromRaw = (reg, bytes) => bytes,
                 ToRaw = (reg, value) => value,
             },
-            //default string DT Range conversion
+
+            //default string DT Range conversion Example bytes: (04 00 03 00 XX XX XX) 
+            //first 4 bytes are reserved size (2 bytes) and used size (2 bytes)
+            //the remaining bytes are the ascii bytes for the string
             new PlcTypeConversion<string>(RegisterType.DT_BYTE_RANGE) {
                 HoldingRegisterType = typeof(StringRegister),
                 PlcVarType = PlcVarType.STRING,
                 FromRaw = (reg, bytes) => {
+
+                    if(bytes == null || bytes.Length <= 4) {
+
+                        throw new MewtocolException("Failed to convert string bytes, response not long enough");
+
+                    }
 
                     //get actual showed size
                     short actualLen = BitConverter.ToInt16(bytes, 2);
@@ -207,7 +181,8 @@ namespace MewtocolNet.TypeConversion {
 
                 },
             },
-            //default bitn array DT conversion
+
+            //default bit array <=> byte array conversion
             new PlcTypeConversion<BitArray>(RegisterType.DT_BYTE_RANGE) {
                 HoldingRegisterType = typeof(BytesRegister),
                 FromRaw = (reg, bytes) => {

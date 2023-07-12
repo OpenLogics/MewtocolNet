@@ -17,12 +17,11 @@ namespace MewtocolNet.Registers {
     /// <typeparam name="T">The type of the numeric value</typeparam>
     public class NumberRegister<T> : BaseRegister {
 
-        /// <summary>
-        /// Defines a register containing a number
-        /// </summary>
-        /// <param name="_address">Memory start adress max 99999</param>
-        /// <param name="_name">Name of the register</param>
-        public NumberRegister (uint _address, string _name = null) {
+        [Obsolete("Creating registers directly is not supported use IPlc.Register instead")]
+        public NumberRegister() =>
+        throw new NotSupportedException("Direct register instancing is not supported, use the builder pattern");
+
+        internal NumberRegister (uint _address, string _name = null) {
 
             memoryAddress = _address;
             name = _name;
@@ -130,7 +129,8 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public override async Task<object> ReadAsync() {
 
-            if (!attachedInterface.IsConnected) return null;
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
 
             var res = await underlyingMemory.ReadRegisterAsync(this);
             if (!res) return null;
@@ -141,20 +141,11 @@ namespace MewtocolNet.Registers {
 
         }
 
-        internal override object SetValueFromBytes(byte[] bytes) {
-
-            AddSuccessRead();
-
-            var parsed = PlcValueParser.Parse<T>(this, bytes);
-            SetValueFromPLC(parsed);
-            return parsed;
-
-        }
-
         /// <inheritdoc/>
         public override async Task<bool> WriteAsync(object data) {
 
-            if (!attachedInterface.IsConnected) return false;
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
 
             var encoded = PlcValueParser.Encode(this, (T)data);
             var res = await underlyingMemory.WriteRegisterAsync(this, encoded);
@@ -165,6 +156,16 @@ namespace MewtocolNet.Registers {
             }
 
             return res;
+
+        }
+
+        internal override object SetValueFromBytes(byte[] bytes) {
+
+            AddSuccessRead();
+
+            var parsed = PlcValueParser.Parse<T>(this, bytes);
+            SetValueFromPLC(parsed);
+            return parsed;
 
         }
 
@@ -183,7 +184,7 @@ namespace MewtocolNet.Registers {
             if (!attachedInterface.IsConnected)
                 throw MewtocolException.NotConnectedSend();
 
-            var res = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, (int)GetRegisterAddressLen() * 2);
+            var res = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, (int)GetRegisterAddressLen() * 2, false);
             if (res == null) return null;
 
             return PlcValueParser.Parse<T>(this, res);

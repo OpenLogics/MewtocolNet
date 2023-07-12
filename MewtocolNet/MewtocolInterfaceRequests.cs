@@ -94,9 +94,16 @@ namespace MewtocolNet {
         /// /// <param name="start">start address of the array</param>
         /// <param name="byteArr"></param>
         /// <returns></returns>
-        public async Task<bool> WriteByteRange (int start, byte[] byteArr) {
+        public async Task<bool> WriteByteRange (int start, byte[] byteArr, bool flipBytes = false) {
 
-            string byteString = byteArr.BigToMixedEndian().ToHexString();
+            string byteString;
+
+            if(flipBytes) {
+                byteString = byteArr.BigToMixedEndian().ToHexString();
+            } else {
+                byteString = byteArr.ToHexString();
+            }
+
             var wordLength = byteArr.Length / 2;
             if (byteArr.Length % 2 != 0)
                 wordLength++;
@@ -120,7 +127,7 @@ namespace MewtocolNet {
         /// <param name="flipBytes">Flips bytes from big to mixed endian</param>
         /// <param name="onProgress">Gets invoked when the progress changes, contains the progress as a double</param>
         /// <returns>A byte array or null of there was an error</returns>
-        public async Task<byte[]> ReadByteRangeNonBlocking (int start, int count, bool flipBytes = true, Action<double> onProgress = null) {
+        public async Task<byte[]> ReadByteRangeNonBlocking (int start, int count, bool flipBytes = false, Action<double> onProgress = null) {
 
             var byteList = new List<byte>();
 
@@ -162,99 +169,6 @@ namespace MewtocolNet {
             }
 
             return byteList.ToArray();
-
-        }
-
-        #endregion
-
-        #region Raw register reading / writing
-
-        [Obsolete]
-        internal async Task<byte[]> ReadRawRegisterAsync (IRegisterInternal _toRead) {
-
-            var toreadType = _toRead.GetType();
-
-            //returns a byte array 1 long and with the byte beeing 0 or 1
-            if (toreadType == typeof(BoolRegister)) {
-
-                string requeststring = $"%{GetStationNumber()}#RCS{_toRead.BuildMewtocolQuery()}";
-                var result = await SendCommandAsync(requeststring);
-                if (!result.Success) return null;
-
-                var resultBool = result.Response.ParseRCSingleBit();
-                if (resultBool != null) {
-
-                    return resultBool.Value ? new byte[] { 1 } : new byte[] { 0 };
-
-                }
-
-            }
-
-            //returns a byte array 2 bytes or 4 bytes long depending on the data size
-            if (toreadType.IsGenericType && _toRead.GetType().GetGenericTypeDefinition() == typeof(NumberRegister<>)) {
-
-                string requeststring = $"%{GetStationNumber()}#RD{_toRead.BuildMewtocolQuery()}";
-                var result = await SendCommandAsync(requeststring);
-                if (!result.Success) return null;
-
-                if(_toRead.RegisterType == RegisterType.DT) {
-
-                    return result.Response.ParseDTByteString(4).HexStringToByteArray();
-
-                } else {
-
-                    return result.Response.ParseDTByteString(8).HexStringToByteArray();
-
-                }
-
-            }
-
-            //returns a byte array with variable size
-            if (toreadType == typeof(BytesRegister)) {
-
-                string requeststring = $"%{GetStationNumber()}#RD{_toRead.BuildMewtocolQuery()}";
-                var result = await SendCommandAsync(requeststring);
-                if (!result.Success) return null;
-
-                var resBytes = result.Response.ParseDTRawStringAsBytes();
-
-                return resBytes;
-
-            }
-
-            if (toreadType == typeof(StringRegister)) {
-
-                string requeststring = $"%{GetStationNumber()}#RD{_toRead.BuildMewtocolQuery()}";
-                var result = await SendCommandAsync(requeststring);
-                if (!result.Success) return null;
-
-                var resBytes = result.Response.ParseDTRawStringAsBytes();
-
-                return resBytes;
-
-            }
-
-            throw new Exception($"Failed to load the byte data for: {_toRead}");
-
-        }
-
-        [Obsolete]
-        internal async Task<bool> WriteRawRegisterAsync (IRegisterInternal _toWrite, byte[] data) {
-
-            var toWriteType = _toWrite.GetType();
-
-            //returns a byte array 1 long and with the byte beeing 0 or 1
-            if (toWriteType == typeof(BoolRegister)) {
-
-                string reqStr = $"%{GetStationNumber()}#WCS{_toWrite.BuildMewtocolQuery()}{(data[0] == 1 ? "1" : "0")}";
-                var res = await SendCommandAsync(reqStr);
-                return res.Success;
-
-            }
-
-            string requeststring = $"%{GetStationNumber()}#WD{_toWrite.BuildMewtocolQuery()}{data.ToHexString()}";
-            var result = await SendCommandAsync(requeststring);
-            return result.Success;
 
         }
 
