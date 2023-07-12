@@ -7,6 +7,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using static MewtocolNet.RegisterBuilding.RBuild;
 
 namespace MewtocolNet.Registers {
 
@@ -67,7 +68,8 @@ namespace MewtocolNet.Registers {
 
             if (lastValue?.ToString() != val?.ToString()) {
 
-                lastValue = (T)val;
+                if (val != null) lastValue = (T)val;
+                else lastValue = null;
 
                 TriggerNotifyChange();
                 attachedInterface.InvokeRegisterChanged(this);
@@ -123,9 +125,6 @@ namespace MewtocolNet.Registers {
         }
 
         /// <inheritdoc/>
-        public override void ClearValue() => SetValueFromPLC(default(T));
-
-        /// <inheritdoc/>
         public override uint GetRegisterAddressLen() => (uint)(RegisterType == RegisterType.DT ? 1 : 2);
 
         /// <inheritdoc/>
@@ -144,6 +143,8 @@ namespace MewtocolNet.Registers {
 
         internal override object SetValueFromBytes(byte[] bytes) {
 
+            AddSuccessRead();
+
             var parsed = PlcValueParser.Parse<T>(this, bytes);
             SetValueFromPLC(parsed);
             return parsed;
@@ -159,6 +160,7 @@ namespace MewtocolNet.Registers {
             var res = await underlyingMemory.WriteRegisterAsync(this, encoded);
 
             if (res) {
+                AddSuccessWrite();
                 SetValueFromPLC(data);
             }
 
@@ -166,29 +168,25 @@ namespace MewtocolNet.Registers {
 
         }
 
-        /// <summary>
-        /// Gets the register bitwise if its a 16 or 32 bit int
-        /// </summary>
-        /// <returns>A bitarray</returns>
-        public BitArray GetBitwise() {
+        internal override async Task<bool> WriteToAnonymousAsync (object value) {
 
-            if (this is NumberRegister<short> shortReg) {
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
 
-                var bytes = BitConverter.GetBytes((short)Value);
-                BitArray bitAr = new BitArray(bytes);
-                return bitAr;
+            var encoded = PlcValueParser.Encode(this, (T)value);
+            return await attachedInterface.WriteByteRange((int)MemoryAddress, encoded);
 
-            }
+        }
 
-            if (this is NumberRegister<int> intReg) {
+        internal override async Task<object> ReadFromAnonymousAsync () {
 
-                var bytes = BitConverter.GetBytes((int)Value);
-                BitArray bitAr = new BitArray(bytes);
-                return bitAr;
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
 
-            }
+            var res = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, (int)GetRegisterAddressLen() * 2);
+            if (res == null) return null;
 
-            return null;
+            return PlcValueParser.Parse<T>(this, res);
 
         }
 

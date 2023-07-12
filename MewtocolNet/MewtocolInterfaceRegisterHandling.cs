@@ -3,6 +3,7 @@ using MewtocolNet.Logging;
 using MewtocolNet.RegisterAttributes;
 using MewtocolNet.RegisterBuilding;
 using MewtocolNet.Registers;
+using MewtocolNet.SetupClasses;
 using MewtocolNet.UnderlyingRegisters;
 using System;
 using System.Collections;
@@ -24,14 +25,18 @@ namespace MewtocolNet {
 
         internal Task pollCycleTask;
 
+        private List<RegisterCollection> registerCollections = new List<RegisterCollection>();
+
+        internal IEnumerable<BaseRegister> RegistersInternal => GetAllRegistersInternal();
+
+        public IEnumerable<IRegister> Registers => GetAllRegisters();
+
         /// <summary>
         /// True if the poller is actvice (can be paused)
         /// </summary>
         public bool PollerActive => !pollerTaskStopped;
 
-        /// <summary>
-        /// Current poller cycle duration
-        /// </summary>
+        /// <inheritdoc/>
         public int PollerCycleDurationMs {
             get => pollerCycleDurationMs;
             private set {
@@ -40,7 +45,8 @@ namespace MewtocolNet {
             }
         }
 
-        private List<RegisterCollection> registerCollections = new List<RegisterCollection>();
+        /// <inheritdoc/>
+        public RBuild Register => new RBuild(this);
 
         #region Register Polling
 
@@ -74,11 +80,11 @@ namespace MewtocolNet {
         /// useful if you want to use a custom update frequency
         /// </summary>
         /// <returns>The number of inidvidual mewtocol commands sent</returns>
-        public async Task<int> RunPollerCylceManual() {
+        public async Task<int> RunPollerCylceManualAsync() {
 
             if (!pollerTaskStopped)
                 throw new NotSupportedException($"The poller is already running, " +
-                $"please make sure there is no polling active before calling {nameof(RunPollerCylceManual)}");
+                $"please make sure there is no polling active before calling {nameof(RunPollerCylceManualAsync)}");
 
             tcpMessagesSentThisCycle = 0;
 
@@ -139,69 +145,46 @@ namespace MewtocolNet {
         private async Task UpdateRCPRegisters() {
 
             //build booleans
-            var rcpList = RegistersUnderlying.Where(x => x.GetType() == typeof(BoolRegister))
-                                   .Select(x => (BoolRegister)x)
-                                   .ToArray();
+            //var rcpList = RegistersUnderlying.Where(x => x.GetType() == typeof(BoolRegister))
+            //              .Select(x => (BoolRegister)x)
+            //              .ToArray();
 
-            //one frame can only read 8 registers at a time
-            int rcpFrameCount = (int)Math.Ceiling((double)rcpList.Length / 8);
-            int rcpLastFrameRemainder = rcpList.Length <= 8 ? rcpList.Length : rcpList.Length % 8;
+            ////one frame can only read 8 registers at a time
+            //int rcpFrameCount = (int)Math.Ceiling((double)rcpList.Length / 8);
+            //int rcpLastFrameRemainder = rcpList.Length <= 8 ? rcpList.Length : rcpList.Length % 8;
 
-            for (int i = 0; i < rcpFrameCount; i++) {
+            //for (int i = 0; i < rcpFrameCount; i++) {
 
-                int toReadRegistersCount = 8;
+            //    int toReadRegistersCount = 8;
 
-                if (i == rcpFrameCount - 1) toReadRegistersCount = rcpLastFrameRemainder;
+            //    if (i == rcpFrameCount - 1) toReadRegistersCount = rcpLastFrameRemainder;
 
-                var rcpString = new StringBuilder($"%{GetStationNumber()}#RCP{toReadRegistersCount}");
+            //    var rcpString = new StringBuilder($"%{GetStationNumber()}#RCP{toReadRegistersCount}");
 
-                for (int j = 0; j < toReadRegistersCount; j++) {
+            //    for (int j = 0; j < toReadRegistersCount; j++) {
 
-                    BoolRegister register = rcpList[i + j];
-                    rcpString.Append(register.BuildMewtocolQuery());
+            //        BoolRegister register = rcpList[i + j];
+            //        rcpString.Append(register.BuildMewtocolQuery());
 
-                }
+            //    }
 
-                string rcpRequest = rcpString.ToString();
-                var result = await SendCommandAsync(rcpRequest);
-                if (!result.Success) return;
+            //    string rcpRequest = rcpString.ToString();
+            //    var result = await SendCommandAsync(rcpRequest);
+            //    if (!result.Success) return;
 
-                var resultBitArray = result.Response.ParseRCMultiBit();
+            //    var resultBitArray = result.Response.ParseRCMultiBit();
 
-                for (int k = 0; k < resultBitArray.Length; k++) {
+            //    for (int k = 0; k < resultBitArray.Length; k++) {
 
-                    var register = rcpList[i + k];
+            //        var register = rcpList[i + k];
 
-                    if ((bool)register.Value != resultBitArray[k]) {
-                        register.SetValueFromPLC(resultBitArray[k]);
-                    }
+            //        if ((bool)register.Value != resultBitArray[k]) {
+            //            register.SetValueFromPLC(resultBitArray[k]);
+            //        }
 
-                }
+            //    }
 
-            }
-
-        }
-
-        private async Task UpdateDTRegisters() {
-
-            foreach (var reg in RegistersUnderlying) {
-
-                var type = reg.GetType();
-
-                if (reg.RegisterType.IsNumericDTDDT() || reg.RegisterType == RegisterType.DT_BYTE_RANGE) {
-
-                    var lastVal = reg.Value;
-                    var rwReg = (IRegisterInternal)reg;
-                    var readout = await rwReg.ReadAsync();
-                    if (readout == null) return;
-
-                    if (lastVal != readout) {
-                        rwReg.SetValueFromPLC(readout);
-                    }
-
-                }
-
-            }
+            //}
 
         }
 
@@ -217,7 +200,7 @@ namespace MewtocolNet {
             if (registerCollections.Count != 0)
                 throw new NotSupportedException("Register collections can only be build once");
 
-            List<RegisterBuildInfo> buildInfos = new List<RegisterBuildInfo>();
+            var regBuild = RBuild.Factory;
 
             foreach (var collection in collections) {
 
@@ -234,18 +217,24 @@ namespace MewtocolNet {
 
                         if (attr is RegisterAttribute cAttribute) {
 
+                            var pollFreqAttr = (PollLevelAttribute)attributes.FirstOrDefault(x => x.GetType() == typeof(PollLevelAttribute));
+
                             if (!prop.PropertyType.IsAllowedPlcCastingType()) {
                                 throw new MewtocolException($"The register attribute property type is not allowed ({prop.PropertyType})");
                             }
 
                             var dotnetType = prop.PropertyType;
+                            int pollLevel = 1;
 
-                            buildInfos.Add(new RegisterBuildInfo {
-                                mewAddress = cAttribute.MewAddress,
-                                dotnetCastType = dotnetType.IsEnum ? dotnetType.UnderlyingSystemType : dotnetType,
-                                collectionTarget = collection,
-                                boundPropTarget = prop,
-                            });
+                            if (pollFreqAttr != null) pollLevel = pollFreqAttr.pollLevel;
+
+                            //add builder item
+                            regBuild
+                            .Address(cAttribute.MewAddress)
+                            .AsType(dotnetType.IsEnum ? dotnetType.UnderlyingSystemType : dotnetType)
+                            .PollLevel(pollLevel)
+                            .RegCollection(collection)
+                            .BoundProp(prop);
 
                         }
 
@@ -265,7 +254,9 @@ namespace MewtocolNet {
 
             }
 
-            AddRegisters(buildInfos);
+            var assembler = new RegisterAssembler(this);
+            var registers = assembler.Assemble(regBuild);
+            AddRegisters(registers.ToArray());
 
         }
 
@@ -291,56 +282,13 @@ namespace MewtocolNet {
 
         #region Register Adding
 
-        /// <inheritdoc/>
-        public void AddRegister (IRegister register) => AddRegister(register as BaseRegister);
+        internal void AddRegisters (params BaseRegister[] registers) {
 
-        /// <inheritdoc/>
-        public void AddRegister (BaseRegister register) {
-
-            if (CheckDuplicateRegister(register))
-                throw MewtocolException.DupeRegister(register);
-
-            if (CheckDuplicateNameRegister(register))
-                throw MewtocolException.DupeNameRegister(register);
-
-            if (CheckOverlappingRegister(register, out var regB))
-                throw MewtocolException.OverlappingRegister(register, regB);
-
-            register.attachedInterface = this;
-            RegistersUnderlying.Add(register);
+            InsertRegistersToMemoryStack(registers.ToList());
 
         }
 
-        // Used for internal property based register building
-        internal void AddRegisters (List<RegisterBuildInfo> buildInfos) {
-
-            //build all from attribute
-            List<BaseRegister> registers = new List<BaseRegister>();
-
-            foreach (var buildInfo in buildInfos) {
-
-                var builtRegister = buildInfo.BuildForCollectionAttribute();
-
-                int? linkLen = null;
-
-                if(builtRegister is BytesRegister bReg) {
-
-                    linkLen = (int?)bReg.ReservedBytesSize ?? bReg.ReservedBitSize;
-
-                }
-
-                //attach the property and collection
-                builtRegister.WithBoundProperty(new RegisterPropTarget {
-                    BoundProperty = buildInfo.boundPropTarget,
-                    LinkLength = linkLen,
-                });
-
-                builtRegister.WithRegisterCollection(buildInfo.collectionTarget);
-
-                builtRegister.attachedInterface = this;
-                registers.Add(builtRegister);
-
-            }
+        internal void InsertRegistersToMemoryStack (List<BaseRegister> registers) {
 
             //order by address
             registers = registers.OrderBy(x => x.GetSpecialAddress()).ToList();
@@ -353,12 +301,7 @@ namespace MewtocolNet {
                 reg.name = $"auto_prop_register_{j + 1}";
 
                 //link the memory area to the register
-                if (memoryManager.LinkRegister(reg)) {
-
-                    RegistersUnderlying.Add(reg);
-                    j++;
-
-                }
+                if (memoryManager.LinkRegister(reg)) j++;
 
             }
 
@@ -423,16 +366,22 @@ namespace MewtocolNet {
         #region Register accessing
 
         /// <inheritdoc/>>
-        public IRegister GetRegister(string name) {
+        public IRegister GetRegister (string name) {
 
-            return RegistersUnderlying.FirstOrDefault(x => x.Name == name);
+            return RegistersInternal.FirstOrDefault(x => x.Name == name);
 
         }
 
         /// <inheritdoc/>
         public IEnumerable<IRegister> GetAllRegisters () {
 
-            return RegistersUnderlying.Cast<IRegister>();
+            return memoryManager.GetAllRegisters().Cast<IRegister>();
+
+        }
+
+        internal IEnumerable<BaseRegister> GetAllRegistersInternal () {
+
+            return memoryManager.GetAllRegisters();
 
         }
 
@@ -442,9 +391,11 @@ namespace MewtocolNet {
 
         private protected void ClearRegisterVals() {
 
-            for (int i = 0; i < RegistersUnderlying.Count; i++) {
+            var internals = RegistersInternal.ToList();
 
-                var reg = (IRegisterInternal)RegistersUnderlying[i];
+            for (int i = 0; i < internals.Count; i++) {
+
+                var reg = (IRegisterInternal)internals[i];
                 reg.ClearValue();
 
             }
@@ -453,7 +404,7 @@ namespace MewtocolNet {
 
         internal void PropertyRegisterWasSet(string propName, object value) {
 
-            _ = SetRegisterAsync(GetRegister(propName), value);
+            throw new NotImplementedException();
 
         }
 

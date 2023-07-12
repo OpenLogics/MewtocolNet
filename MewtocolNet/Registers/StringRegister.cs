@@ -70,9 +70,6 @@ namespace MewtocolNet.Registers {
         public override string GetRegisterString() => "DT";
 
         /// <inheritdoc/>
-        public override void ClearValue() => SetValueFromPLC("");
-
-        /// <inheritdoc/>
         public override uint GetRegisterAddressLen() => Math.Max(1, WordsSize);
 
         /// <inheritdoc/>

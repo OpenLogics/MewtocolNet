@@ -81,7 +81,7 @@ namespace MewtocolNet {
         }
 
         /// <inheritdoc/>
-        public void ConfigureConnection (string _portName, int _baudRate = 19200, int _dataBits = 8, Parity _parity = Parity.Odd, StopBits _stopBits = StopBits.One, int _station = 1) {
+        public void ConfigureConnection (string _portName, int _baudRate = 19200, int _dataBits = 8, Parity _parity = Parity.Odd, StopBits _stopBits = StopBits.One, int _station = 0xEE) {
 
             PortName = _portName;
             SerialBaudRate = _baudRate;
@@ -89,6 +89,9 @@ namespace MewtocolNet {
             SerialParity = _parity;    
             SerialStopBits = _stopBits;
             stationNumber = _station;
+
+            if (stationNumber != 0xEE && stationNumber > 99)
+                throw new NotSupportedException("Station number can't be greater than 99");
 
             OnSerialPropsChanged();
             Disconnect();

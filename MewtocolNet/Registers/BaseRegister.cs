@@ -25,6 +25,10 @@ namespace MewtocolNet.Registers {
         internal object lastValue = null;
         internal string name;
         internal uint memoryAddress;
+        internal int pollLevel = 0;
+
+        internal uint successfulReads = 0;
+        internal uint successfulWrites = 0;
 
         /// <inheritdoc/>
         public RegisterCollection ContainedCollection => containedCollection;   
@@ -82,6 +86,10 @@ namespace MewtocolNet.Registers {
 
         public virtual Task<bool> WriteAsync(object data) => throw new NotImplementedException();
 
+        internal virtual Task<bool> WriteToAnonymousAsync (object value) => throw new NotImplementedException();
+
+        internal virtual Task<object> ReadFromAnonymousAsync () => throw new NotImplementedException();
+
         #endregion
 
         #region Default accessors
@@ -129,6 +137,16 @@ namespace MewtocolNet.Registers {
 
         }
 
+        protected virtual void AddSuccessRead () {
+            if (successfulReads == uint.MaxValue) successfulReads = 0;
+            else successfulReads++;
+        }
+
+        protected virtual void AddSuccessWrite () {
+            if (successfulWrites == uint.MaxValue) successfulWrites = 0;
+            else successfulWrites++;
+        }
+
         public override string ToString() {
 
             var sb = new StringBuilder();
@@ -148,9 +166,10 @@ namespace MewtocolNet.Registers {
             sb.AppendLine($"MewName: {GetMewName()}");
             sb.AppendLine($"Name: {Name ?? "Not named"}");
             sb.AppendLine($"Value: {GetValueString()}");
+            sb.AppendLine($"Perf. Reads: {successfulReads}, Writes: {successfulWrites}");
             sb.AppendLine($"Register Type: {RegisterType}");
             sb.AppendLine($"Address: {GetRegisterWordRangeString()}");
-            if(GetSpecialAddress() != null) sb.AppendLine($"SPAddress: {GetSpecialAddress()}");
+            if(GetSpecialAddress() != null) sb.AppendLine($"SPAddress: {GetSpecialAddress():X1}");
             if (GetType().IsGenericType) sb.AppendLine($"Type: NumberRegister<{GetType().GenericTypeArguments[0]}>");
             else sb.AppendLine($"Type: {GetType()}");
             if(containedCollection != null) sb.AppendLine($"In collection: {containedCollection.GetType()}");

@@ -32,11 +32,14 @@ namespace MewtocolNet {
         #region TCP connection state handling
 
         /// <inheritdoc/>
-        public void ConfigureConnection (string ip, int port = 9094, int station = 1) {
+        public void ConfigureConnection (string ip, int port = 9094, int station = 0xEE) {
 
             if (!IPAddress.TryParse(ip, out ipAddr))
                 throw new MewtocolException($"The ip: {ip} is no valid ip address");
-            
+
+            if (stationNumber != 0xEE && stationNumber > 99)
+                throw new NotSupportedException("Station number can't be greater than 99");
+
             Port = port;
             stationNumber = station;
 
@@ -45,10 +48,14 @@ namespace MewtocolNet {
         }
 
         /// <inheritdoc/>
-        public void ConfigureConnection(IPAddress ip, int port = 9094, int station = 1) {
+        public void ConfigureConnection(IPAddress ip, int port = 9094, int station = 0xEE) {
 
             ipAddr = ip;
             Port = port;
+
+            if (stationNumber != 0xEE && stationNumber > 99)
+                throw new NotSupportedException("Station number can't be greater than 99");
+
             stationNumber = station;
 
             Disconnect();

@@ -15,7 +15,7 @@ using MewtocolNet.UnderlyingRegisters;
 
 namespace MewtocolNet {
 
-    public abstract partial class MewtocolInterface : IPlc, INotifyPropertyChanged, IDisposable {
+    public abstract partial class MewtocolInterface : IPlc {
 
         #region Private fields
 
@@ -28,6 +28,7 @@ namespace MewtocolNet {
         private PLCInfo plcInfo;
         private protected int stationNumber;
 
+        private protected int RecBufferSize = 128;
         private protected int bytesTotalCountedUpstream = 0;
         private protected int bytesTotalCountedDownstream = 0;
         private protected int cycleTimeMs = 25;
@@ -35,7 +36,6 @@ namespace MewtocolNet {
         private protected int bytesPerSecondDownstream = 0;
 
         private protected AsyncQueue queue = new AsyncQueue();
-        private protected int RecBufferSize = 128;
         private protected Stopwatch speedStopwatchUpstr;
         private protected Stopwatch speedStopwatchDownstr;
         private protected Task firstPollTask = new Task(() => { });
@@ -51,9 +51,6 @@ namespace MewtocolNet {
         internal volatile bool pollerFirstCycle;
         internal bool usePoller = false;
         internal MemoryAreaManager memoryManager;
-
-        internal List<BaseRegister> RegistersUnderlying { get; private set; } = new List<BaseRegister>();
-        internal IEnumerable<IRegisterInternal> RegistersInternal => RegistersUnderlying.Cast<IRegisterInternal>();
 
         #endregion
 
@@ -94,9 +91,6 @@ namespace MewtocolNet {
                 OnPropChange();
             }
         }
-
-        /// <inheritdoc/>
-        public IEnumerable<IRegister> Registers => RegistersUnderlying.Cast<IRegister>();
 
         /// <inheritdoc/>
         public int StationNumber => stationNumber;
@@ -173,18 +167,26 @@ namespace MewtocolNet {
         }
 
         /// <inheritdoc/>
-        public virtual async Task ConnectAsync() => throw new NotImplementedException();
+        public virtual Task ConnectAsync() => throw new NotImplementedException();
 
         /// <inheritdoc/>
         public async Task AwaitFirstDataCycleAsync() => await firstPollTask;
+
+        /// <inheritdoc/>
+        public async Task DisconnectAsync () {
+
+            await pollCycleTask;
+
+            Disconnect();
+
+        }
 
         /// <inheritdoc/>
         public void Disconnect() {
 
             if (!IsConnected) return;
 
-            if(pollCycleTask != null && !pollCycleTask.IsCompleted)  
-                pollCycleTask.Wait();
+            if (!pollCycleTask.IsCompleted) pollCycleTask.Wait();
 
             OnMajorSocketExceptionWhileConnected();
 
@@ -194,7 +196,9 @@ namespace MewtocolNet {
         public void Dispose() {
 
             if (Disposed) return;
+
             Disconnect();
+
             //GC.SuppressFinalize(this);
             Disposed = true;
 
@@ -329,7 +333,7 @@ namespace MewtocolNet {
 
                     SetDownstreamStopWatchStart();
 
-                    byte[] buffer = new byte[128];
+                    byte[] buffer = new byte[RecBufferSize];
                     int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
 
                     CalcDownstreamSpeed(bytesRead);

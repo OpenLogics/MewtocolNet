@@ -17,6 +17,12 @@ namespace MewtocolNet.Exceptions {
           System.Runtime.Serialization.SerializationInfo info,
           System.Runtime.Serialization.StreamingContext context) : base(info, context) { }
 
+        internal static MewtocolException NotConnectedSend () {
+
+            return new MewtocolException($"Can not send a message to the PLC if it isn't connected");
+
+        }
+
         internal static MewtocolException DupeRegister (IRegisterInternal register) {
 
             return new MewtocolException($"The mewtocol interface already contains this register: {register.GetMewName()}");
@@ -31,7 +37,7 @@ namespace MewtocolNet.Exceptions {
 
         internal static MewtocolException OverlappingRegister (IRegisterInternal registerA, IRegisterInternal registerB) {
 
-            throw new MewtocolException($"The register: {registerA.GetRegisterWordRangeString()} " +
+            return new MewtocolException($"The register: {registerA.GetRegisterWordRangeString()} " +
                         $"has overlapping addresses with: {registerB.GetRegisterWordRangeString()}");
 
         }

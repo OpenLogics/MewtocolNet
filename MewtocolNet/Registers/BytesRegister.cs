@@ -118,9 +118,6 @@ namespace MewtocolNet.Registers {
         public override string GetRegisterString() => "DT";
 
         /// <inheritdoc/>
-        public override void ClearValue() => SetValueFromPLC(null);
-
-        /// <inheritdoc/>
         public override uint GetRegisterAddressLen() => AddressLength;
 
         /// <inheritdoc/>
@@ -138,6 +135,8 @@ namespace MewtocolNet.Registers {
         }
 
         internal override object SetValueFromBytes(byte[] bytes) {
+
+            AddSuccessRead();
 
             object parsed;
             if (ReservedBitSize != null) {
@@ -166,6 +165,7 @@ namespace MewtocolNet.Registers {
 
             var res = await underlyingMemory.WriteRegisterAsync(this, encoded);
             if (res) {
+                AddSuccessWrite();
                 SetValueFromPLC(data);
             }
 

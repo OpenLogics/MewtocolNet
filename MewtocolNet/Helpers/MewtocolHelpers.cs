@@ -59,7 +59,7 @@ namespace MewtocolNet {
             if (_onString == null)
                 return null;
 
-            var res = new Regex(@"\%([0-9]{2})\$RD(.{" + _blockSize + "})").Match(_onString);
+            var res = new Regex(@"\%([0-9a-fA-F]{2})\$RD(.{" + _blockSize + "})").Match(_onString);
             if (res.Success) {
                 string val = res.Groups[2].Value;
                 return val;
@@ -75,7 +75,7 @@ namespace MewtocolNet {
 
             _onString = _onString.Replace("\r", "");
 
-            var res = new Regex(@"\%([0-9]{2})\$RC(.)").Match(_onString);
+            var res = new Regex(@"\%([0-9a-fA-F]{2})\$RC(.)").Match(_onString);
             if (res.Success) {
                 string val = res.Groups[2].Value;
                 return val == "1";
@@ -91,7 +91,7 @@ namespace MewtocolNet {
 
             _onString = _onString.Replace("\r", "");
 
-            var res = new Regex(@"\%([0-9]{2})\$RC(?<bits>(?:0|1){0,8})(..)").Match(_onString);
+            var res = new Regex(@"\%([0-9a-fA-F]{2})\$RC(?<bits>(?:0|1){0,8})(..)").Match(_onString);
             if (res.Success) {
                 
                 string val = res.Groups["bits"].Value;
@@ -121,7 +121,7 @@ namespace MewtocolNet {
 
             _onString = _onString.Replace("\r", "");
 
-            var res = new Regex(@"\%([0-9]{2})\$RD(?<data>.*)(?<csum>..)").Match(_onString);
+            var res = new Regex(@"\%([0-9a-fA-F]{2})\$RD(?<data>.*)(?<csum>..)").Match(_onString);
             if (res.Success) {
 
                 string val = res.Groups["data"].Value;
@@ -245,16 +245,20 @@ namespace MewtocolNet {
 
             bool valCompare = reg1.RegisterType == compare.RegisterType &&
                               reg1.MemoryAddress == compare.MemoryAddress && 
+                              reg1.GetRegisterAddressLen() == compare.GetRegisterAddressLen() &&
                               reg1.GetSpecialAddress() == compare.GetSpecialAddress();
 
             return valCompare;
 
         }
 
-        internal static bool CompareIsDuplicateNonCast (this BaseRegister reg1, BaseRegister compare) {
+        internal static bool CompareIsDuplicateNonCast (this BaseRegister reg1, BaseRegister compare, bool ingnoreByteRegisters = true) {
+
+            if (ingnoreByteRegisters && (compare.GetType() == typeof(BytesRegister) || reg1.GetType() == typeof(BytesRegister))) return false;
 
             bool valCompare = reg1.GetType() != compare.GetType() &&
                               reg1.MemoryAddress == compare.MemoryAddress &&
+                              reg1.GetRegisterAddressLen() == compare.GetRegisterAddressLen() &&
                               reg1.GetSpecialAddress() == compare.GetSpecialAddress();
 
             return valCompare;

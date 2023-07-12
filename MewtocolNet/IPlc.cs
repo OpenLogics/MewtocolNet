@@ -1,6 +1,8 @@
-﻿using MewtocolNet.Registers;
+﻿using MewtocolNet.RegisterBuilding;
+using MewtocolNet.Registers;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Threading.Tasks;
 
 namespace MewtocolNet {
@@ -8,7 +10,7 @@ namespace MewtocolNet {
     /// <summary>
     /// Provides a interface for Panasonic PLCs
     /// </summary>
-    public interface IPlc : IDisposable {
+    public interface IPlc : IDisposable, INotifyPropertyChanged {
 
         /// <summary>
         /// The current connection state of the interface
@@ -36,11 +38,6 @@ namespace MewtocolNet {
         int QueuedMessages { get; }
 
         /// <summary>
-        /// The registered data registers of the PLC
-        /// </summary>
-        IEnumerable<IRegister> Registers { get; }
-
-        /// <summary>
         /// Generic information about the connected PLC
         /// </summary>
         PLCInfo PlcInfo { get; }
@@ -61,12 +58,23 @@ namespace MewtocolNet {
         int ConnectTimeout { get; set; }
 
         /// <summary>
+        /// Provides an anonymous interface for register reading and writing without memory management
+        /// </summary>
+        RBuild Register { get; }
+
+        /// <summary>
         /// Tries to establish a connection with the device asynchronously
         /// </summary>
         Task ConnectAsync();
 
         /// <summary>
-        /// Disconnects the devive from its current connection
+        /// Disconnects the device from its current plc connection 
+        /// and awaits the end of all asociated tasks
+        /// </summary>
+        Task DisconnectAsync();
+
+        /// <summary>
+        /// Disconnects the device from its current plc connection
         /// </summary>
         void Disconnect();
 
@@ -97,22 +105,12 @@ namespace MewtocolNet {
         /// useful if you want to use a custom update frequency
         /// </summary>
         /// <returns>The number of inidvidual mewtocol commands sent</returns>
-        Task<int> RunPollerCylceManual();
+        Task<int> RunPollerCylceManualAsync();
 
         /// <summary>
         /// Gets the connection info string
         /// </summary>
         string GetConnectionInfo();
-
-        /// <summary>
-        /// Adds a register to the plc
-        /// </summary>
-        void AddRegister(BaseRegister register);
-
-        /// <summary>
-        /// Adds a register to the plc
-        /// </summary>
-        void AddRegister(IRegister register);
 
         /// <summary>
         /// Gets a register from the plc by name

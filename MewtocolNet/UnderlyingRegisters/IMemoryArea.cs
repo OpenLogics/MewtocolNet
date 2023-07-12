@@ -11,6 +11,8 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         Task<bool> WriteRegisterAsync(BaseRegister reg, byte[] bytes);
 
+        void UpdateAreaRegisterValues();
+
     }
 
 }

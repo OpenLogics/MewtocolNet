@@ -47,6 +47,20 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
+        public void UpdateAreaRegisterValues() {
+
+            foreach (var register in this.linkedRegisters) {
+
+                var regStart = register.MemoryAddress;
+                var addLen = (int)register.GetRegisterAddressLen();
+
+                var bytes = this.GetUnderlyingBytes(regStart, addLen);
+                register.SetValueFromBytes(bytes);
+
+            }
+
+        }
+
         public async Task<bool> ReadRegisterAsync (BaseRegister reg) {
 
             return await RequestByteReadAsync(reg.MemoryAddress, reg.MemoryAddress + reg.GetRegisterAddressLen() - 1);
@@ -124,6 +138,8 @@ namespace MewtocolNet.UnderlyingRegisters {
 
             int copyOffset = (int)((addStart - addressStart) * 2);
             bytes.CopyTo(underlyingBytes, copyOffset);
+
+            UpdateAreaRegisterValues();
 
         }
 

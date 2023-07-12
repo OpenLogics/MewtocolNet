@@ -25,6 +25,12 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
+        public void UpdateAreaRegisterValues () {
+
+
+
+        }
+
         public byte[] GetUnderlyingBytes(BaseRegister reg) {
 
             return null;

@@ -1,6 +1,8 @@
 ﻿using MewtocolNet.Registers;
+using MewtocolNet.SetupClasses;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,22 +13,16 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         internal int maxOptimizationDistance = 8;
         internal int maxRegistersPerGroup = -1;
+        internal bool allowByteRegDupes;
+
+        private int wrAreaSize;
+        private int dtAreaSize;
 
         internal MewtocolInterface mewInterface;
+        internal List<PollLevel> pollLevels;
+        internal Dictionary<int, PollLevelConfig> pollLevelConfigs = new Dictionary<int, PollLevelConfig>();
 
-        // WR areas are n of words, each word has 2 bytes representing the "special address component"
-
-        //X WR
-        internal List<WRArea> externalRelayInAreas;
-
-        //Y WR
-        internal List<WRArea> externalRelayOutAreas;
-
-        //R WR
-        internal List<WRArea> internalRelayAreas;
-
-        //DT
-        internal List<DTArea> dataAreas;
+        private uint pollIteration = 0;
 
         internal MemoryAreaManager (MewtocolInterface mewIf, int wrSize = 512, int dtSize = 32_765) {
 
@@ -38,22 +34,25 @@ namespace MewtocolNet.UnderlyingRegisters {
         // Later on pass memory area sizes here
         internal void Setup (int wrSize, int dtSize) {
 
-            externalRelayInAreas = new List<WRArea>(wrSize * 16);
-            externalRelayOutAreas = new List<WRArea>(wrSize * 16);
-            internalRelayAreas = new List<WRArea>(wrSize * 16);
-            dataAreas = new List<DTArea>(dtSize);
+            wrAreaSize = wrSize;
+            dtAreaSize = dtSize;
+            pollLevels = new List<PollLevel> {
+                new PollLevel(wrSize, dtSize) {
+                    level = 1,
+                }
+            };
 
         }
 
         internal bool LinkRegister (BaseRegister reg) {
 
+            TestPollLevelExistence(reg);
+
             switch (reg.RegisterType) {
                 case RegisterType.X:
-                return AddWRArea(reg, externalRelayInAreas);
                 case RegisterType.Y:
-                return AddWRArea(reg, externalRelayOutAreas);
                 case RegisterType.R:
-                return AddWRArea(reg, internalRelayAreas);
+                return AddWRArea(reg);
                 case RegisterType.DT:
                 case RegisterType.DDT:
                 case RegisterType.DT_BYTE_RANGE:
@@ -64,7 +63,48 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        private bool AddWRArea (BaseRegister insertReg, List<WRArea> collection) {
+        private void TestPollLevelExistence (BaseRegister reg) {
+
+            if(!pollLevelConfigs.ContainsKey(1)) {
+                pollLevelConfigs.Add(1, new PollLevelConfig {
+                    skipNth = 1,
+                });
+            }
+
+            if(!pollLevels.Any(x => x.level == reg.pollLevel)) {
+
+                pollLevels.Add(new PollLevel(wrAreaSize, dtAreaSize) {
+                    level = reg.pollLevel,
+                });
+            
+                //add config if it was not made at setup
+                if(!pollLevelConfigs.ContainsKey(reg.pollLevel)) {
+                    pollLevelConfigs.Add(reg.pollLevel, new PollLevelConfig {
+                        skipNth = reg.pollLevel,
+                    });
+                }
+
+            }
+            
+        }
+
+        private bool AddWRArea (BaseRegister insertReg) {
+
+            var pollLevelFound = pollLevels.FirstOrDefault(x => x.level == insertReg.pollLevel);
+
+            List<WRArea> collection = null;
+
+            switch (insertReg.RegisterType) {
+                case RegisterType.X:
+                collection = pollLevelFound.externalRelayInAreas;
+                break;
+                case RegisterType.Y:
+                collection = pollLevelFound.externalRelayOutAreas;
+                break;
+                case RegisterType.R:
+                collection = pollLevelFound.internalRelayAreas;
+                break;
+            }
 
             WRArea area = collection.FirstOrDefault(x => x.AddressStart == insertReg.MemoryAddress);
 
@@ -114,6 +154,9 @@ namespace MewtocolNet.UnderlyingRegisters {
 
             DTArea targetArea = null;
 
+            var pollLevelFound = pollLevels.FirstOrDefault(x => x.level == insertReg.pollLevel);
+            var dataAreas = pollLevelFound.dataAreas;
+
             foreach (var dtArea in dataAreas) {
 
                 bool matchingAddress = regInsAddStart >= dtArea.AddressStart &&
@@ -123,9 +166,10 @@ namespace MewtocolNet.UnderlyingRegisters {
                 if (matchingAddress) {
 
                     //check if the area has registers linked that are overlapping (not matching)
-                    var foundDupe = dtArea.linkedRegisters.FirstOrDefault(x => x.CompareIsDuplicateNonCast(insertReg));
+                    var foundDupe = dtArea.linkedRegisters
+                    .FirstOrDefault(x => x.CompareIsDuplicateNonCast(insertReg, allowByteRegDupes));
 
-                    if(foundDupe != null) {
+                    if (foundDupe != null) {
                         throw new NotSupportedException(
                         message: $"Can't have registers of different types at the same referenced plc address: " +
                                  $"{insertReg.PLCAddressName} ({insertReg.GetType()}) <=> " +
@@ -211,34 +255,60 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         internal async Task PollAllAreasAsync () {
 
-            foreach (var dtArea in dataAreas) {
+            foreach (var pollLevel in pollLevels) {
 
-                //set the whole memory area at once
-                var res = await dtArea.RequestByteReadAsync(dtArea.AddressStart, dtArea.AddressEnd);
+                var sw = Stopwatch.StartNew();
 
-                foreach (var register in dtArea.linkedRegisters) {
+                //determine to skip poll levels, first iteration is always polled
+                if(pollIteration > 0 && pollLevel.level > 1) {
 
-                    var regStart = register.MemoryAddress;
-                    var addLen = (int)register.GetRegisterAddressLen();
+                    var lvlConfig = pollLevelConfigs[pollLevel.level];
+                    var skipIterations = lvlConfig.skipNth;
+                    var skipDelay = lvlConfig.delay;
 
-                    var bytes = dtArea.GetUnderlyingBytes(regStart, addLen);
-                    register.SetValueFromBytes(bytes);
+                    if (skipIterations != null && pollIteration % skipIterations.Value != 0) {
+
+                        //count delayed poll skips
+                        continue;
+
+                    } else if(skipDelay != null) {
+
+                        //time delayed poll skips
+
+                        if(lvlConfig.timeFromLastRead.Elapsed < skipDelay.Value) {
+
+                            continue;
+
+                        }
+
+                    }
 
                 }
 
+                //set stopwatch for levels
+                if(pollLevelConfigs.ContainsKey(pollLevel.level)) {
+
+                    pollLevelConfigs[pollLevel.level].timeFromLastRead = Stopwatch.StartNew();   
+                
+                }
+
+                //update registers in poll level
+                foreach (var dtArea in pollLevel.dataAreas) {
+
+                    //set the whole memory area at once
+                    await dtArea.RequestByteReadAsync(dtArea.AddressStart, dtArea.AddressEnd);
+
+                }
+
+                pollLevel.lastReadTimeMs = (int)sw.Elapsed.TotalMilliseconds;
+
             }
 
-        }
-
-        internal void Merge () {
-
-            //merge gaps that the algorithm didn't catch be rerunning the register attachment
-
-            var allDataAreaRegisters = dataAreas.SelectMany(x => x.linkedRegisters).ToList();
-            dataAreas = new List<DTArea>(allDataAreaRegisters.Capacity);
-
-            foreach (var reg in allDataAreaRegisters)
-                AddDTArea(reg);
+            if(pollIteration == uint.MaxValue) {
+                pollIteration = uint.MinValue;
+            } else {
+                pollIteration++;
+            }
 
         }
 
@@ -246,63 +316,77 @@ namespace MewtocolNet.UnderlyingRegisters {
 
             var sb = new StringBuilder();
 
-            sb.AppendLine("---- DT Area ----");
+            foreach (var pollLevel in pollLevels) {
 
-            sb.AppendLine($"Optimization distance: {maxOptimizationDistance}");
-
-            foreach (var area in dataAreas) {
+                sb.AppendLine($"==== Poll lvl {pollLevel.level} ====");
 
                 sb.AppendLine();
-                sb.AppendLine($"=> {area} = {area.underlyingBytes.Length} bytes");
-                sb.AppendLine();
-                sb.AppendLine(string.Join("\n", area.underlyingBytes.ToHexString(" ").SplitInParts(3 * 8)));
+                if (pollLevelConfigs[pollLevel.level].delay != null) {
+                    sb.AppendLine($"Poll each {pollLevelConfigs[pollLevel.level].delay?.TotalMilliseconds}ms");
+                } else {
+                    sb.AppendLine($"Poll every {pollLevelConfigs[pollLevel.level].skipNth} iterations");
+                }
+                sb.AppendLine($"Level read time: {pollLevel.lastReadTimeMs}ms");
+                sb.AppendLine($"Optimization distance: {maxOptimizationDistance}");
                 sb.AppendLine();
 
-                foreach (var reg in area.linkedRegisters) {
+                sb.AppendLine($"---- DT Area ----");
 
-                    sb.AppendLine($"{reg.ToString(true)}");
+                foreach (var area in pollLevel.dataAreas) {
+
+                    sb.AppendLine();
+                    sb.AppendLine($"=> {area} = {area.underlyingBytes.Length} bytes");
+                    sb.AppendLine();
+                    sb.AppendLine(string.Join("\n", area.underlyingBytes.ToHexString(" ").SplitInParts(3 * 8)));
+                    sb.AppendLine();
+
+                    foreach (var reg in area.linkedRegisters) {
+
+                        sb.AppendLine($"{reg.ToString(true)}");
+
+                    }
 
                 }
 
-            }
+                sb.AppendLine($"---- WR X Area ----");
 
-            sb.AppendLine("---- WR X Area ----");
+                foreach (var area in pollLevel.externalRelayInAreas) {
 
-            foreach (var area in externalRelayInAreas) {
+                    sb.AppendLine(area.ToString());
 
-                sb.AppendLine(area.ToString());
+                    foreach (var reg in area.linkedRegisters) {
 
-                foreach (var reg in area.linkedRegisters) {
+                        sb.AppendLine($"{reg.ToString(true)}");
 
-                    sb.AppendLine($"{reg.ToString(true)}");
-
-                }
-
-            }
-
-            sb.AppendLine("---- WR Y Area ----");
-
-            foreach (var area in externalRelayOutAreas) {
-
-                sb.AppendLine(area.ToString());
-
-                foreach (var reg in area.linkedRegisters) {
-
-                    sb.AppendLine($"{reg.ToString(true)}");
+                    }
 
                 }
 
-            }
+                sb.AppendLine($"---- WR Y Area ---");
 
-            sb.AppendLine("---- WR R Area ----");
+                foreach (var area in pollLevel.externalRelayOutAreas) {
 
-            foreach (var area in internalRelayAreas) {
+                    sb.AppendLine(area.ToString());
 
-                sb.AppendLine(area.ToString());
+                    foreach (var reg in area.linkedRegisters) {
 
-                foreach (var reg in area.linkedRegisters) {
+                        sb.AppendLine($"{reg.ToString(true)}");
 
-                    sb.AppendLine($"{reg.ToString(true)}");
+                    }
+
+                }
+
+                sb.AppendLine($"---- WR R Area ----");
+
+                foreach (var area in pollLevel.internalRelayAreas) {
+
+                    sb.AppendLine(area.ToString());
+
+                    foreach (var reg in area.linkedRegisters) {
+
+                        sb.AppendLine($"{reg.ToString(true)}");
+
+                    }
 
                 }
 
@@ -312,6 +396,22 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         } 
 
+        internal IEnumerable<BaseRegister> GetAllRegisters () {
+
+            List<BaseRegister> registers = new List<BaseRegister>();    
+
+            foreach (var lvl in pollLevels) {
+
+                registers.AddRange(lvl.dataAreas.SelectMany(x => x.linkedRegisters));
+                registers.AddRange(lvl.internalRelayAreas.SelectMany(x => x.linkedRegisters));
+                registers.AddRange(lvl.externalRelayInAreas.SelectMany(x => x.linkedRegisters));
+                registers.AddRange(lvl.externalRelayOutAreas.SelectMany(x => x.linkedRegisters));
+
+            }
+
+            return registers;
+
+        }
 
     } 
 

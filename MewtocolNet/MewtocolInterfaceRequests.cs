@@ -169,6 +169,7 @@ namespace MewtocolNet {
 
         #region Raw register reading / writing
 
+        [Obsolete]
         internal async Task<byte[]> ReadRawRegisterAsync (IRegisterInternal _toRead) {
 
             var toreadType = _toRead.GetType();
@@ -237,6 +238,7 @@ namespace MewtocolNet {
 
         }
 
+        [Obsolete]
         internal async Task<bool> WriteRawRegisterAsync (IRegisterInternal _toWrite, byte[] data) {
 
             var toWriteType = _toWrite.GetType();
@@ -258,42 +260,16 @@ namespace MewtocolNet {
 
         #endregion
 
-        #region Register reading / writing
-
-        internal async Task<bool> SetRegisterAsync (IRegister register, object value) {
-
-            var internalReg = (IRegisterInternal)register;
-
-            return await internalReg.WriteAsync(value);
-
-        }
-
-        #endregion
-
-        #region Reading / Writing Plc program
-
-        public async Task GetSystemRegister () {
-
-            //the "." means CR or \r
-
-            await SendCommandAsync("%EE#RT");
-
-            //then get plc status extended? gets polled all time
-            // %EE#EX00RT00
-            await SendCommandAsync("%EE#EX00RT00");
-
-
-
-        }
-
-        #endregion
-
         #region Helpers
 
         internal string GetStationNumber() {
 
-            return StationNumber.ToString().PadLeft(2, '0');
+            if (StationNumber != 0xEE && StationNumber > 99)
+                throw new NotSupportedException("Station number was greater 99");
 
+            if(StationNumber == 0xEE) return "EE";
+
+            return StationNumber.ToString().PadLeft(2, '0');
 
         }
 

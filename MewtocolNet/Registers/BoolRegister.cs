@@ -113,9 +113,6 @@ namespace MewtocolNet.Registers {
         }
 
         /// <inheritdoc/>
-        public override void ClearValue() => SetValueFromPLC(false);
-
-        /// <inheritdoc/>
         public override string GetMewName() {
 
             var spAdressEnd = SpecialAddress.ToString("X1");
