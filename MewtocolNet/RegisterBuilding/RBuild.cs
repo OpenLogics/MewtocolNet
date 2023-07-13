@@ -362,13 +362,14 @@ namespace MewtocolNet.RegisterBuilding {
             /// <item><term><see cref="bool"/></term><description>Boolean R/X/Y registers</description></item>
             /// <item><term><see cref="short"/></term><description>16 bit signed integer</description></item>
             /// <item><term><see cref="ushort"/></term><description>16 bit un-signed integer</description></item>
+            /// <item><term><see cref="Word"/></term><description>16 bit word (2 bytes)</description></item>
             /// <item><term><see cref="int"/></term><description>32 bit signed integer</description></item>
             /// <item><term><see cref="uint"/></term><description>32 bit un-signed integer</description></item>
+            /// <item><term><see cref="DWord"/></term><description>32 bit word (4 bytes)</description></item>
             /// <item><term><see cref="float"/></term><description>32 bit floating point</description></item>
             /// <item><term><see cref="TimeSpan"/></term><description>32 bit time from <see cref="PlcVarType.TIME"/> interpreted as <see cref="TimeSpan"/></description></item>
-            /// <item><term><see cref="Enum"/></term><description>16 or 32 bit enums</description></item>
+            /// <item><term><see cref="Enum"/></term><description>16 or 32 bit enums, also supports flags</description></item>
             /// <item><term><see cref="string"/></term><description>String of chars, the interface will automatically get the length</description></item>
-            /// <item><term><see cref="BitArray"/></term><description>As an array of bits</description></item>
             /// <item><term><see cref="byte[]"/></term><description>As an array of bytes</description></item>
             /// </list>
             /// </summary>
@@ -611,7 +612,7 @@ namespace MewtocolNet.RegisterBuilding {
 
             var assembler = new RegisterAssembler(attachedPLC);
             var tempRegister = assembler.Assemble(reg.Data);
-            return await tempRegister.WriteToAnonymousAsync(value);
+            return await tempRegister.WriteAsync(value);
 
         }
 
@@ -619,7 +620,7 @@ namespace MewtocolNet.RegisterBuilding {
 
             var assembler = new RegisterAssembler(attachedPLC);
             var tempRegister = assembler.Assemble(reg.Data);
-            return await tempRegister.WriteToAnonymousAsync(value);
+            return await tempRegister.WriteAsync(value);
 
         }
 
@@ -627,7 +628,7 @@ namespace MewtocolNet.RegisterBuilding {
 
             var assembler = new RegisterAssembler(attachedPLC);
             var tempRegister = assembler.Assemble(reg.Data);
-            return await tempRegister.ReadFromAnonymousAsync();
+            return await tempRegister.ReadAsync();
 
         }
 
@@ -635,7 +636,7 @@ namespace MewtocolNet.RegisterBuilding {
 
             var assembler = new RegisterAssembler(attachedPLC);
             var tempRegister = assembler.Assemble(reg.Data);
-            return (T)await tempRegister.ReadFromAnonymousAsync();
+            return (T)await tempRegister.ReadAsync();
 
         }
 

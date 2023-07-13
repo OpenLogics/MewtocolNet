@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -63,21 +64,6 @@ namespace MewtocolNet.Registers {
         }
 
         /// <inheritdoc/>
-        public override void SetValueFromPLC(object val) {
-
-            if (lastValue?.ToString() != val?.ToString()) {
-
-                if (val != null) lastValue = (T)val;
-                else lastValue = null;
-
-                TriggerNotifyChange();
-                attachedInterface.InvokeRegisterChanged(this);
-
-            }
-
-        }
-
-        /// <inheritdoc/>
         public override string BuildMewtocolQuery() {
 
             StringBuilder asciistring = new StringBuilder("D");
@@ -108,7 +94,13 @@ namespace MewtocolNet.Registers {
 
                 return $"{Value} [{((TimeSpan)Value).ToPlcTime()}]";
 
-            } 
+            }
+
+            if (Value != null && typeof(T) == typeof(Word)) {
+
+                return $"{Value} [{((Word)Value).ToStringBitsPlc()}]";
+
+            }
 
             if (Value != null && typeof(T).IsEnum) {
 
@@ -127,35 +119,42 @@ namespace MewtocolNet.Registers {
         public override uint GetRegisterAddressLen() => (uint)(RegisterType == RegisterType.DT ? 1 : 2);
 
         /// <inheritdoc/>
+        public override async Task<bool> WriteAsync (object value) {
+
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
+
+            var encoded = PlcValueParser.Encode(this, (T)value);
+            var res = await attachedInterface.WriteByteRange((int)MemoryAddress, encoded);
+
+            if(res) {
+
+                //find the underlying memory
+                var matchingReg = attachedInterface.memoryManager.GetAllRegisters()
+                .FirstOrDefault(x => x.IsSameAddressAndType(this));
+
+                if (matchingReg != null) 
+                    matchingReg.underlyingMemory.SetUnderlyingBytes(matchingReg, encoded);
+
+                AddSuccessWrite();
+                UpdateHoldingValue(value);
+
+            }
+
+            return res;
+
+        }
+
+        /// <inheritdoc/>
         public override async Task<object> ReadAsync() {
 
             if (!attachedInterface.IsConnected)
                 throw MewtocolException.NotConnectedSend();
 
-            var res = await underlyingMemory.ReadRegisterAsync(this);
-            if (!res) return null;
+            var res = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, (int)GetRegisterAddressLen() * 2, false);
+            if (res == null) return null;
 
-            var bytes = underlyingMemory.GetUnderlyingBytes(this);
-            
-            return SetValueFromBytes(bytes);
-
-        }
-
-        /// <inheritdoc/>
-        public override async Task<bool> WriteAsync(object data) {
-
-            if (!attachedInterface.IsConnected)
-                throw MewtocolException.NotConnectedSend();
-
-            var encoded = PlcValueParser.Encode(this, (T)data);
-            var res = await underlyingMemory.WriteRegisterAsync(this, encoded);
-
-            if (res) {
-                AddSuccessWrite();
-                SetValueFromPLC(data);
-            }
-
-            return res;
+            return SetValueFromBytes(res);
 
         }
 
@@ -164,30 +163,22 @@ namespace MewtocolNet.Registers {
             AddSuccessRead();
 
             var parsed = PlcValueParser.Parse<T>(this, bytes);
-            SetValueFromPLC(parsed);
+            UpdateHoldingValue(parsed);
             return parsed;
 
         }
 
-        internal override async Task<bool> WriteToAnonymousAsync (object value) {
+        internal override void UpdateHoldingValue(object val) {
 
-            if (!attachedInterface.IsConnected)
-                throw MewtocolException.NotConnectedSend();
+            if (lastValue?.ToString() != val?.ToString()) {
 
-            var encoded = PlcValueParser.Encode(this, (T)value);
-            return await attachedInterface.WriteByteRange((int)MemoryAddress, encoded);
+                if (val != null) lastValue = (T)val;
+                else lastValue = null;
 
-        }
+                TriggerNotifyChange();
+                attachedInterface.InvokeRegisterChanged(this);
 
-        internal override async Task<object> ReadFromAnonymousAsync () {
-
-            if (!attachedInterface.IsConnected)
-                throw MewtocolException.NotConnectedSend();
-
-            var res = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, (int)GetRegisterAddressLen() * 2, false);
-            if (res == null) return null;
-
-            return PlcValueParser.Parse<T>(this, res);
+            }
 
         }
 

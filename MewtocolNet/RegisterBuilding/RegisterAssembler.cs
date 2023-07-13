@@ -3,6 +3,7 @@ using MewtocolNet.RegisterAttributes;
 using MewtocolNet.Registers;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using static MewtocolNet.RegisterBuilding.RBuild;
@@ -49,9 +50,9 @@ namespace MewtocolNet.RegisterBuilding {
                 //as numeric register with enum target
 
                 var underlying = Enum.GetUnderlyingType(data.dotnetVarType);
-                var enuSize = Marshal.SizeOf(underlying);
+                int numericSize = Marshal.SizeOf(underlying); 
 
-                if (enuSize > 4)
+                if (numericSize > 4)
                     throw new NotSupportedException("Enums not based on 16 or 32 bit numbers are not supported");
 
                 var flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
@@ -60,6 +61,8 @@ namespace MewtocolNet.RegisterBuilding {
 
                 var parameters = new object[] { data.memAddress, data.name };
                 var instance = (BaseRegister)constr.Invoke(parameters);
+
+                instance.RegisterType = numericSize > 2 ? RegisterType.DDT : RegisterType.DT;
 
                 generatedInstance = instance;
 
@@ -74,23 +77,31 @@ namespace MewtocolNet.RegisterBuilding {
                 //int _adress, Type _enumType = null, string _name = null
                 var parameters = new object[] { data.memAddress, data.name };
                 var instance = (BaseRegister)Activator.CreateInstance(registerClassType, flags, null, parameters, null);
-                instance.pollLevel = data.pollLevel;
+
+                int numericSize = 0;
+                bool isExtensionTypeDT = typeof(MewtocolExtensionTypeDT).IsAssignableFrom(data.dotnetVarType);
+                bool isExtensionTypeDDT = typeof(MewtocolExtensionTypeDDT).IsAssignableFrom(data.dotnetVarType);
+
+                if (data.dotnetVarType.Namespace == "System") {
+                    numericSize = Marshal.SizeOf(data.dotnetVarType);
+                } else if(isExtensionTypeDT) {
+                    numericSize = 2;
+                } else if(isExtensionTypeDDT) {
+                    numericSize = 4;
+                } else {
+                    throw new NotSupportedException($"The type {data.dotnetVarType} is not supported for NumberRegisters");
+                }
+                
+                instance.RegisterType = numericSize > 2 ? RegisterType.DDT : RegisterType.DT;
+
                 generatedInstance = instance;
 
-            } else if (registerClassType == typeof(BytesRegister) && data.byteSize != null) {
+            } else if (registerClassType == typeof(ArrayRegister) && data.byteSize != null) {
 
                 //-------------------------------------------
                 //as byte range register
 
-                BytesRegister instance = new BytesRegister(data.memAddress, (uint)data.byteSize, data.name);
-                generatedInstance = instance;
-
-            } else if (registerClassType == typeof(BytesRegister) && data.bitSize != null) {
-
-                //-------------------------------------------
-                //as bit range register
-
-                BytesRegister instance = new BytesRegister(data.memAddress, (ushort)data.bitSize, data.name);
+                ArrayRegister instance = new ArrayRegister(data.memAddress, (uint)data.byteSize, data.name);
                 generatedInstance = instance;
 
             } else if (registerClassType == typeof(StringRegister)) {
@@ -125,8 +136,13 @@ namespace MewtocolNet.RegisterBuilding {
             if (collectionTarget != null)
                 generatedInstance.WithRegisterCollection(collectionTarget);
 
-            generatedInstance.attachedInterface = onInterface;
+            if (data.boundProperty != null)
+                generatedInstance.WithBoundProperty(new RegisterPropTarget {
+                    BoundProperty = data.boundProperty,
+                });
 
+            generatedInstance.attachedInterface = onInterface;
+            generatedInstance.underlyingSystemType = data.dotnetVarType;
             generatedInstance.pollLevel = data.pollLevel;
 
             return generatedInstance;   

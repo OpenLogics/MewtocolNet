@@ -156,10 +156,11 @@ namespace MewtocolNet {
 
         private void OnRegisterChanged(IRegister o) {
 
-            var asInternal = (IRegisterInternal)o;
+            var asInternal = (BaseRegister)o;
 
             Logger.Log($"{asInternal.GetMewName()} " +
                        $"{(o.Name != null ? $"({o.Name}) " : "")}" +
+                       $"{asInternal.underlyingSystemType} " +
                        $"changed to \"{asInternal.GetValueString()}\"", LogLevel.Change, this);
 
             OnRegisterChangedUpdateProps((IRegisterInternal)o);

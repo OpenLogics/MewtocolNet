@@ -290,20 +290,7 @@ namespace MewtocolNet {
 
         internal void InsertRegistersToMemoryStack (List<BaseRegister> registers) {
 
-            //order by address
-            registers = registers.OrderBy(x => x.GetSpecialAddress()).ToList();
-            registers = registers.OrderBy(x => x.MemoryAddress).ToList();
-
-            //link to memory manager
-            for (int i = 0, j = 0; i < registers.Count; i++) {
-
-                BaseRegister reg = registers[i];
-                reg.name = $"auto_prop_register_{j + 1}";
-
-                //link the memory area to the register
-                if (memoryManager.LinkRegister(reg)) j++;
-
-            }
+            memoryManager.LinkRegisters(registers);
 
         }
 
@@ -408,7 +395,7 @@ namespace MewtocolNet {
 
         }
 
-        internal void InvokeRegisterChanged(IRegister reg) {
+        internal void InvokeRegisterChanged(BaseRegister reg) {
 
             RegisterChanged?.Invoke(reg);
 

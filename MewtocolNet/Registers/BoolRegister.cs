@@ -54,57 +54,6 @@ namespace MewtocolNet.Registers {
 
         }
 
-        #region Read / Write
-
-        /// <inheritdoc/>
-        public override async Task<object> ReadAsync() {
-
-            if (!attachedInterface.IsConnected)
-                throw MewtocolException.NotConnectedSend();
-
-            return null;
-
-        }
-
-        /// <inheritdoc/>
-        public override async Task<bool> WriteAsync(object data) {
-
-            if (!attachedInterface.IsConnected)
-                throw MewtocolException.NotConnectedSend();
-
-            return false;
-
-        }
-
-        internal override async Task<bool> WriteToAnonymousAsync (object value) {
-
-            if (!attachedInterface.IsConnected)
-                throw MewtocolException.NotConnectedSend();
-
-            var station = attachedInterface.GetStationNumber();
-            string reqStr = $"%{station}#WCS{BuildMewtocolQuery()}{((bool)value ? "1" : "0")}";
-            var res = await attachedInterface.SendCommandAsync(reqStr);
-
-            return res.Success;
-
-        }
-
-        internal override async Task<object> ReadFromAnonymousAsync() {
-
-            if (!attachedInterface.IsConnected)
-                throw MewtocolException.NotConnectedSend();
-
-            var station = attachedInterface.GetStationNumber();
-            string requeststring = $"%{station}#RCS{BuildMewtocolQuery()}";
-            var result = await attachedInterface.SendCommandAsync(requeststring);
-            if (!result.Success) return null;
-
-            return result.Response.ParseRCSingleBit();
-
-        }
-
-        #endregion
-
         /// <inheritdoc/>
         public override byte? GetSpecialAddress() => SpecialAddress;
 

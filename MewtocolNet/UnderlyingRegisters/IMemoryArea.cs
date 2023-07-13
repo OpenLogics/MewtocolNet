@@ -7,9 +7,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         byte[] GetUnderlyingBytes(BaseRegister reg);
 
-        Task<bool> ReadRegisterAsync(BaseRegister reg);
-
-        Task<bool> WriteRegisterAsync(BaseRegister reg, byte[] bytes);
+        void SetUnderlyingBytes(BaseRegister reg, byte[] bytes);
 
         void UpdateAreaRegisterValues();
 

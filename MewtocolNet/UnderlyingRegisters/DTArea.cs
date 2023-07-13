@@ -17,7 +17,9 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         internal byte[] underlyingBytes = new byte[2];
 
-        internal List<BaseRegister> linkedRegisters = new List<BaseRegister>(); 
+        internal List<BaseRegister> linkedRegisters = new List<BaseRegister>();
+
+        internal Dictionary<BaseRegister, List<BaseRegister>> crossRegisterBindings = new Dictionary<BaseRegister, List<BaseRegister>>();
 
         public ulong AddressStart => addressStart;
         public ulong AddressEnd => addressEnd;
@@ -40,7 +42,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
             //copy old bytes to new array
             var offset = (int)(oldFrom - addFrom) * 2;
-            oldUnderlying.CopyTo(oldUnderlying, offset);
+            oldUnderlying.CopyTo(underlyingBytes, offset);
 
             addressStart = addFrom;
             addressEnd = addTo;
@@ -61,18 +63,6 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        public async Task<bool> ReadRegisterAsync (BaseRegister reg) {
-
-            return await RequestByteReadAsync(reg.MemoryAddress, reg.MemoryAddress + reg.GetRegisterAddressLen() - 1);
-
-        }
-
-        public async Task<bool> WriteRegisterAsync (BaseRegister reg, byte[] bytes) {
-
-            return await RequestByteWriteAsync(reg.MemoryAddress, bytes);
-
-        }
-
         internal async Task<bool> RequestByteReadAsync (ulong addStart, ulong addEnd) {
 
             await CheckDynamicallySizedRegistersAsync();
@@ -86,24 +76,6 @@ namespace MewtocolNet.UnderlyingRegisters {
 
                 var resBytes = result.Response.ParseDTRawStringAsBytes();
                 SetUnderlyingBytes(resBytes, addStart);
-
-            }
-
-            return result.Success;
-
-        }
-
-        internal async Task<bool> RequestByteWriteAsync(ulong addStart, byte[] bytes) {
-
-            var station = mewInterface.GetStationNumber();
-            var addEnd = addStart + ((ulong)bytes.Length / 2) - 1;
-
-            string requeststring = $"%{station}#WD{GetMewtocolIdent(addStart, addEnd)}{bytes.ToHexString()}";
-            var result = await mewInterface.SendCommandAsync(requeststring);
-
-            if (result.Success) {
-
-                SetUnderlyingBytes(bytes, addStart);
 
             }
 

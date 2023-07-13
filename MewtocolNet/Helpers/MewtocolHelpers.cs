@@ -5,8 +5,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using static MewtocolNet.RegisterBuilding.RBuild;
 
 namespace MewtocolNet {
 
@@ -252,14 +254,18 @@ namespace MewtocolNet {
 
         }
 
-        internal static bool CompareIsDuplicateNonCast (this BaseRegister reg1, BaseRegister compare, bool ingnoreByteRegisters = true) {
+        internal static bool CompareIsDuplicateNonCast (this BaseRegister toInsert, BaseRegister compare, List<Type> allowOverlappingTypes) {
 
-            if (ingnoreByteRegisters && (compare.GetType() == typeof(BytesRegister) || reg1.GetType() == typeof(BytesRegister))) return false;
+            foreach (var type in allowOverlappingTypes) {
 
-            bool valCompare = reg1.GetType() != compare.GetType() &&
-                              reg1.MemoryAddress == compare.MemoryAddress &&
-                              reg1.GetRegisterAddressLen() == compare.GetRegisterAddressLen() &&
-                              reg1.GetSpecialAddress() == compare.GetSpecialAddress();
+                if (toInsert.GetType() == type) return false;
+
+            }
+
+            bool valCompare = toInsert.GetType() != compare.GetType() &&
+                              toInsert.MemoryAddress == compare.MemoryAddress &&
+                              toInsert.GetRegisterAddressLen() == compare.GetRegisterAddressLen() &&
+                              toInsert.GetSpecialAddress() == compare.GetSpecialAddress();
 
             return valCompare;
 

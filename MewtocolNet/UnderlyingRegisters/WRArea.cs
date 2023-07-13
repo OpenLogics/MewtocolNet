@@ -30,6 +30,10 @@ namespace MewtocolNet.UnderlyingRegisters {
 
 
         }
+        public void SetUnderlyingBytes(BaseRegister reg, byte[] bytes) {
+
+
+        }
 
         public byte[] GetUnderlyingBytes(BaseRegister reg) {
 

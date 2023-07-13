@@ -72,12 +72,12 @@ namespace MewtocolNet.TypeConversion {
                 ToRaw = (reg, value) => BitConverter.GetBytes(value),
             },
 
-            //default ushort DT conversion
-            new PlcTypeConversion<ushort>(RegisterType.DT) {
-                HoldingRegisterType = typeof(NumberRegister<ushort>),
+            //default Word DT conversion
+            new PlcTypeConversion<Word>(RegisterType.DT) {
+                HoldingRegisterType = typeof(NumberRegister<Word>),
                 PlcVarType = PlcVarType.WORD,
-                FromRaw = (reg, bytes) => BitConverter.ToUInt16(bytes, 0),
-                ToRaw = (reg, value) => BitConverter.GetBytes(value),
+                FromRaw = (reg, bytes) => new Word(bytes),
+                ToRaw = (reg, value) => value.ToByteArray(),
             },
 
             //default int DDT conversion
@@ -96,12 +96,12 @@ namespace MewtocolNet.TypeConversion {
                 ToRaw = (reg, value) => BitConverter.GetBytes(value),
             },
 
-            //default uint DDT conversion
-            new PlcTypeConversion<uint>(RegisterType.DDT) {
-                HoldingRegisterType = typeof(NumberRegister<uint>),
+            //default DWord DDT conversion
+            new PlcTypeConversion<DWord>(RegisterType.DDT) {
+                HoldingRegisterType = typeof(NumberRegister<DWord>),
                 PlcVarType = PlcVarType.DWORD,
-                FromRaw = (reg, bytes) => BitConverter.ToUInt32(bytes, 0),
-                ToRaw = (reg, value) => BitConverter.GetBytes(value),
+                FromRaw = (reg, bytes) => new DWord(bytes),
+                ToRaw = (reg, value) => value.ToByteArray(),
             },
 
             //default float DDT conversion
@@ -134,7 +134,7 @@ namespace MewtocolNet.TypeConversion {
 
             //default byte array DT Range conversion, direct pass through
             new PlcTypeConversion<byte[]>(RegisterType.DT_BYTE_RANGE) {
-                HoldingRegisterType = typeof(BytesRegister),
+                HoldingRegisterType = typeof(ArrayRegister),
                 FromRaw = (reg, bytes) => bytes,
                 ToRaw = (reg, value) => value,
             },
@@ -178,37 +178,6 @@ namespace MewtocolNet.TypeConversion {
                     finalBytes.AddRange(strBytes);
 
                     return finalBytes.ToArray();
-
-                },
-            },
-
-            //default bit array <=> byte array conversion
-            new PlcTypeConversion<BitArray>(RegisterType.DT_BYTE_RANGE) {
-                HoldingRegisterType = typeof(BytesRegister),
-                FromRaw = (reg, bytes) => {
-
-                    var byteReg = (BytesRegister)reg;
-
-                    BitArray bitAr = new BitArray(bytes);
-                    bitAr.Length = (int)byteReg.ReservedBitSize;
-
-                    return bitAr;
-
-                },
-                ToRaw = (reg, value) => {
-
-                    byte[] ret = new byte[(value.Length - 1) / 8 + 1];
-                    value.CopyTo(ret, 0);
-
-                    if(ret.Length % 2 != 0) {
-
-                        var lst = ret.ToList();
-                        lst.Add(0);
-                        ret = lst.ToArray();
-
-                    }
-
-                    return ret;
 
                 },
             },

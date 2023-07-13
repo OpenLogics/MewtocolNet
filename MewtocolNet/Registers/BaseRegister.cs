@@ -19,8 +19,10 @@ namespace MewtocolNet.Registers {
         //links to 
         internal RegisterCollection containedCollection;
         internal MewtocolInterface attachedInterface;
-        internal List<RegisterPropTarget> boundToProps = new List<RegisterPropTarget>();
 
+        internal List<RegisterPropTarget> boundProperties = new List<RegisterPropTarget>();
+
+        internal Type underlyingSystemType;
         internal IMemoryArea underlyingMemory;
         internal object lastValue = null;
         internal string name;
@@ -40,7 +42,7 @@ namespace MewtocolNet.Registers {
         public object Value => lastValue;
 
         /// <inheritdoc/>
-        public RegisterType RegisterType { get; protected set; }
+        public RegisterType RegisterType { get; internal set; }
 
         /// <inheritdoc/>
         public string Name => name;
@@ -59,9 +61,9 @@ namespace MewtocolNet.Registers {
 
         #endregion
 
-        public virtual void ClearValue() => SetValueFromPLC(null);
+        public virtual void ClearValue() => UpdateHoldingValue(null);
 
-        public virtual void SetValueFromPLC(object val) {
+        internal virtual void UpdateHoldingValue(object val) {
 
             if(lastValue?.ToString() != val?.ToString()) {
 
@@ -78,17 +80,20 @@ namespace MewtocolNet.Registers {
 
         internal void WithRegisterCollection (RegisterCollection collection) => containedCollection = collection;
 
-        internal void WithBoundProperty(RegisterPropTarget propInfo) => boundToProps.Add(propInfo);
+        internal void WithBoundProperty(RegisterPropTarget propInfo) => boundProperties.Add(propInfo);
+        
+        internal void WithBoundProperties(IEnumerable<RegisterPropTarget> propInfos) {
+
+            foreach (var item in propInfos)
+                boundProperties.Add(item);
+
+        }
 
         #region Read / Write
 
         public virtual Task<object> ReadAsync() => throw new NotImplementedException();
 
         public virtual Task<bool> WriteAsync(object data) => throw new NotImplementedException();
-
-        internal virtual Task<bool> WriteToAnonymousAsync (object value) => throw new NotImplementedException();
-
-        internal virtual Task<object> ReadFromAnonymousAsync () => throw new NotImplementedException();
 
         #endregion
 
@@ -147,18 +152,36 @@ namespace MewtocolNet.Registers {
             else successfulWrites++;
         }
 
+        internal virtual bool IsSameAddressAndType (BaseRegister toCompare) {
+
+            return this.MemoryAddress == toCompare.MemoryAddress &&
+                   this.RegisterType == toCompare.RegisterType &&
+                   this.GetRegisterAddressLen() == toCompare.GetRegisterAddressLen() &&
+                   this.GetSpecialAddress() == toCompare.GetSpecialAddress();
+
+        }
+
+        internal virtual bool IsSameAddress (BaseRegister toCompare) {
+
+            return (this.MemoryAddress == toCompare.MemoryAddress) &&
+                   (this.GetRegisterAddressLen() == toCompare.GetRegisterAddressLen()) &&
+                   (this.GetSpecialAddress() == toCompare.GetSpecialAddress());
+
+        }
+
         public override string ToString() {
 
             var sb = new StringBuilder();
             sb.Append(GetMewName());
             if(Name != null) sb.Append($" ({Name})");
+            sb.Append($" [{this.GetType().Name}({underlyingSystemType.Name})]");
             if (Value != null) sb.Append($" Val: {GetValueString()}");
 
             return sb.ToString();
 
         }
 
-        public virtual string ToString(bool additional) {
+        public virtual string ToString (bool additional) {
 
             if (!additional) return this.ToString();
 
@@ -166,16 +189,30 @@ namespace MewtocolNet.Registers {
             sb.AppendLine($"MewName: {GetMewName()}");
             sb.AppendLine($"Name: {Name ?? "Not named"}");
             sb.AppendLine($"Value: {GetValueString()}");
-            sb.AppendLine($"Perf. Reads: {successfulReads}, Writes: {successfulWrites}");
             sb.AppendLine($"Register Type: {RegisterType}");
             sb.AppendLine($"Address: {GetRegisterWordRangeString()}");
-            if(this is StringRegister sr) sb.AppendLine($"Reserved: {sr.ReservedSize}, Used: {sr.UsedSize}");
+
+            return sb.ToString();
+
+        }
+
+        public virtual string Explain () {
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"MewName: {GetMewName()}");
+            sb.AppendLine($"Name: {Name ?? "Not named"}");
+            sb.AppendLine($"Value: {GetValueString()}");
+            sb.AppendLine($"Perf. Reads: {successfulReads}, Writes: {successfulWrites}");
+            sb.AppendLine($"Register Type: {RegisterType}");
+            sb.AppendLine($"Underlying System Type: {underlyingSystemType}");
+            sb.AppendLine($"Address: {GetRegisterWordRangeString()}");
+            if (this is StringRegister sr) sb.AppendLine($"Reserved: {sr.ReservedSize}, Used: {sr.UsedSize}");
             if (GetSpecialAddress() != null) sb.AppendLine($"SPAddress: {GetSpecialAddress():X1}");
             if (GetType().IsGenericType) sb.AppendLine($"Type: NumberRegister<{GetType().GenericTypeArguments[0]}>");
             else sb.AppendLine($"Type: {GetType()}");
-            if(containedCollection != null) sb.AppendLine($"In collection: {containedCollection.GetType()}");
-            if(boundToProps != null && boundToProps.Count != 0) 
-                sb.AppendLine($"Bound props: {string.Join(",", boundToProps)}");
+            if (containedCollection != null) sb.AppendLine($"In collection: {containedCollection.GetType()}");
+            if (boundProperties != null && boundProperties.Count > 0) sb.AppendLine($"Bound props: {string.Join(", ", boundProperties)}");
+            else sb.AppendLine("No bound properties");
 
             return sb.ToString();
 

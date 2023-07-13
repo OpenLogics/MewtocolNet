@@ -1,9 +1,12 @@
-﻿using MewtocolNet.Registers;
+﻿using MewtocolNet.Helpers;
+using MewtocolNet.Registers;
 using MewtocolNet.SetupClasses;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -44,22 +47,69 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        internal bool LinkRegister (BaseRegister reg) {
+        internal void LinkRegisters (List<BaseRegister> registers = null) {
 
-            TestPollLevelExistence(reg);
+            //for self calling
+            if (registers == null) registers = GetAllRegisters().ToList();
 
-            switch (reg.RegisterType) {
-                case RegisterType.X:
-                case RegisterType.Y:
-                case RegisterType.R:
-                return AddWRArea(reg);
-                case RegisterType.DT:
-                case RegisterType.DDT:
-                case RegisterType.DT_BYTE_RANGE:
-                return AddDTArea(reg);
+            //pre combine
+            var groupedByAdd = registers
+            .GroupBy(x => new {
+                x.MemoryAddress,
+                len = x.GetRegisterAddressLen(),
+                spadd = x.GetSpecialAddress(),
+            });
+
+            var filteredRegisters = new List<BaseRegister>();    
+            var propertyLookupTable = new Dictionary<PropertyInfo, BaseRegister>(); 
+
+            foreach (var addressGroup in groupedByAdd) {
+
+                var ordered = addressGroup.OrderBy(x => x.pollLevel);
+                var highestPollLevel = ordered.Max(x => x.pollLevel);
+
+                var distinctByUnderlyingType = 
+                ordered.GroupBy(x => x.underlyingSystemType).ToList();
+
+                foreach (var underlyingTypeGroup in distinctByUnderlyingType) {
+
+                    foreach (var register in underlyingTypeGroup) {
+
+                        register.pollLevel = highestPollLevel;
+
+                        var alreadyAdded = filteredRegisters
+                        .FirstOrDefault(x => x.underlyingSystemType == register.underlyingSystemType);
+
+                        if(alreadyAdded == null) {
+                            filteredRegisters.Add(register);
+                        } else {
+                            alreadyAdded.WithBoundProperties(register.boundProperties);
+                        }
+
+                    }
+                    
+                }
+
             }
 
-            return false;
+            foreach (var reg in filteredRegisters) {
+
+                TestPollLevelExistence(reg);
+
+                switch (reg.RegisterType) {
+                    case RegisterType.X:
+                    case RegisterType.Y:
+                    case RegisterType.R:
+                    AddToWRArea(reg);
+                    break;
+                    case RegisterType.DT:
+                    case RegisterType.DDT:
+                    case RegisterType.DT_BYTE_RANGE:
+                    AddToDTArea(reg);
+                    break;
+                }
+
+            }
 
         }
 
@@ -88,7 +138,7 @@ namespace MewtocolNet.UnderlyingRegisters {
             
         }
 
-        private bool AddWRArea (BaseRegister insertReg) {
+        private bool AddToWRArea (BaseRegister insertReg) {
 
             var pollLevelFound = pollLevels.FirstOrDefault(x => x.level == insertReg.pollLevel);
 
@@ -114,9 +164,6 @@ namespace MewtocolNet.UnderlyingRegisters {
                 .FirstOrDefault(x => x.CompareIsDuplicate(insertReg));
 
                 if(existingLinkedRegister != null) {
-
-                    foreach (var prop in insertReg.boundToProps)
-                        existingLinkedRegister.WithBoundProperty(prop);
 
                     return false;
 
@@ -147,7 +194,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        private bool AddDTArea (BaseRegister insertReg) {
+        private void AddToDTArea (BaseRegister insertReg) {
 
             uint regInsAddStart = insertReg.MemoryAddress;
             uint regInsAddEnd = insertReg.MemoryAddress + insertReg.GetRegisterAddressLen() - 1;
@@ -159,26 +206,13 @@ namespace MewtocolNet.UnderlyingRegisters {
 
             foreach (var dtArea in dataAreas) {
 
-                bool matchingAddress = regInsAddStart >= dtArea.AddressStart &&
-                                       regInsAddEnd <= dtArea.addressEnd;
+                bool addressInsideArea = regInsAddStart >= dtArea.AddressStart &&
+                                         regInsAddEnd <= dtArea.AddressEnd;
 
-                //found matching
-                if (matchingAddress) {
+                if (addressInsideArea) {
 
-                    //check if the area has registers linked that are overlapping (not matching)
-                    var foundDupe = dtArea.linkedRegisters
-                    .FirstOrDefault(x => x.CompareIsDuplicateNonCast(insertReg, allowByteRegDupes));
-
-                    if (foundDupe != null) {
-                        throw new NotSupportedException(
-                        message: $"Can't have registers of different types at the same referenced plc address: " +
-                                 $"{insertReg.PLCAddressName} ({insertReg.GetType()}) <=> " +
-                                 $"{foundDupe.PLCAddressName} ({foundDupe.GetType()})"
-                        );
-                    }
-
+                    //found an area that is already existing where the register can fit into 
                     targetArea = dtArea;
-
                     break;
 
                 }
@@ -208,7 +242,6 @@ namespace MewtocolNet.UnderlyingRegisters {
 
                         //expand the boundaries for the area to include the new adjacent area
                         dtArea.BoundaryUdpdate(addrFrom: regInsAddStart);
-
                         targetArea = dtArea;
                         break;
 
@@ -218,6 +251,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
             }
 
+            //create a new area
             if (targetArea == null) {
 
                 targetArea = new DTArea(mewInterface) {
@@ -227,45 +261,27 @@ namespace MewtocolNet.UnderlyingRegisters {
                 };
 
                 targetArea.BoundaryUdpdate();
-
                 dataAreas.Add(targetArea);
             
             }
 
             insertReg.underlyingMemory = targetArea;
 
-            var existingLinkedRegister = targetArea.linkedRegisters
-                .FirstOrDefault(x => x.CompareIsDuplicate(insertReg));
-
-            if (existingLinkedRegister != null) {
-
-                foreach (var prop in insertReg.boundToProps)
-                    existingLinkedRegister.WithBoundProperty(prop);
-
-                return false;
-
-            } else {
-
-                targetArea.linkedRegisters.Add(insertReg);
-                return true;
-
+            if (insertReg.name == null) {
+                insertReg.name = $"auto_{Guid.NewGuid().ToString("N")}";
             }
-            
+
+            Console.WriteLine($"Adding linked register: {insertReg}");
+            targetArea.linkedRegisters.Add(insertReg);
+            return;
+
         }
 
         internal void MergeAndSizeDataAreas () {
 
             //merge gaps that the algorithm didn't catch be rerunning the register attachment
 
-            foreach (var pLevel in pollLevels) {
-
-                var allDataAreaRegisters = pLevel.dataAreas.SelectMany(x => x.linkedRegisters).ToList();
-                var dataAreas = new List<DTArea>(allDataAreaRegisters.Capacity);
-
-                foreach (var reg in allDataAreaRegisters)
-                    AddDTArea(reg);
-
-            }
+            LinkRegisters();
 
         }
 
@@ -309,7 +325,7 @@ namespace MewtocolNet.UnderlyingRegisters {
                 }
 
                 //update registers in poll level
-                foreach (var dtArea in pollLevel.dataAreas) {
+                foreach (var dtArea in pollLevel.dataAreas.ToArray()) {
 
                     //set the whole memory area at once
                     await dtArea.RequestByteReadAsync(dtArea.AddressStart, dtArea.AddressEnd);
@@ -346,7 +362,7 @@ namespace MewtocolNet.UnderlyingRegisters {
                 sb.AppendLine($"Optimization distance: {maxOptimizationDistance}");
                 sb.AppendLine();
 
-                sb.AppendLine($"---- DT Area ----");
+                sb.AppendLine($"---- DT Areas: ----");
 
                 foreach (var area in pollLevel.dataAreas) {
 
@@ -358,7 +374,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
                     foreach (var reg in area.linkedRegisters) {
 
-                        sb.AppendLine($"{reg.ToString(true)}");
+                        sb.AppendLine($"{reg.Explain()}");
 
                     }
 
@@ -372,7 +388,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
                     foreach (var reg in area.linkedRegisters) {
 
-                        sb.AppendLine($"{reg.ToString(true)}");
+                        sb.AppendLine($"{reg.Explain()}");
 
                     }
 
@@ -386,7 +402,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
                     foreach (var reg in area.linkedRegisters) {
 
-                        sb.AppendLine($"{reg.ToString(true)}");
+                        sb.AppendLine($"{reg.Explain()}");
 
                     }
 
@@ -400,7 +416,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
                     foreach (var reg in area.linkedRegisters) {
 
-                        sb.AppendLine($"{reg.ToString(true)}");
+                        sb.AppendLine($"{reg.Explain()}");
 
                     }
 

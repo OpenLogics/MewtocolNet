@@ -24,8 +24,6 @@ namespace MewtocolNet {
 
         // setters
 
-        void SetValueFromPLC(object value);
-
         void ClearValue();
 
         // Accessors
