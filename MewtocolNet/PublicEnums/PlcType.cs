@@ -1,4 +1,4 @@
-﻿using MewtocolNet.DocAttributes;
+﻿using MewtocolNet.Documentation;
 
 namespace MewtocolNet {
 

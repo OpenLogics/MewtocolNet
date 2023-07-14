@@ -190,7 +190,7 @@ namespace MewtocolNet {
 
         #endregion
 
-        #region Register Colleciton adding
+        #region Register Collection adding
 
         /// <summary>
         /// Adds the given register collection and all its registers with attributes to the register list
@@ -219,18 +219,14 @@ namespace MewtocolNet {
 
                             var pollFreqAttr = (PollLevelAttribute)attributes.FirstOrDefault(x => x.GetType() == typeof(PollLevelAttribute));
 
-                            if (!prop.PropertyType.IsAllowedPlcCastingType()) {
-                                throw new MewtocolException($"The register attribute property type is not allowed ({prop.PropertyType})");
-                            }
-
                             var dotnetType = prop.PropertyType;
                             int pollLevel = 1;
 
                             if (pollFreqAttr != null) pollLevel = pollFreqAttr.pollLevel;
 
                             //add builder item
-                            regBuild
-                            .Address(cAttribute.MewAddress)
+                            var stp1 = regBuild
+                            .AddressFromAttribute(cAttribute.MewAddress, cAttribute.TypeDef)
                             .AsType(dotnetType.IsEnum ? dotnetType.UnderlyingSystemType : dotnetType)
                             .PollLevel(pollLevel)
                             .RegCollection(collection)
@@ -255,7 +251,7 @@ namespace MewtocolNet {
             }
 
             var assembler = new RegisterAssembler(this);
-            var registers = assembler.AssembleAll(regBuild);
+            var registers = assembler.AssembleAll(regBuild, true);
             AddRegisters(registers.ToArray());
 
         }
@@ -290,7 +286,7 @@ namespace MewtocolNet {
 
         internal void InsertRegistersToMemoryStack (List<BaseRegister> registers) {
 
-            memoryManager.LinkRegisters(registers);
+            memoryManager.LinkAndMergeRegisters(registers);
 
         }
 

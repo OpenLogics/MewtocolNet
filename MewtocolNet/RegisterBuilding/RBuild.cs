@@ -1,16 +1,20 @@
-﻿using MewtocolNet.RegisterAttributes;
+﻿using MewtocolNet.PublicEnums;
+using MewtocolNet.RegisterAttributes;
 using MewtocolNet.UnderlyingRegisters;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using static MewtocolNet.RegisterBuilding.RBuild;
 
 namespace MewtocolNet.RegisterBuilding {
 
@@ -63,6 +67,9 @@ namespace MewtocolNet.RegisterBuilding {
 
         internal class SData {
 
+            internal RegisterBuildSource buildSource = RegisterBuildSource.Anonymous;
+
+            internal bool wasAddressStringRangeBased;
             internal string originalParseStr;
             internal string name;
             internal RegisterType regType;
@@ -77,8 +84,11 @@ namespace MewtocolNet.RegisterBuilding {
 
             internal int pollLevel = 1;
 
+            //only for building from attributes
             internal RegisterCollection regCollection;
             internal PropertyInfo boundProperty;
+
+            internal string typeDef;
 
         }
 
@@ -304,6 +314,7 @@ namespace MewtocolNet.RegisterBuilding {
                 state = ParseResultState.Success,
                 stepData = new SData {
                     regType = RegisterType.DT_BYTE_RANGE,
+                    wasAddressStringRangeBased = true,
                     dotnetVarType = typeof(byte[]),
                     memAddress = addresses[0],
                     byteSize = (addresses[1] - addresses[0] + 1) * 2
@@ -330,6 +341,7 @@ namespace MewtocolNet.RegisterBuilding {
                     if (!string.IsNullOrEmpty(name)) res.stepData.name = name;
 
                     res.stepData.originalParseStr = plcAddrName;
+                    res.stepData.buildSource = RegisterBuildSource.Manual;
 
                     unfinishedList.Add(res.stepData);
 
@@ -350,6 +362,16 @@ namespace MewtocolNet.RegisterBuilding {
 
         }
 
+        //internal use only, adds a type definition (for use when building from attibute)
+        internal SAddress AddressFromAttribute (string plcAddrName, string typeDef) {
+
+            var built = Address(plcAddrName);
+            built.Data.typeDef = typeDef;
+            built.Data.buildSource = RegisterBuildSource.Attribute;
+            return built;
+
+        }
+
         #endregion
 
         #region Type determination stage
@@ -358,21 +380,10 @@ namespace MewtocolNet.RegisterBuilding {
 
             /// <summary>
             /// Sets the register as a dotnet <see cref="System"/> type for direct conversion
-            /// <list type="bullet">
-            /// <item><term><see cref="bool"/></term><description>Boolean R/X/Y registers</description></item>
-            /// <item><term><see cref="short"/></term><description>16 bit signed integer</description></item>
-            /// <item><term><see cref="ushort"/></term><description>16 bit un-signed integer</description></item>
-            /// <item><term><see cref="Word"/></term><description>16 bit word (2 bytes)</description></item>
-            /// <item><term><see cref="int"/></term><description>32 bit signed integer</description></item>
-            /// <item><term><see cref="uint"/></term><description>32 bit un-signed integer</description></item>
-            /// <item><term><see cref="DWord"/></term><description>32 bit word (4 bytes)</description></item>
-            /// <item><term><see cref="float"/></term><description>32 bit floating point</description></item>
-            /// <item><term><see cref="TimeSpan"/></term><description>32 bit time from <see cref="PlcVarType.TIME"/> interpreted as <see cref="TimeSpan"/></description></item>
-            /// <item><term><see cref="Enum"/></term><description>16 or 32 bit enums, also supports flags</description></item>
-            /// <item><term><see cref="string"/></term><description>String of chars, the interface will automatically get the length</description></item>
-            /// <item><term><see cref="byte[]"/></term><description>As an array of bytes</description></item>
-            /// </list>
             /// </summary>
+            /// <typeparam name="T">
+            /// <include file="../Documentation/docs.xml" path='extradoc/class[@name="support-conv-types"]/*' />
+            /// </typeparam>
             public TempRegister<T> AsType<T> () {
 
                 if (!typeof(T).IsAllowedPlcCastingType()) {
@@ -387,9 +398,77 @@ namespace MewtocolNet.RegisterBuilding {
 
             }
 
-            ///<inheritdoc cref="AsType{T}()"/>
+            /// <summary>
+            /// Sets the register as a dotnet <see cref="System"/> type for direct conversion
+            /// <include file="../Documentation/docs.xml" path='extradoc/class[@name="support-conv-types"]/*' />
+            /// </summary>
+            /// <param name="type">
+            /// <include file="../Documentation/docs.xml" path='extradoc/class[@name="support-conv-types"]/*' />
+            /// </param>
             public TempRegister AsType (Type type) {
 
+                //was ranged syntax array build
+                if (Data.wasAddressStringRangeBased && type.IsArray && type.GetArrayRank() == 1) {
+
+                    //invoke generic AsTypeArray
+                    MethodInfo method = typeof(SAddress).GetMethod(nameof(AsTypeArray));
+                    MethodInfo generic = method.MakeGenericMethod(type);
+
+                    var elementType = type.GetElementType();
+
+                    if (!elementType.IsAllowedPlcCastingType()) {
+
+                        throw new NotSupportedException($"The dotnet type {elementType}, is not supported for PLC type casting");
+
+                    }
+
+                    bool isExtensionTypeDT = typeof(MewtocolExtensionTypeDT).IsAssignableFrom(elementType);
+                    bool isExtensionTypeDDT = typeof(MewtocolExtensionTypeDDT).IsAssignableFrom(elementType);
+
+                    int byteSizePerItem = 0;
+                    if(elementType.Namespace.StartsWith("System")) {
+                        byteSizePerItem = Marshal.SizeOf(elementType);
+                    } else if (isExtensionTypeDT) {
+                        byteSizePerItem = 2;
+                    } else if (isExtensionTypeDDT) {
+                        byteSizePerItem = 4;
+                    }
+
+                    //check if it fits without remainder
+                    if(Data.byteSize % byteSizePerItem != 0) {
+                        throw new NotSupportedException($"The array element type {elementType} doesn't fit into the adress range");
+                    }
+
+                    return (TempRegister)generic.Invoke(this, new object[] { 
+                        //element count
+                        new int[] { (int)((Data.byteSize / byteSizePerItem) / 2) }
+                    });
+
+                } else if(Data.wasAddressStringRangeBased) {
+
+                    throw new NotSupportedException("DT range building is only allowed for 1 dimensional arrays");
+
+                }
+
+                //for internal only, relay to AsType from string
+                if (Data.buildSource == RegisterBuildSource.Attribute) {
+
+                    if ((type.IsArray || type == typeof(string)) && Data.typeDef != null) {
+
+                        return AsType(Data.typeDef);
+
+                    } else if ((type.IsArray || type == typeof(string)) && Data.typeDef == null) {
+
+                        throw new NotSupportedException("Typedef parameter is needed for array or string types");
+
+                    } else if (Data.typeDef != null) {
+
+                        throw new NotSupportedException("Can't use the typedef parameter on non array or string types");
+
+                    }
+
+                }
+                
                 if (!type.IsAllowedPlcCastingType()) {
 
                     throw new NotSupportedException($"The dotnet type {type}, is not supported for PLC type casting");
@@ -430,7 +509,7 @@ namespace MewtocolNet.RegisterBuilding {
             /// <item><term>DWORD</term><description>32 bit double word interpreted as <see cref="uint"/></description></item>
             /// </list>
             /// </summary>
-            public TempRegister AsType(string type) {
+            public TempRegister AsType (string type) {
 
                 var stringMatch = Regex.Match(type, @"STRING *\[(?<len>[0-9]*)\]", RegexOptions.IgnoreCase);
                 var arrayMatch = Regex.Match(type, @"ARRAY *\[(?<S1>[0-9]*)..(?<E1>[0-9]*)(?:\,(?<S2>[0-9]*)..(?<E2>[0-9]*))?(?:\,(?<S3>[0-9]*)..(?<E3>[0-9]*))?\] *OF {1,}(?<t>.*)", RegexOptions.IgnoreCase);
@@ -446,11 +525,46 @@ namespace MewtocolNet.RegisterBuilding {
 
                 } else if (arrayMatch.Success) {
 
-                    throw new NotSupportedException("Arrays are currently not supported");
+                    //invoke generic AsTypeArray
+
+                    string arrTypeString = arrayMatch.Groups["t"].Value;
+
+                    if (Enum.TryParse<PlcVarType>(arrTypeString, out var parsedArrType)) {
+
+                        var dotnetArrType = parsedArrType.GetDefaultDotnetType();
+                        var indices = new List<int>();
+
+                        for (int i = 1; i < 4; i++) {
+
+                            var arrStart = arrayMatch.Groups[$"S{i}"]?.Value;
+                            var arrEnd = arrayMatch.Groups[$"E{i}"]?.Value;
+                            if (string.IsNullOrEmpty(arrStart) || string.IsNullOrEmpty(arrEnd)) break;
+
+                            var arrStartInt = int.Parse(arrStart);  
+                            var arrEndInt = int.Parse(arrEnd);
+
+                            indices.Add(arrEndInt - arrStartInt + 1);   
+
+                        }
+
+                        var arr = Array.CreateInstance(dotnetArrType, indices.ToArray());
+                        var arrType = arr.GetType();
+
+                        MethodInfo method = typeof(SAddress).GetMethod(nameof(AsTypeArray));
+                        MethodInfo generic = method.MakeGenericMethod(arrType);
+
+                        return (TempRegister)generic.Invoke(this, new object[] {
+                            indices.ToArray()
+                        });
+
+                    } else {
+
+                        throw new NotSupportedException($"The FP type '{arrTypeString}' was not recognized");
+                    }
 
                 } else {
 
-                    throw new NotSupportedException($"The mewtocol type '{type}' was not recognized");
+                    throw new NotSupportedException($"The FP type '{type}' was not recognized");
                 
                 }
 
@@ -459,38 +573,41 @@ namespace MewtocolNet.RegisterBuilding {
             }
 
             /// <summary>
-            /// Gets the data DT area as a <see cref="byte[]"/>
+            /// Sets the register as a (multidimensional) array targeting a PLC array
             /// </summary>
-            /// <param name="byteLength">Bytes to assign</param>
-            public TempRegister AsBytes (uint byteLength) {
+            /// <typeparam name="T">
+            /// <include file="../Documentation/docs.xml" path='extradoc/class[@name="support-conv-types"]/*' />
+            /// </typeparam>
+            /// <param name="indicies">
+            /// Indicies for multi dimensional arrays, for normal arrays just one INT
+            /// </param>
+            /// <example>
+            /// <b>One dimensional arrays:</b><br/>
+            /// ARRAY [0..2] OF INT = <c>AsTypeArray&lt;short[]&gt;(3)</c><br/>
+            /// ARRAY [5..6] OF DWORD = <c>AsTypeArray&lt;DWord[]&gt;(2)</c><br/>
+            /// <br/>
+            /// <b>Multi dimensional arrays:</b><br/>
+            /// ARRAY [0..2, 0..3, 0..4] OF INT = <c>AsTypeArray&lt;short[,,]&gt;(3,4,5)</c><br/>
+            /// ARRAY [5..6, 0..2] OF DWORD = <c>AsTypeArray&lt;DWord[,]&gt;(2, 3)</c><br/>
+            /// </example>
+            public TempRegister AsTypeArray<T> (params int[] indicies) {
 
-                if (Data.regType != RegisterType.DT) {
+                if (!typeof(T).IsArray)
+                    throw new NotSupportedException($"The type {typeof(T)} was no array");
 
-                    throw new NotSupportedException($"Cant use the {nameof(AsBytes)} converter on a non {nameof(RegisterType.DT)} register");
+                var arrRank = typeof(T).GetArrayRank();
+                var elBaseType = typeof(T).GetElementType();
 
-                }
+                if (arrRank > 3)
+                    throw new NotSupportedException($"4+ dimensional arrays are not supported");
 
-                Data.byteSize = byteLength;
-                Data.dotnetVarType = typeof(byte[]);
+                if (!elBaseType.IsAllowedPlcCastingType())
+                    throw new NotSupportedException($"The dotnet type {typeof(T)}, is not supported for PLC array type casting");
 
-                return new TempRegister(Data, builder);
+                if (arrRank != indicies.Length)
+                    throw new NotSupportedException($"All dimensional array indicies must be set");
 
-            }
-
-            /// <summary>
-            /// Gets the data DT area as a <see cref="BitArray"/>
-            /// </summary>
-            /// <param name="bitCount">Number of bits to read</param>
-            public TempRegister AsBits (ushort bitCount = 16) {
-
-                if (Data.regType != RegisterType.DT) {
-
-                    throw new NotSupportedException($"Cant use the {nameof(AsBits)} converter on a non {nameof(RegisterType.DT)} register");
-
-                }
-
-                Data.bitSize = bitCount;
-                Data.dotnetVarType = typeof(BitArray);
+                Data.dotnetVarType = typeof(T);
 
                 return new TempRegister(Data, builder);
 

@@ -17,9 +17,10 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         internal byte[] underlyingBytes = new byte[2];
 
-        internal List<BaseRegister> linkedRegisters = new List<BaseRegister>();
-
-        internal Dictionary<BaseRegister, List<BaseRegister>> crossRegisterBindings = new Dictionary<BaseRegister, List<BaseRegister>>();
+        /// <summary>
+        /// List of register link groups that are managed in this memory area
+        /// </summary>
+        internal List<LinkedRegisterGroup> managedRegisters = new List<LinkedRegisterGroup>();
 
         public ulong AddressStart => addressStart;
         public ulong AddressEnd => addressEnd;
@@ -51,7 +52,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         public void UpdateAreaRegisterValues() {
 
-            foreach (var register in this.linkedRegisters) {
+            foreach (var register in this.managedRegisters.SelectMany(x => x.Linked)) {
 
                 var regStart = register.MemoryAddress;
                 var addLen = (int)register.GetRegisterAddressLen();
@@ -120,7 +121,8 @@ namespace MewtocolNet.UnderlyingRegisters {
         private async Task CheckDynamicallySizedRegistersAsync () {
 
             //calibrating at runtime sized registers
-            var uncalibratedStringRegisters = linkedRegisters
+            var uncalibratedStringRegisters = managedRegisters
+            .SelectMany(x => x.Linked)
             .Where(x => x is StringRegister sreg && !sreg.isCalibratedFromPlc)
             .Cast<StringRegister>()
             .ToList();
@@ -129,7 +131,7 @@ namespace MewtocolNet.UnderlyingRegisters {
                 await register.CalibrateFromPLC();
 
             if (uncalibratedStringRegisters.Count > 0)
-                mewInterface.memoryManager.MergeAndSizeDataAreas();
+                mewInterface.memoryManager.LinkAndMergeRegisters();
 
         }
 

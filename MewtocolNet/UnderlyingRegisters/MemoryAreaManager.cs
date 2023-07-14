@@ -47,12 +47,12 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        internal void LinkRegisters (List<BaseRegister> registers = null) {
+        internal void LinkAndMergeRegisters (List<BaseRegister> registers = null) {
 
             //for self calling
             if (registers == null) registers = GetAllRegisters().ToList();
 
-            //pre combine
+            //pre combine per address
             var groupedByAdd = registers
             .GroupBy(x => new {
                 x.MemoryAddress,
@@ -60,39 +60,20 @@ namespace MewtocolNet.UnderlyingRegisters {
                 spadd = x.GetSpecialAddress(),
             });
 
-            var filteredRegisters = new List<BaseRegister>();    
-            var propertyLookupTable = new Dictionary<PropertyInfo, BaseRegister>(); 
-
+            //poll level merging
             foreach (var addressGroup in groupedByAdd) {
 
-                var ordered = addressGroup.OrderBy(x => x.pollLevel);
-                var highestPollLevel = ordered.Max(x => x.pollLevel);
+                //determine highest poll level for same addresses
+                var highestPollLevel = addressGroup.Max(x => x.pollLevel);
 
-                var distinctByUnderlyingType = 
-                ordered.GroupBy(x => x.underlyingSystemType).ToList();
-
-                foreach (var underlyingTypeGroup in distinctByUnderlyingType) {
-
-                    foreach (var register in underlyingTypeGroup) {
-
-                        register.pollLevel = highestPollLevel;
-
-                        var alreadyAdded = filteredRegisters
-                        .FirstOrDefault(x => x.underlyingSystemType == register.underlyingSystemType);
-
-                        if(alreadyAdded == null) {
-                            filteredRegisters.Add(register);
-                        } else {
-                            alreadyAdded.WithBoundProperties(register.boundProperties);
-                        }
-
-                    }
-                    
-                }
+                //apply poll level to all registers in same group
+                foreach (var reg in addressGroup)
+                    reg.pollLevel = highestPollLevel;  
 
             }
 
-            foreach (var reg in filteredRegisters) {
+            //insert into area
+            foreach (var reg in registers) {
 
                 TestPollLevelExistence(reg);
 
@@ -107,6 +88,18 @@ namespace MewtocolNet.UnderlyingRegisters {
                     case RegisterType.DT_BYTE_RANGE:
                     AddToDTArea(reg);
                     break;
+                }
+
+            }
+
+            //order 
+
+            foreach (var lvl in pollLevels) {
+
+                foreach (var area in lvl.dataAreas) {
+
+                    area.managedRegisters = area.managedRegisters.OrderBy(x => x.AddressStart).ToList();
+
                 }
 
             }
@@ -271,17 +264,27 @@ namespace MewtocolNet.UnderlyingRegisters {
                 insertReg.name = $"auto_{Guid.NewGuid().ToString("N")}";
             }
 
-            Console.WriteLine($"Adding linked register: {insertReg}");
-            targetArea.linkedRegisters.Add(insertReg);
-            return;
+            var existinglinkedGroup = targetArea.managedRegisters
+            .FirstOrDefault(x => x.AddressStart == insertReg.MemoryAddress &&
+                                 x.AddressEnd == insertReg.GetRegisterAddressEnd());
 
-        }
+            if (existinglinkedGroup == null) {
+                // make a new linked group
+                existinglinkedGroup = new LinkedRegisterGroup {
+                    AddressStart = insertReg.MemoryAddress,
+                    AddressEnd = insertReg.GetRegisterAddressEnd(),
+                };
+                targetArea.managedRegisters.Add(existinglinkedGroup);   
+            }
 
-        internal void MergeAndSizeDataAreas () {
+            //check if the linked group has duplicate type registers
 
-            //merge gaps that the algorithm didn't catch be rerunning the register attachment
-
-            LinkRegisters();
+            var dupedTypeReg = existinglinkedGroup.Linked.FirstOrDefault(x => x.IsSameAddressAndType(insertReg));
+            if (dupedTypeReg != null) {
+                dupedTypeReg.WithBoundProperties(insertReg.boundProperties);
+            } else {
+                existinglinkedGroup.Linked.Add(insertReg);
+            }
 
         }
 
@@ -350,75 +353,67 @@ namespace MewtocolNet.UnderlyingRegisters {
 
             foreach (var pollLevel in pollLevels) {
 
-                sb.AppendLine($"==== Poll lvl {pollLevel.level} ====");
+                sb.AppendLine($"\n> ==== Poll lvl {pollLevel.level} ====");
 
                 sb.AppendLine();
                 if (pollLevelConfigs[pollLevel.level].delay != null) {
-                    sb.AppendLine($"Poll each {pollLevelConfigs[pollLevel.level].delay?.TotalMilliseconds}ms");
+                    sb.AppendLine($"> Poll each {pollLevelConfigs[pollLevel.level].delay?.TotalMilliseconds}ms");
                 } else {
-                    sb.AppendLine($"Poll every {pollLevelConfigs[pollLevel.level].skipNth} iterations");
+                    sb.AppendLine($"> Poll every {pollLevelConfigs[pollLevel.level].skipNth} iterations");
                 }
-                sb.AppendLine($"Level read time: {pollLevel.lastReadTimeMs}ms");
-                sb.AppendLine($"Optimization distance: {maxOptimizationDistance}");
+                sb.AppendLine($"> Level read time: {pollLevel.lastReadTimeMs}ms");
+                sb.AppendLine($"> Optimization distance: {maxOptimizationDistance}");
                 sb.AppendLine();
-
-                sb.AppendLine($"---- DT Areas: ----");
 
                 foreach (var area in pollLevel.dataAreas) {
 
+                    var areaHeader = $"AREA => {area} = {area.underlyingBytes.Length} bytes";
+                    sb.AppendLine($"* {new string('-', areaHeader.Length)}*");
+                    sb.AppendLine($"* {areaHeader}");
+                    sb.AppendLine($"* {new string('-', areaHeader.Length)}*");
+                    sb.AppendLine("*");
+                    sb.AppendLine($"* {(string.Join("\n* ", area.underlyingBytes.ToHexString(" ").SplitInParts(3 * 8)))}");
+                    sb.AppendLine("*");
+
+                    int seperatorLen = 50;
+
+                    LinkedRegisterGroup prevGroup = null;
+
+                    foreach (var linkedG in area.managedRegisters) {
+
+                        if (prevGroup != null && (linkedG.AddressStart - prevGroup.AddressEnd - 1 > 0)) {
+
+                            var dist = linkedG.AddressStart - prevGroup.AddressEnd - 1;
+
+                            sb.AppendLine($"* {new string('=', seperatorLen + 3)}");
+                            sb.AppendLine($"* Byte spacer: {dist} Words");
+                            sb.AppendLine($"* {new string('=', seperatorLen + 3)}");
+
+                        }
+
+                        sb.AppendLine($"* {new string('_', seperatorLen + 3)}");
+                        sb.AppendLine($"* || Linked group {linkedG.AddressStart} - {linkedG.AddressEnd}");
+                        sb.AppendLine($"* || {new string('=', seperatorLen)}");
+
+                        foreach (var reg in linkedG.Linked) {
+
+                            string explained = reg.Explain();
+
+                            sb.AppendLine($"* || {explained.Replace("\n", "\n* || ")}");
+
+                            if (linkedG.Linked.Count > 1) {
+                                sb.AppendLine($"* || {new string('-', seperatorLen)}");
+                            }
+
+                        }
+
+                        sb.AppendLine($"* {new string('=', seperatorLen + 3)}");
+
+                        prevGroup = linkedG;    
+
+                    }
+
                     sb.AppendLine();
-                    sb.AppendLine($"=> {area} = {area.underlyingBytes.Length} bytes");
-                    sb.AppendLine();
-                    sb.AppendLine(string.Join("\n", area.underlyingBytes.ToHexString(" ").SplitInParts(3 * 8)));
-                    sb.AppendLine();
-
-                    foreach (var reg in area.linkedRegisters) {
-
-                        sb.AppendLine($"{reg.Explain()}");
-
-                    }
-
-                }
-
-                sb.AppendLine($"---- WR X Area ----");
-
-                foreach (var area in pollLevel.externalRelayInAreas) {
-
-                    sb.AppendLine(area.ToString());
-
-                    foreach (var reg in area.linkedRegisters) {
-
-                        sb.AppendLine($"{reg.Explain()}");
-
-                    }
-
-                }
-
-                sb.AppendLine($"---- WR Y Area ---");
-
-                foreach (var area in pollLevel.externalRelayOutAreas) {
-
-                    sb.AppendLine(area.ToString());
-
-                    foreach (var reg in area.linkedRegisters) {
-
-                        sb.AppendLine($"{reg.Explain()}");
-
-                    }
-
-                }
-
-                sb.AppendLine($"---- WR R Area ----");
-
-                foreach (var area in pollLevel.internalRelayAreas) {
-
-                    sb.AppendLine(area.ToString());
-
-                    foreach (var reg in area.linkedRegisters) {
-
-                        sb.AppendLine($"{reg.Explain()}");
-
-                    }
 
                 }
 
@@ -434,7 +429,8 @@ namespace MewtocolNet.UnderlyingRegisters {
 
             foreach (var lvl in pollLevels) {
 
-                registers.AddRange(lvl.dataAreas.SelectMany(x => x.linkedRegisters));
+                registers.AddRange(lvl.dataAreas.SelectMany(x => x.managedRegisters).SelectMany(x => x.Linked));
+
                 registers.AddRange(lvl.internalRelayAreas.SelectMany(x => x.linkedRegisters));
                 registers.AddRange(lvl.externalRelayInAreas.SelectMany(x => x.linkedRegisters));
                 registers.AddRange(lvl.externalRelayOutAreas.SelectMany(x => x.linkedRegisters));

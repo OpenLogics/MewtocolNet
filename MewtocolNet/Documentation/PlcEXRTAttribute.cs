@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace MewtocolNet.DocAttributes {
+namespace MewtocolNet.Documentation {
 
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
-    internal class PlcCodeTestedAttribute : Attribute {
-
-        public PlcCodeTestedAttribute() { }
+    internal class PlcEXRTAttribute : Attribute {
+    
+        public PlcEXRTAttribute() {} 
         
     }
 

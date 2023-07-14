@@ -154,6 +154,12 @@ namespace MewtocolNet.Registers {
             var res = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, (int)GetRegisterAddressLen() * 2, false);
             if (res == null) return null;
 
+            var matchingReg = attachedInterface.memoryManager.GetAllRegisters()     
+            .FirstOrDefault(x => x.IsSameAddressAndType(this));
+
+            if (matchingReg != null)
+                matchingReg.underlyingMemory.SetUnderlyingBytes(matchingReg, res);
+
             return SetValueFromBytes(res);
 
         }

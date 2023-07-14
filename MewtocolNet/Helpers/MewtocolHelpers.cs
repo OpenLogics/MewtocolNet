@@ -1,4 +1,4 @@
-﻿using MewtocolNet.DocAttributes;
+﻿using MewtocolNet.Documentation;
 using MewtocolNet.Registers;
 using System;
 using System.Collections;

@@ -125,7 +125,7 @@ namespace MewtocolNet {
             /// </example>
             /// </summary>
 
-            public int MaxOptimizationDistance { get; set; } = 8;
+            public int MaxOptimizationDistance { get; set; } = 4;
 
             /// <summary>
             /// The max number of registers per request group
