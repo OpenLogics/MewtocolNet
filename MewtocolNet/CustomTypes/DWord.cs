@@ -1,18 +1,13 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
-using System.Numerics;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace MewtocolNet {
 
     /// <summary>
     /// A DWord is a 16 bit value of 2 bytes
     /// </summary>
-    public struct DWord : MewtocolExtensionTypeDDT {
+    public struct DWord : MewtocolExtTypeInit2Word {
 
         private int bitLength;
 
@@ -64,7 +59,7 @@ namespace MewtocolNet {
             get {
                 if (bitIndex > bitLength - 1)
                     throw new IndexOutOfRangeException($"The DWord bit index was out of range ({bitIndex}/{bitLength - 1})");
-                
+
                 return (value & (1 << bitIndex)) != 0;
             }
             set {
@@ -76,7 +71,7 @@ namespace MewtocolNet {
             }
         }
 
-        public void ClearBits () => this.value = 0;
+        public void ClearBits() => this.value = 0;
 
         public override bool Equals(object obj) {
 
@@ -96,13 +91,13 @@ namespace MewtocolNet {
 
         public override string ToString() => $"0x{value.ToString("X8")}";
 
-        public string ToStringBits () {
+        public string ToStringBits() {
 
             return Convert.ToString(value, 2).PadLeft(bitLength, '0');
-        
+
         }
 
-        public string ToStringBitsPlc () {
+        public string ToStringBitsPlc() {
 
             var parts = Convert.ToString(value, 2)
             .PadLeft(Marshal.SizeOf(value) * 8, '0')
@@ -111,6 +106,8 @@ namespace MewtocolNet {
             return string.Join("_", parts);
 
         }
+
+        public int GetIntialPlcByteSize() => 4;
 
     }
 

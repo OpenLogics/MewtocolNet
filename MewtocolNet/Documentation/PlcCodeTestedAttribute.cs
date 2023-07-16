@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace MewtocolNet.Documentation {
 
@@ -8,7 +6,7 @@ namespace MewtocolNet.Documentation {
     internal class PlcCodeTestedAttribute : Attribute {
 
         public PlcCodeTestedAttribute() { }
-        
+
     }
 
 }

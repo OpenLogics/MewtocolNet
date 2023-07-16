@@ -1,6 +1,4 @@
-﻿using System.Text;
-
-namespace MewtocolNet {
+﻿namespace MewtocolNet {
 
     public enum PlcVarType {
 

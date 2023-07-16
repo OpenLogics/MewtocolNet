@@ -1,12 +1,13 @@
-﻿using System;
+﻿using MewtocolNet.Registers;
+using System;
 
 namespace MewtocolNet {
 
     internal interface IPlcTypeConverter {
 
-        object FromRawData(IRegister register, byte[] data);
+        object FromRawData(Register register, byte[] data);
 
-        byte[] ToRawData(IRegister register, object value);
+        byte[] ToRawData(Register register, object value);
 
         Type GetDotnetType();
 

@@ -1,5 +1,5 @@
-﻿using System;
-using System.ComponentModel;
+﻿using MewtocolNet.Registers;
+using System;
 
 namespace MewtocolNet {
 
@@ -13,9 +13,9 @@ namespace MewtocolNet {
 
         public Type HoldingRegisterType { get; set; }
 
-        public Func<IRegister, byte[], T> FromRaw { get; set; }
+        public Func<Register, byte[], T> FromRaw { get; set; }
 
-        public Func<IRegister, T, byte[]> ToRaw { get; set; }
+        public Func<Register, T, byte[]> ToRaw { get; set; }
 
         public PlcTypeConversion(RegisterType plcType) {
 
@@ -32,9 +32,9 @@ namespace MewtocolNet {
 
         public PlcVarType GetPlcVarType() => PlcVarType;
 
-        public object FromRawData(IRegister register, byte[] data) => FromRaw.Invoke(register, data);
+        public object FromRawData(Register register, byte[] data) => FromRaw.Invoke(register, data);
 
-        public byte[] ToRawData(IRegister register, object value) => ToRaw.Invoke(register, (T)value);  
+        public byte[] ToRawData(Register register, object value) => ToRaw.Invoke(register, (T)value);
 
 
     }

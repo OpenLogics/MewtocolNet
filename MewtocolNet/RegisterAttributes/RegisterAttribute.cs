@@ -1,5 +1,4 @@
-﻿using MewtocolNet.RegisterBuilding;
-using System;
+﻿using System;
 
 namespace MewtocolNet.RegisterAttributes {
 
@@ -10,7 +9,7 @@ namespace MewtocolNet.RegisterAttributes {
     public class RegisterAttribute : Attribute {
 
         internal string MewAddress = null;
-        internal string TypeDef = null; 
+        internal string TypeDef = null;
 
         /// <summary>
         /// Builds automatic data transfer between the property below this and 
@@ -20,8 +19,8 @@ namespace MewtocolNet.RegisterAttributes {
         /// <param name="plcTypeDef">The type definition from the PLC (STRING[n], ARRAY [0..2] OF ...)</param>
         public RegisterAttribute(string mewAddress, string plcTypeDef = null) {
 
-            MewAddress = mewAddress;    
-            TypeDef = plcTypeDef;   
+            MewAddress = mewAddress;
+            TypeDef = plcTypeDef;
 
         }
 

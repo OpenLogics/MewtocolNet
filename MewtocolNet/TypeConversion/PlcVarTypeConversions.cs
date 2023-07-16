@@ -1,10 +1,7 @@
 ﻿using MewtocolNet.Exceptions;
 using MewtocolNet.Registers;
-using MewtocolNet.TypeConversion;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace MewtocolNet {
 
@@ -30,7 +27,7 @@ namespace MewtocolNet {
 
         internal static bool IsAllowedPlcCastingType(this Type type) {
 
-            if (type.IsEnum) return true;
+            if (type.IsEnum || type == typeof(string)) return true;
 
             return allowedCastingTypes.Contains(type);
 
@@ -52,7 +49,7 @@ namespace MewtocolNet {
 
         }
 
-        internal static PlcVarType ToPlcVarType (this Type type) {
+        internal static PlcVarType ToPlcVarType(this Type type) {
 
             var found = type.GetDefaultPlcVarType().Value;
 

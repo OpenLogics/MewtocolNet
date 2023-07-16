@@ -1,12 +1,9 @@
-﻿using MewtocolNet.Helpers;
-using MewtocolNet.Registers;
+﻿using MewtocolNet.Registers;
 using MewtocolNet.SetupClasses;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -16,7 +13,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         internal int maxOptimizationDistance = 8;
         internal int maxRegistersPerGroup = -1;
-        internal bool allowByteRegDupes;
+        internal PollLevelOverwriteMode pollLevelOrMode = PollLevelOverwriteMode.Highest;
 
         private int wrAreaSize;
         private int dtAreaSize;
@@ -27,15 +24,15 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         private uint pollIteration = 0;
 
-        internal MemoryAreaManager (MewtocolInterface mewIf, int wrSize = 512, int dtSize = 32_765) {
+        internal MemoryAreaManager(MewtocolInterface mewIf, int wrSize = 512, int dtSize = 32_765) {
 
-            mewInterface = mewIf;   
-            Setup(wrSize, dtSize);      
+            mewInterface = mewIf;
+            Setup(wrSize, dtSize);
 
         }
 
         // Later on pass memory area sizes here
-        internal void Setup (int wrSize, int dtSize) {
+        internal void Setup(int wrSize, int dtSize) {
 
             wrAreaSize = wrSize;
             dtAreaSize = dtSize;
@@ -47,30 +44,30 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        internal void LinkAndMergeRegisters (List<BaseRegister> registers = null) {
+        internal async Task OnPlcConnected () {
+
+            //check all area for dynamic sized registers
+            await CheckAllDynamicallySizedAreas();
+
+        }
+
+        internal void LinkAndMergeRegisters(List<Register> registers = null) {
 
             //for self calling
-            if (registers == null) registers = GetAllRegisters().ToList();
-
-            //pre combine per address
-            var groupedByAdd = registers
-            .GroupBy(x => new {
-                x.MemoryAddress,
-                len = x.GetRegisterAddressLen(),
-                spadd = x.GetSpecialAddress(),
-            });
-
-            //poll level merging
-            foreach (var addressGroup in groupedByAdd) {
-
-                //determine highest poll level for same addresses
-                var highestPollLevel = addressGroup.Max(x => x.pollLevel);
-
-                //apply poll level to all registers in same group
-                foreach (var reg in addressGroup)
-                    reg.pollLevel = highestPollLevel;  
-
+            if (registers == null) {
+           
+                //get a copy of the current ones
+                registers = GetAllRegisters().ToList();
+                //clear old ones
+                ClearAllRegisters();
+           
             }
+
+            //maxes the highest poll level for all registers that contain each other
+            registers
+            .OrderByDescending(x => x.GetRegisterAddressLen())
+            .ToList()
+            .ForEach(x => x.AveragePollLevel(registers, pollLevelOrMode));
 
             //insert into area
             foreach (var reg in registers) {
@@ -93,7 +90,6 @@ namespace MewtocolNet.UnderlyingRegisters {
             }
 
             //order 
-
             foreach (var lvl in pollLevels) {
 
                 foreach (var area in lvl.dataAreas) {
@@ -102,36 +98,38 @@ namespace MewtocolNet.UnderlyingRegisters {
 
                 }
 
+                lvl.dataAreas = lvl.dataAreas.OrderBy(x => x.AddressStart).ToList();
+
             }
 
         }
 
-        private void TestPollLevelExistence (BaseRegister reg) {
+        private void TestPollLevelExistence(Register reg) {
 
-            if(!pollLevelConfigs.ContainsKey(1)) {
+            if (!pollLevelConfigs.ContainsKey(1)) {
                 pollLevelConfigs.Add(1, new PollLevelConfig {
                     skipNth = 1,
                 });
             }
 
-            if(!pollLevels.Any(x => x.level == reg.pollLevel)) {
+            if (!pollLevels.Any(x => x.level == reg.pollLevel)) {
 
                 pollLevels.Add(new PollLevel(wrAreaSize, dtAreaSize) {
                     level = reg.pollLevel,
                 });
-            
+
                 //add config if it was not made at setup
-                if(!pollLevelConfigs.ContainsKey(reg.pollLevel)) {
+                if (!pollLevelConfigs.ContainsKey(reg.pollLevel)) {
                     pollLevelConfigs.Add(reg.pollLevel, new PollLevelConfig {
                         skipNth = reg.pollLevel,
                     });
                 }
 
             }
-            
+
         }
 
-        private bool AddToWRArea (BaseRegister insertReg) {
+        private bool AddToWRArea(Register insertReg) {
 
             var pollLevelFound = pollLevels.FirstOrDefault(x => x.level == insertReg.pollLevel);
 
@@ -151,12 +149,12 @@ namespace MewtocolNet.UnderlyingRegisters {
 
             WRArea area = collection.FirstOrDefault(x => x.AddressStart == insertReg.MemoryAddress);
 
-            if(area != null) {
+            if (area != null) {
 
                 var existingLinkedRegister = area.linkedRegisters
                 .FirstOrDefault(x => x.CompareIsDuplicate(insertReg));
 
-                if(existingLinkedRegister != null) {
+                if (existingLinkedRegister != null) {
 
                     return false;
 
@@ -187,7 +185,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        private void AddToDTArea (BaseRegister insertReg) {
+        private void AddToDTArea(Register insertReg) {
 
             uint regInsAddStart = insertReg.MemoryAddress;
             uint regInsAddEnd = insertReg.MemoryAddress + insertReg.GetRegisterAddressLen() - 1;
@@ -211,7 +209,7 @@ namespace MewtocolNet.UnderlyingRegisters {
                 }
 
                 //found adjacent before
-                if(dtArea.AddressEnd <= regInsAddStart) {
+                if (dtArea.AddressEnd <= regInsAddStart) {
 
                     ulong distance = regInsAddStart - dtArea.AddressEnd;
 
@@ -255,12 +253,12 @@ namespace MewtocolNet.UnderlyingRegisters {
 
                 targetArea.BoundaryUdpdate();
                 dataAreas.Add(targetArea);
-            
+
             }
 
             insertReg.underlyingMemory = targetArea;
 
-            if (insertReg.name == null) {
+            if (insertReg.autoGenerated && insertReg.name == null) {
                 insertReg.name = $"auto_{Guid.NewGuid().ToString("N")}";
             }
 
@@ -274,7 +272,7 @@ namespace MewtocolNet.UnderlyingRegisters {
                     AddressStart = insertReg.MemoryAddress,
                     AddressEnd = insertReg.GetRegisterAddressEnd(),
                 };
-                targetArea.managedRegisters.Add(existinglinkedGroup);   
+                targetArea.managedRegisters.Add(existinglinkedGroup);
             }
 
             //check if the linked group has duplicate type registers
@@ -284,18 +282,33 @@ namespace MewtocolNet.UnderlyingRegisters {
                 dupedTypeReg.WithBoundProperties(insertReg.boundProperties);
             } else {
                 existinglinkedGroup.Linked.Add(insertReg);
+                existinglinkedGroup.Linked = existinglinkedGroup.Linked.OrderBy(x => x.MemoryAddress).ToList();
             }
 
         }
 
-        internal async Task PollAllAreasAsync () {
+        internal async Task CheckAllDynamicallySizedAreas () {
+
+            foreach (var pollLevel in pollLevels.ToArray()) {
+
+                foreach (var area in pollLevel.dataAreas.ToArray()) {
+
+                    await area.CheckDynamicallySizedRegistersAsync();
+
+                }
+
+            }
+
+        }
+
+        internal async Task PollAllAreasAsync() {
 
             foreach (var pollLevel in pollLevels) {
 
                 var sw = Stopwatch.StartNew();
 
                 //determine to skip poll levels, first iteration is always polled
-                if(pollIteration > 0 && pollLevel.level > 1) {
+                if (pollIteration > 0 && pollLevel.level > 1) {
 
                     var lvlConfig = pollLevelConfigs[pollLevel.level];
                     var skipIterations = lvlConfig.skipNth;
@@ -306,11 +319,11 @@ namespace MewtocolNet.UnderlyingRegisters {
                         //count delayed poll skips
                         continue;
 
-                    } else if(skipDelay != null) {
+                    } else if (skipDelay != null) {
 
                         //time delayed poll skips
 
-                        if(lvlConfig.timeFromLastRead.Elapsed < skipDelay.Value) {
+                        if (lvlConfig.timeFromLastRead.Elapsed < skipDelay.Value) {
 
                             continue;
 
@@ -321,10 +334,10 @@ namespace MewtocolNet.UnderlyingRegisters {
                 }
 
                 //set stopwatch for levels
-                if(pollLevelConfigs.ContainsKey(pollLevel.level)) {
+                if (pollLevelConfigs.ContainsKey(pollLevel.level)) {
 
-                    pollLevelConfigs[pollLevel.level].timeFromLastRead = Stopwatch.StartNew();   
-                
+                    pollLevelConfigs[pollLevel.level].timeFromLastRead = Stopwatch.StartNew();
+
                 }
 
                 //update registers in poll level
@@ -339,7 +352,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
             }
 
-            if(pollIteration == uint.MaxValue) {
+            if (pollIteration == uint.MaxValue) {
                 pollIteration = uint.MinValue;
             } else {
                 pollIteration++;
@@ -347,7 +360,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        internal string ExplainLayout () {
+        internal string ExplainLayout() {
 
             var sb = new StringBuilder();
 
@@ -356,9 +369,9 @@ namespace MewtocolNet.UnderlyingRegisters {
                 sb.AppendLine($"\n> ==== Poll lvl {pollLevel.level} ====");
 
                 sb.AppendLine();
-                if (pollLevelConfigs[pollLevel.level].delay != null) {
+                if (pollLevelConfigs.ContainsKey(pollLevel.level) && pollLevelConfigs[pollLevel.level].delay != null) {
                     sb.AppendLine($"> Poll each {pollLevelConfigs[pollLevel.level].delay?.TotalMilliseconds}ms");
-                } else {
+                } else if (pollLevelConfigs.ContainsKey(pollLevel.level)) {
                     sb.AppendLine($"> Poll every {pollLevelConfigs[pollLevel.level].skipNth} iterations");
                 }
                 sb.AppendLine($"> Level read time: {pollLevel.lastReadTimeMs}ms");
@@ -381,7 +394,10 @@ namespace MewtocolNet.UnderlyingRegisters {
 
                     foreach (var linkedG in area.managedRegisters) {
 
-                        if (prevGroup != null && (linkedG.AddressStart - prevGroup.AddressEnd - 1 > 0)) {
+                        if (prevGroup != null &&
+                            linkedG.AddressStart != prevGroup.AddressStart &&
+                            linkedG.AddressEnd > prevGroup.AddressEnd &&
+                            linkedG.AddressStart - prevGroup.AddressEnd > 1) {
 
                             var dist = linkedG.AddressStart - prevGroup.AddressEnd - 1;
 
@@ -409,7 +425,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
                         sb.AppendLine($"* {new string('=', seperatorLen + 3)}");
 
-                        prevGroup = linkedG;    
+                        prevGroup = linkedG;
 
                     }
 
@@ -421,11 +437,21 @@ namespace MewtocolNet.UnderlyingRegisters {
 
             return sb.ToString();
 
-        } 
+        }
 
-        internal IEnumerable<BaseRegister> GetAllRegisters () {
+        internal void ClearAllRegisters () {
 
-            List<BaseRegister> registers = new List<BaseRegister>();    
+            foreach (var lvl in pollLevels) {
+
+                lvl.dataAreas.Clear();
+            
+            }
+            
+        }
+
+        internal IEnumerable<Register> GetAllRegisters() {
+
+            List<Register> registers = new List<Register>();
 
             foreach (var lvl in pollLevels) {
 
@@ -441,6 +467,6 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-    } 
+    }
 
 }

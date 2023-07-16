@@ -1,15 +1,12 @@
-﻿using MewtocolNet.Registers;
+﻿using MewtocolNet.Exceptions;
+using MewtocolNet.Registers;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text;
-using MewtocolNet.Helpers;
-using MewtocolNet.Exceptions;
 
 namespace MewtocolNet.TypeConversion {
-    
+
     internal static class Conversions {
 
         internal static Dictionary<PlcVarType, RegisterType> dictPlcTypeToRegisterType = new Dictionary<PlcVarType, RegisterType> {
@@ -58,7 +55,7 @@ namespace MewtocolNet.TypeConversion {
 
             //default short DT conversion
             new PlcTypeConversion<short>(RegisterType.DT) {
-                HoldingRegisterType = typeof(NumberRegister<short>),
+                HoldingRegisterType = typeof(SingleRegister<short>),
                 PlcVarType = PlcVarType.INT,
                 FromRaw = (reg, bytes) => BitConverter.ToInt16(bytes, 0),
                 ToRaw = (reg, value) => BitConverter.GetBytes(value),
@@ -66,7 +63,7 @@ namespace MewtocolNet.TypeConversion {
 
             //default ushort DT conversion
             new PlcTypeConversion<ushort>(RegisterType.DT) {
-                HoldingRegisterType = typeof(NumberRegister<ushort>),
+                HoldingRegisterType = typeof(SingleRegister<ushort>),
                 PlcVarType = PlcVarType.UINT,
                 FromRaw = (reg, bytes) => BitConverter.ToUInt16(bytes, 0),
                 ToRaw = (reg, value) => BitConverter.GetBytes(value),
@@ -74,7 +71,7 @@ namespace MewtocolNet.TypeConversion {
 
             //default Word DT conversion
             new PlcTypeConversion<Word>(RegisterType.DT) {
-                HoldingRegisterType = typeof(NumberRegister<Word>),
+                HoldingRegisterType = typeof(SingleRegister<Word>),
                 PlcVarType = PlcVarType.WORD,
                 FromRaw = (reg, bytes) => new Word(bytes),
                 ToRaw = (reg, value) => value.ToByteArray(),
@@ -82,7 +79,7 @@ namespace MewtocolNet.TypeConversion {
 
             //default int DDT conversion
             new PlcTypeConversion<int>(RegisterType.DDT) {
-                HoldingRegisterType = typeof(NumberRegister<int>),
+                HoldingRegisterType = typeof(SingleRegister<int>),
                 PlcVarType = PlcVarType.DINT,
                 FromRaw = (reg, bytes) => BitConverter.ToInt32(bytes, 0),
                 ToRaw = (reg, value) => BitConverter.GetBytes(value),
@@ -90,7 +87,7 @@ namespace MewtocolNet.TypeConversion {
 
             //default uint DDT conversion
             new PlcTypeConversion<uint>(RegisterType.DDT) {
-                HoldingRegisterType = typeof(NumberRegister<uint>),
+                HoldingRegisterType = typeof(SingleRegister<uint>),
                 PlcVarType = PlcVarType.UDINT,
                 FromRaw = (reg, bytes) => BitConverter.ToUInt32(bytes, 0),
                 ToRaw = (reg, value) => BitConverter.GetBytes(value),
@@ -98,7 +95,7 @@ namespace MewtocolNet.TypeConversion {
 
             //default DWord DDT conversion
             new PlcTypeConversion<DWord>(RegisterType.DDT) {
-                HoldingRegisterType = typeof(NumberRegister<DWord>),
+                HoldingRegisterType = typeof(SingleRegister<DWord>),
                 PlcVarType = PlcVarType.DWORD,
                 FromRaw = (reg, bytes) => new DWord(bytes),
                 ToRaw = (reg, value) => value.ToByteArray(),
@@ -106,7 +103,7 @@ namespace MewtocolNet.TypeConversion {
 
             //default float DDT conversion
             new PlcTypeConversion<float>(RegisterType.DDT) {
-                HoldingRegisterType = typeof(NumberRegister<float>),
+                HoldingRegisterType = typeof(SingleRegister<float>),
                 PlcVarType = PlcVarType.REAL,
                 FromRaw = (reg, bytes) => BitConverter.ToSingle(bytes, 0),
                 ToRaw = (reg, value) => BitConverter.GetBytes(value),
@@ -114,7 +111,7 @@ namespace MewtocolNet.TypeConversion {
 
             //default TimeSpan DDT conversion
             new PlcTypeConversion<TimeSpan>(RegisterType.DDT) {
-                HoldingRegisterType = typeof(NumberRegister<TimeSpan>),
+                HoldingRegisterType = typeof(SingleRegister<TimeSpan>),
                 PlcVarType = PlcVarType.TIME,
                 FromRaw = (reg, bytes) => {
 
@@ -131,19 +128,11 @@ namespace MewtocolNet.TypeConversion {
 
                 },
             },
-
-            //default byte array DT Range conversion, direct pass through
-            new PlcTypeConversion<byte[]>(RegisterType.DT_BYTE_RANGE) {
-                HoldingRegisterType = typeof(ArrayRegister),
-                FromRaw = (reg, bytes) => bytes,
-                ToRaw = (reg, value) => value,
-            },
-
             //default string DT Range conversion Example bytes: (04 00 03 00 XX XX XX) 
             //first 4 bytes are reserved size (2 bytes) and used size (2 bytes)
             //the remaining bytes are the ascii bytes for the string
             new PlcTypeConversion<string>(RegisterType.DT_BYTE_RANGE) {
-                HoldingRegisterType = typeof(StringRegister),
+                HoldingRegisterType = typeof(SingleRegister<string>),
                 PlcVarType = PlcVarType.STRING,
                 FromRaw = (reg, bytes) => {
 
@@ -157,24 +146,25 @@ namespace MewtocolNet.TypeConversion {
                     short actualLen = BitConverter.ToInt16(bytes, 2);
 
                     //skip 4 bytes because they only describe the length
-                    return Encoding.UTF8.GetString(bytes.Skip(4).Take(actualLen).ToArray());
-                
+                    string gotVal = Encoding.UTF8.GetString(bytes.Skip(4).Take(actualLen).ToArray());
+
+                    return gotVal;
+
                 },
                 ToRaw = (reg, value) => {
 
-                    var sReg = (StringRegister)reg;
-
-                    if(value.Length > sReg.ReservedSize)
-                        value = value.Substring(0, sReg.ReservedSize);
-
-                    int padLen = sReg.ReservedSize;
-                    if(sReg.ReservedSize % 2 != 0) padLen++;
+                    int padLen = value.Length;
+                    if(value.Length % 2 != 0) padLen++;
 
                     var strBytes = Encoding.UTF8.GetBytes(value.PadRight(padLen, '\0'));
 
-                    List<byte> finalBytes = new List<byte>();   
-                    finalBytes.AddRange(BitConverter.GetBytes(sReg.ReservedSize));
-                    finalBytes.AddRange(BitConverter.GetBytes((short)value.Length));
+                    List<byte> finalBytes = new List<byte>();
+
+                    short reserved = (short)(reg.GetRegisterAddressLen() * 2 - 4);
+                    short used = (short)value.Length;
+
+                    finalBytes.AddRange(BitConverter.GetBytes(reserved));
+                    finalBytes.AddRange(BitConverter.GetBytes(used));
                     finalBytes.AddRange(strBytes);
 
                     return finalBytes.ToArray();

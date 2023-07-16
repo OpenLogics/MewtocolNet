@@ -1,13 +1,12 @@
 ﻿using MewtocolNet.Registers;
-using System.Threading.Tasks;
 
 namespace MewtocolNet.UnderlyingRegisters {
 
     internal interface IMemoryArea {
 
-        byte[] GetUnderlyingBytes(BaseRegister reg);
+        byte[] GetUnderlyingBytes(Register reg);
 
-        void SetUnderlyingBytes(BaseRegister reg, byte[] bytes);
+        void SetUnderlyingBytes(Register reg, byte[] bytes);
 
         void UpdateAreaRegisterValues();
 

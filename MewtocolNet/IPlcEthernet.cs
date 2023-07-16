@@ -1,6 +1,4 @@
-﻿using MewtocolNet.RegisterAttributes;
-using System;
-using System.Net;
+﻿using System.Net;
 using System.Threading.Tasks;
 
 namespace MewtocolNet {

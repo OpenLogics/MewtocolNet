@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -18,7 +16,7 @@ namespace MewtocolNet {
         /// </summary>
         /// <param name="timespan"></param>
         /// <returns></returns>
-        public static string ToPlcTime (this TimeSpan timespan) {
+        public static string ToPlcTime(this TimeSpan timespan) {
 
             if (timespan == null || timespan == TimeSpan.Zero)
                 return $"T#0s";
@@ -41,19 +39,19 @@ namespace MewtocolNet {
 
         }
 
-        public static TimeSpan ParsePlcTime (string plcTimeFormat) {
+        public static TimeSpan ParsePlcTime(string plcTimeFormat) {
 
             var reg = new Regex(@"(?:T|t)#(?:(?<d>[0-9]{1,2})d)?(?:(?<h>[0-9]{1,2})h)?(?:(?<m>[0-9]{1,2})m)?(?:(?<s>[0-9]{1,2})s)?(?:(?<ms>[0-9]{1,3})ms)?");
             var match = reg.Match(plcTimeFormat);
 
-            if(match.Success) {
+            if (match.Success) {
 
                 var days = match.Groups["d"].Value;
                 var hours = match.Groups["h"].Value;
                 var minutes = match.Groups["m"].Value;
                 var seconds = match.Groups["s"].Value;
                 var milliseconds = match.Groups["ms"].Value;
-                
+
                 TimeSpan retTime = TimeSpan.Zero;
 
                 if (!string.IsNullOrEmpty(days)) retTime += TimeSpan.FromDays(int.Parse(days));

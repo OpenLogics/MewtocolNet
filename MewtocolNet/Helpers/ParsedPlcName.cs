@@ -2,11 +2,10 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace MewtocolNet {
-    
+
     /// <summary>
     /// A structure containing the PLC name parsed
     /// </summary>
@@ -20,12 +19,12 @@ namespace MewtocolNet {
         /// <summary>
         /// The family group of the PLC
         /// </summary>
-        public string Group { get; internal set; }  
+        public string Group { get; internal set; }
 
         /// <summary>
         /// The Memory size of the PLC
         /// </summary>
-        public float Size { get; internal set; }    
+        public float Size { get; internal set; }
 
         /// <summary>
         /// The subtype strings of the plc
@@ -35,7 +34,7 @@ namespace MewtocolNet {
         /// <inheritdoc/>
         public override string ToString() => WholeName;
 
-        internal static ParsedPlcName[] PlcDeconstruct (PlcType plcT) {
+        internal static ParsedPlcName[] PlcDeconstruct(PlcType plcT) {
 
             string wholeStr = plcT.ToString();
 
@@ -59,7 +58,7 @@ namespace MewtocolNet {
                     string wholeName = $"{groupStr} {sizeFl:0.##}k{(subTypes.Length > 0 ? " " : "")}{string.Join(",", subTypes)}";
 
                     if (string.IsNullOrEmpty(subTypes[0]))
-                        subTypes = Array.Empty<string>();   
+                        subTypes = Array.Empty<string>();
 
                     retList.Add(new ParsedPlcName {
                         Group = groupStr,

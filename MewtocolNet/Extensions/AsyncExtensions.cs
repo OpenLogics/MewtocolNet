@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
 using System.Threading;
-using System.Net.Sockets;
+using System.Threading.Tasks;
 
 namespace MewtocolNet {
 
@@ -18,7 +15,7 @@ namespace MewtocolNet {
                 }
             }
 
-            if(task.IsCanceled) return default(T);  
+            if (task.IsCanceled) return default(T);
 
             return task.Result;
 

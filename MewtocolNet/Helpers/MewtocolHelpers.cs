@@ -5,10 +5,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Security.Cryptography;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
-using static MewtocolNet.RegisterBuilding.RBuild;
 
 namespace MewtocolNet {
 
@@ -18,6 +18,23 @@ namespace MewtocolNet {
     public static class MewtocolHelpers {
 
         #region Byte and string operation helpers
+
+        public static int DetermineTypeByteSize(this Type type) {
+
+            //enums can only be of numeric types
+            if (type.IsEnum) return Marshal.SizeOf(Enum.GetUnderlyingType(type));
+
+            //strings get always set with 4 bytes because the first 4 bytes contain the length
+            if (type == typeof(string)) return 4;
+            
+            if (type.Namespace.StartsWith("System")) return Marshal.SizeOf(type);
+
+            if (typeof(MewtocolExtTypeInit1Word).IsAssignableFrom(type)) return 2;
+            if (typeof(MewtocolExtTypeInit2Word).IsAssignableFrom(type)) return 4;
+            
+            throw new Exception("Type not supported");
+
+        }
 
         /// <summary>
         /// Searches a byte array for a pattern
@@ -54,23 +71,6 @@ namespace MewtocolNet {
         }
 
         /// <summary>
-        /// Parses the byte string from a incoming RD message
-        /// </summary>
-        internal static string ParseDTByteString(this string _onString, int _blockSize = 4) {
-
-            if (_onString == null)
-                return null;
-
-            var res = new Regex(@"\%([0-9a-fA-F]{2})\$RD(.{" + _blockSize + "})").Match(_onString);
-            if (res.Success) {
-                string val = res.Groups[2].Value;
-                return val;
-            }
-            return null;
-
-        }
-
-        /// <summary>
         /// Parses a return message as RCS single bit
         /// </summary>
         internal static bool? ParseRCSingleBit(this string _onString) {
@@ -95,7 +95,7 @@ namespace MewtocolNet {
 
             var res = new Regex(@"\%([0-9a-fA-F]{2})\$RC(?<bits>(?:0|1){0,8})(..)").Match(_onString);
             if (res.Success) {
-                
+
                 string val = res.Groups["bits"].Value;
 
                 return new BitArray(val.Select(c => c == '1').ToArray());
@@ -119,7 +119,7 @@ namespace MewtocolNet {
         /// </summary>
         /// <param name="_onString"></param>
         /// <returns>A <see cref="T:byte[]"/> or null of failed</returns>
-        internal static byte[] ParseDTRawStringAsBytes (this string _onString) {
+        internal static byte[] ParseDTRawStringAsBytes(this string _onString) {
 
             _onString = _onString.Replace("\r", "");
 
@@ -160,7 +160,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Converts a hex string (AB01C1) to a byte array
         /// </summary>
-        internal static byte[] HexStringToByteArray (this string hex) {
+        internal static byte[] HexStringToByteArray(this string hex) {
             if (hex == null) return null;
             return Enumerable.Range(0, hex.Length)
                              .Where(x => x % 2 == 0)
@@ -173,14 +173,14 @@ namespace MewtocolNet {
         /// </summary>
         /// <param name="seperator">Seperator between the hex numbers</param>
         /// <param name="arr">The byte array</param>
-        public static string ToHexString (this byte[] arr, string seperator = "") {
+        public static string ToHexString(this byte[] arr, string seperator = "") {
 
             StringBuilder sb = new StringBuilder();
 
             for (int i = 0; i < arr.Length; i++) {
                 byte b = arr[i];
                 sb.Append(b.ToString("X2"));
-                if(i < arr.Length - 1) sb.Append(seperator);
+                if (i < arr.Length - 1) sb.Append(seperator);
             }
 
             return sb.ToString();
@@ -219,7 +219,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Checks if the register type is boolean
         /// </summary>
-        internal static bool IsBoolean (this RegisterType type) {
+        internal static bool IsBoolean(this RegisterType type) {
 
             return type == RegisterType.X || type == RegisterType.Y || type == RegisterType.R;
 
@@ -228,7 +228,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Checks if the register type numeric
         /// </summary>
-        internal static bool IsNumericDTDDT (this RegisterType type) {
+        internal static bool IsNumericDTDDT(this RegisterType type) {
 
             return type == RegisterType.DT || type == RegisterType.DDT;
 
@@ -243,10 +243,10 @@ namespace MewtocolNet {
 
         }
 
-        internal static bool CompareIsDuplicate (this IRegisterInternal reg1, IRegisterInternal compare) {
+        internal static bool CompareIsDuplicate(this Register reg1, Register compare) {
 
             bool valCompare = reg1.RegisterType == compare.RegisterType &&
-                              reg1.MemoryAddress == compare.MemoryAddress && 
+                              reg1.MemoryAddress == compare.MemoryAddress &&
                               reg1.GetRegisterAddressLen() == compare.GetRegisterAddressLen() &&
                               reg1.GetSpecialAddress() == compare.GetSpecialAddress();
 
@@ -254,7 +254,7 @@ namespace MewtocolNet {
 
         }
 
-        internal static bool CompareIsDuplicateNonCast (this BaseRegister toInsert, BaseRegister compare, List<Type> allowOverlappingTypes) {
+        internal static bool CompareIsDuplicateNonCast(this Register toInsert, Register compare, List<Type> allowOverlappingTypes) {
 
             foreach (var type in allowOverlappingTypes) {
 
@@ -271,9 +271,9 @@ namespace MewtocolNet {
 
         }
 
-        internal static bool CompareIsNameDuplicate(this IRegisterInternal reg1, IRegisterInternal compare) {
+        internal static bool CompareIsNameDuplicate(this Register reg1, Register compare) {
 
-            return ( reg1.Name != null || compare.Name != null) && reg1.Name == compare.Name;
+            return (reg1.Name != null || compare.Name != null) && reg1.Name == compare.Name;
 
         }
 
@@ -284,7 +284,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Converts the enum to a plc name string
         /// </summary>
-        public static string ToName (this PlcType plcT) {
+        public static string ToName(this PlcType plcT) {
 
             if (plcT == 0) return "Unknown";
 
@@ -295,7 +295,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Converts the enum to a decomposed <see cref="ParsedPlcName"/> struct
         /// </summary>
-        public static ParsedPlcName[] ToNameDecompose (this PlcType plcT) {
+        public static ParsedPlcName[] ToNameDecompose(this PlcType plcT) {
 
             if ((int)plcT == 0) return Array.Empty<ParsedPlcName>();
 
@@ -306,7 +306,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Checks if the PLC type is discontinued
         /// </summary>
-        public static bool IsDiscontinued (this PlcType plcT) {
+        public static bool IsDiscontinued(this PlcType plcT) {
 
             var memberInfos = plcT.GetType().GetMember(plcT.ToString());
             var enumValueMemberInfo = memberInfos.FirstOrDefault(m => m.DeclaringType == plcT.GetType());
@@ -320,9 +320,9 @@ namespace MewtocolNet {
 
         }
 
-        #if DEBUG
+#if DEBUG
 
-        internal static bool WasTestedLive (this PlcType plcT) {
+        internal static bool WasTestedLive(this PlcType plcT) {
 
             var memberInfos = plcT.GetType().GetMember(plcT.ToString());
             var enumValueMemberInfo = memberInfos.FirstOrDefault(m => m.DeclaringType == plcT.GetType());
@@ -336,7 +336,7 @@ namespace MewtocolNet {
 
         }
 
-        internal static bool IsEXRTPLC (this PlcType plcT) {
+        internal static bool IsEXRTPLC(this PlcType plcT) {
 
             var memberInfos = plcT.GetType().GetMember(plcT.ToString());
             var enumValueMemberInfo = memberInfos.FirstOrDefault(m => m.DeclaringType == plcT.GetType());
@@ -350,7 +350,51 @@ namespace MewtocolNet {
 
         }
 
-        #endif
+#endif
+
+        #endregion
+
+        #region Mapping
+
+        /// <summary>
+        /// Maps the source object to target object.
+        /// </summary>
+        /// <typeparam name="T">Type of target object.</typeparam>
+        /// <typeparam name="TU">Type of source object.</typeparam>
+        /// <param name="target">Target object.</param>
+        /// <param name="source">Source object.</param>
+        /// <returns>Updated target object.</returns>
+        internal static T Map<T, TU>(this T target, TU source) {
+
+            var flags = BindingFlags.NonPublic | BindingFlags.Instance;
+
+            var tprops = target.GetType().GetProperties();
+
+            tprops.Where(x => x.CanWrite == true).ToList().ForEach(prop => {
+                // check whether source object has the the property
+                var sp = source.GetType().GetProperty(prop.Name);
+                if (sp != null) {
+                    // if yes, copy the value to the matching property
+                    var value = sp.GetValue(source, null);
+                    target.GetType().GetProperty(prop.Name).SetValue(target, value, null);
+                }
+            });
+
+            var tfields = target.GetType().GetFields(flags);
+            tfields.ToList().ForEach(field => {
+
+                var sp = source.GetType().GetField(field.Name, flags);
+
+                if (sp != null) {
+                    // if yes, copy the value to the matching property
+                    var value = sp.GetValue(source);
+                    target.GetType().GetField(field.Name, flags).SetValue(target, value);
+                }
+
+            });
+
+            return target;
+        }
 
         #endregion
 

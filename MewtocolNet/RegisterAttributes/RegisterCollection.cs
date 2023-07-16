@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using MewtocolNet.Registers;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
 namespace MewtocolNet.RegisterAttributes {

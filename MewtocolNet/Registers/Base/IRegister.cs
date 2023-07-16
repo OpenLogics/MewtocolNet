@@ -1,9 +1,7 @@
-﻿using MewtocolNet.Registers;
-using System;
-using System.Text;
+﻿using System;
 using System.Threading.Tasks;
 
-namespace MewtocolNet {
+namespace MewtocolNet.Registers {
 
     /// <summary>
     /// An interface for all register types
@@ -18,7 +16,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Type of the underlying register
         /// </summary>
-        RegisterType RegisterType { get; }  
+        RegisterType RegisterType { get; }
 
         /// <summary>
         /// The name of the register
@@ -28,7 +26,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Gets the register address name as in the plc
         /// </summary>
-        string PLCAddressName { get; } 
+        string PLCAddressName { get; }
 
         /// <summary>
         /// The current value of the register

@@ -1,7 +1,5 @@
 ﻿using MewtocolNet.Registers;
-using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace MewtocolNet.UnderlyingRegisters {
 
@@ -9,9 +7,9 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         internal uint AddressStart;
 
-        internal uint AddressEnd;     
+        internal uint AddressEnd;
 
-        internal List<BaseRegister> Linked = new List<BaseRegister>();  
+        internal List<Register> Linked = new List<Register>();
 
     }
 

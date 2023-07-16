@@ -21,7 +21,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Hardware information flags about the PLC
         /// </summary>
-        public HWInformation HardwareInformation { get; private set; }  
+        public HWInformation HardwareInformation { get; private set; }
 
         /// <summary>
         /// Program capacity in 1K steps
@@ -43,11 +43,11 @@ namespace MewtocolNet {
         /// </summary>
         public bool IsRunMode => OperationMode.HasFlag(OPMode.RunMode);
 
-        internal bool TryExtendFromEXRT (string msg) {
+        internal bool TryExtendFromEXRT(string msg) {
 
             var regexEXRT = new Regex(@"\%EE\$EX00RT00(?<icnt>..)(?<mc>..)..(?<cap>..)(?<op>..)..(?<flg>..)(?<sdiag>....)(?<ver>..)(?<hwif>..)(?<nprog>.)(?<progsz>....)(?<hdsz>....)(?<sysregsz>....).*", RegexOptions.IgnoreCase);
-            var match = regexEXRT.Match(msg);      
-            if(match.Success) {
+            var match = regexEXRT.Match(msg);
+            if (match.Success) {
 
                 byte typeCodeByte = byte.Parse(match.Groups["mc"].Value, NumberStyles.HexNumber);
 
@@ -63,7 +63,7 @@ namespace MewtocolNet {
 
         }
 
-        internal static bool TryFromRT (string msg, out PLCInfo inf) {
+        internal static bool TryFromRT(string msg, out PLCInfo inf) {
 
             var regexRT = new Regex(@"\%EE\$RT(?<cputype>..)(?<cpuver>..)(?<cap>..)(?<op>..)..(?<flg>..)(?<sdiag>....).*", RegexOptions.IgnoreCase);
             var match = regexRT.Match(msg);
@@ -99,16 +99,16 @@ namespace MewtocolNet {
             OperationMode = 0,
             ProgramCapacity = 0,
             TypeCode = 0,
-        
+
         };
 
         /// <inheritdoc/>
-        public static bool operator == (PLCInfo c1, PLCInfo c2) {
+        public static bool operator ==(PLCInfo c1, PLCInfo c2) {
             return c1.Equals(c2);
         }
 
         /// <inheritdoc/>
-        public static bool operator != (PLCInfo c1, PLCInfo c2) {
+        public static bool operator !=(PLCInfo c1, PLCInfo c2) {
             return !c1.Equals(c2);
         }
 

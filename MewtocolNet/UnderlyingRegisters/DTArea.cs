@@ -1,9 +1,7 @@
 ﻿using MewtocolNet.Registers;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace MewtocolNet.UnderlyingRegisters {
@@ -25,19 +23,19 @@ namespace MewtocolNet.UnderlyingRegisters {
         public ulong AddressStart => addressStart;
         public ulong AddressEnd => addressEnd;
 
-        internal DTArea (MewtocolInterface mewIf) {
+        internal DTArea(MewtocolInterface mewIf) {
 
             mewInterface = mewIf;
-        
+
         }
 
-        internal void BoundaryUdpdate (uint? addrFrom = null, uint? addrTo = null) {
+        internal void BoundaryUdpdate(uint? addrFrom = null, uint? addrTo = null) {
 
             var addFrom = addrFrom ?? addressStart;
             var addTo = addrTo ?? addressEnd;
 
             var oldFrom = addressStart;
-            var oldUnderlying = underlyingBytes.ToArray();    
+            var oldUnderlying = underlyingBytes.ToArray();
 
             underlyingBytes = new byte[(addTo + 1 - addFrom) * 2];
 
@@ -64,7 +62,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        internal async Task<bool> RequestByteReadAsync (ulong addStart, ulong addEnd) {
+        internal async Task<bool> RequestByteReadAsync(ulong addStart, ulong addEnd) {
 
             await CheckDynamicallySizedRegistersAsync();
 
@@ -73,7 +71,7 @@ namespace MewtocolNet.UnderlyingRegisters {
             string requeststring = $"%{station}#RD{GetMewtocolIdent(addStart, addEnd)}";
             var result = await mewInterface.SendCommandAsync(requeststring);
 
-            if(result.Success) {
+            if (result.Success) {
 
                 var resBytes = result.Response.ParseDTRawStringAsBytes();
                 SetUnderlyingBytes(resBytes, addStart);
@@ -84,7 +82,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        public byte[] GetUnderlyingBytes(BaseRegister reg) {
+        public byte[] GetUnderlyingBytes(Register reg) {
 
             int byteLen = (int)(reg.GetRegisterAddressLen() * 2);
 
@@ -92,7 +90,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        internal byte[] GetUnderlyingBytes (uint addStart, int addLen) {
+        internal byte[] GetUnderlyingBytes(uint addStart, int addLen) {
 
             int byteLen = (int)(addLen * 2);
 
@@ -103,7 +101,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        public void SetUnderlyingBytes(BaseRegister reg, byte[] bytes) {
+        public void SetUnderlyingBytes(Register reg, byte[] bytes) {
 
             SetUnderlyingBytes(bytes, reg.MemoryAddress);
 
@@ -118,24 +116,23 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        private async Task CheckDynamicallySizedRegistersAsync () {
+        internal async Task CheckDynamicallySizedRegistersAsync() {
 
             //calibrating at runtime sized registers
             var uncalibratedStringRegisters = managedRegisters
             .SelectMany(x => x.Linked)
-            .Where(x => x is StringRegister sreg && !sreg.isCalibratedFromPlc)
-            .Cast<StringRegister>()
+            .Where(x => x.dynamicSizeState.HasFlag(DynamicSizeState.DynamicallySized | DynamicSizeState.NeedsSizeUpdate))
             .ToList();
 
             foreach (var register in uncalibratedStringRegisters)
-                await register.CalibrateFromPLC();
+                await register.UpdateDynamicSize();
 
             if (uncalibratedStringRegisters.Count > 0)
                 mewInterface.memoryManager.LinkAndMergeRegisters();
 
         }
 
-        private string GetMewtocolIdent () {
+        private string GetMewtocolIdent() {
 
             StringBuilder asciistring = new StringBuilder("D");
             asciistring.Append(AddressStart.ToString().PadLeft(5, '0'));

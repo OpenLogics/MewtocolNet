@@ -4,9 +4,9 @@ namespace MewtocolNet.UnderlyingRegisters {
 
     internal class PollLevel {
 
-        internal int lastReadTimeMs = 0; 
+        internal int lastReadTimeMs = 0;
 
-        internal PollLevel (int wrSize, int dtSize) {
+        internal PollLevel(int wrSize, int dtSize) {
 
             externalRelayInAreas = new List<WRArea>(wrSize * 16);
             externalRelayOutAreas = new List<WRArea>(wrSize * 16);

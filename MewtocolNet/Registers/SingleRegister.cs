@@ -1,14 +1,10 @@
 ﻿using MewtocolNet.Exceptions;
-using MewtocolNet.UnderlyingRegisters;
+using MewtocolNet.Logging;
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using static MewtocolNet.RegisterBuilding.RBuild;
 
 namespace MewtocolNet.Registers {
 
@@ -16,65 +12,34 @@ namespace MewtocolNet.Registers {
     /// Defines a register containing a number
     /// </summary>
     /// <typeparam name="T">The type of the numeric value</typeparam>
-    public class NumberRegister<T> : BaseRegister {
+    public class SingleRegister<T> : Register {
+
+        internal uint addressLength;
+
+        /// <summary>
+        /// The rgisters memory length
+        /// </summary>
+        public uint AddressLength => addressLength;
+
 
         [Obsolete("Creating registers directly is not supported use IPlc.Register instead")]
-        public NumberRegister() =>
+        public SingleRegister() =>
         throw new NotSupportedException("Direct register instancing is not supported, use the builder pattern");
 
-        internal NumberRegister (uint _address, string _name = null) {
+        internal SingleRegister(uint _address, uint _reservedByteSize, DynamicSizeState dynamicSizeSt, string _name = null) {
 
             memoryAddress = _address;
             name = _name;
+            dynamicSizeState = dynamicSizeSt;
+            addressLength = _reservedByteSize / 2;
 
-            Type numType = typeof(T);
-            uint areaLen = 0;
+            if (_reservedByteSize == 2) RegisterType = RegisterType.DT;
+            if(_reservedByteSize == 4) RegisterType = RegisterType.DDT;
+            if (typeof(T) == typeof(string)) RegisterType = RegisterType.DT_BYTE_RANGE;
 
-            if (typeof(T).IsEnum) {
+            CheckAddressOverflow(memoryAddress, addressLength);
 
-                //for enums
-
-                var underlyingType = typeof(T).GetEnumUnderlyingType(); //the numeric type
-                areaLen = (uint)(Marshal.SizeOf(underlyingType) / 2) - 1;
-
-                if (areaLen == 0) RegisterType = RegisterType.DT;
-                if (areaLen == 1) RegisterType = RegisterType.DDT;
-                if (areaLen >= 2) RegisterType = RegisterType.DT_BYTE_RANGE;
-
-                lastValue = null;
-                Console.WriteLine();
-
-            } else {
-
-                //for all others known pre-defined numeric structs
-
-                var allowedTypes = PlcValueParser.GetAllowDotnetTypes();
-                if (!allowedTypes.Contains(numType))
-                    throw new NotSupportedException($"The type {numType} is not allowed for Number Registers");
-
-                areaLen = (uint)(Marshal.SizeOf(numType) / 2) - 1;
-                RegisterType = areaLen >= 1 ? RegisterType.DDT : RegisterType.DT;
-
-                lastValue = null;
-
-            }
-
-            CheckAddressOverflow(memoryAddress, areaLen);
-
-        }
-
-        /// <inheritdoc/>
-        public override string BuildMewtocolQuery() {
-
-            StringBuilder asciistring = new StringBuilder("D");
-            asciistring.Append(MemoryAddress.ToString().PadLeft(5, '0'));
-
-            int offsetAddress = 0;
-            if(RegisterType == RegisterType.DDT)
-                offsetAddress = 1;
-
-            asciistring.Append((MemoryAddress + offsetAddress).ToString().PadLeft(5, '0'));
-            return asciistring.ToString();
+            lastValue = null;
 
         }
 
@@ -90,7 +55,7 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public override string GetValueString() {
 
-            if(Value != null && typeof(T) == typeof(TimeSpan)) {
+            if (Value != null && typeof(T) == typeof(TimeSpan)) {
 
                 return $"{Value} [{((TimeSpan)Value).ToPlcTime()}]";
 
@@ -116,24 +81,27 @@ namespace MewtocolNet.Registers {
         }
 
         /// <inheritdoc/>
-        public override uint GetRegisterAddressLen() => (uint)(RegisterType == RegisterType.DT ? 1 : 2);
+        public override uint GetRegisterAddressLen() => AddressLength;
 
         /// <inheritdoc/>
-        public override async Task<bool> WriteAsync (object value) {
+        public override async Task<bool> WriteAsync(object value) {
 
             if (!attachedInterface.IsConnected)
                 throw MewtocolException.NotConnectedSend();
 
+            if (dynamicSizeState.HasFlag(DynamicSizeState.DynamicallySized | DynamicSizeState.NeedsSizeUpdate))
+                await UpdateDynamicSize();
+
             var encoded = PlcValueParser.Encode(this, (T)value);
             var res = await attachedInterface.WriteByteRange((int)MemoryAddress, encoded);
 
-            if(res) {
+            if (res) {
 
                 //find the underlying memory
                 var matchingReg = attachedInterface.memoryManager.GetAllRegisters()
                 .FirstOrDefault(x => x.IsSameAddressAndType(this));
 
-                if (matchingReg != null) 
+                if (matchingReg != null)
                     matchingReg.underlyingMemory.SetUnderlyingBytes(matchingReg, encoded);
 
                 AddSuccessWrite();
@@ -151,16 +119,59 @@ namespace MewtocolNet.Registers {
             if (!attachedInterface.IsConnected)
                 throw MewtocolException.NotConnectedSend();
 
-            var res = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, (int)GetRegisterAddressLen() * 2, false);
+            if(dynamicSizeState.HasFlag(DynamicSizeState.DynamicallySized | DynamicSizeState.NeedsSizeUpdate))
+                await UpdateDynamicSize();
+
+            var res = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, (int)GetRegisterAddressLen() * 2);
             if (res == null) return null;
 
-            var matchingReg = attachedInterface.memoryManager.GetAllRegisters()     
+            var matchingReg = attachedInterface.memoryManager.GetAllRegisters()
             .FirstOrDefault(x => x.IsSameAddressAndType(this));
 
-            if (matchingReg != null)
+            if (matchingReg != null) {
+
+                if (matchingReg is SingleRegister<string> sreg && this is SingleRegister<string> selfSreg) {
+                    sreg.addressLength = selfSreg.addressLength;
+                    sreg.dynamicSizeState = DynamicSizeState.DynamicallySized | DynamicSizeState.WasSizeUpdated;
+                }
+
                 matchingReg.underlyingMemory.SetUnderlyingBytes(matchingReg, res);
 
+            }
+                
+
             return SetValueFromBytes(res);
+
+        }
+
+        internal override async Task UpdateDynamicSize() {
+
+            if (typeof(T) == typeof(string)) await UpdateDynamicSizeString();
+
+            dynamicSizeState = DynamicSizeState.DynamicallySized | DynamicSizeState.WasSizeUpdated;
+
+        }
+
+        private async Task UpdateDynamicSizeString () {
+
+            Logger.Log($"Calibrating dynamic register ({GetRegisterWordRangeString()}) from PLC source", LogLevel.Verbose, attachedInterface);
+
+            //get the string describer bytes
+            var bytes = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, 4);
+
+            if (bytes == null || bytes.Length == 0 || bytes.All(x => x == 0x0)) {
+
+                throw new MewtocolException($"The string register ({GetMewName()}{MemoryAddress}) doesn't exist in the PLC program");
+
+            }
+
+            var reservedSize = BitConverter.ToInt16(bytes, 0);
+            var usedSize = BitConverter.ToInt16(bytes, 2);
+            var wordsSize = Math.Max(0, (uint)(2 + (reservedSize + 1) / 2));
+
+            addressLength = wordsSize;
+
+            CheckAddressOverflow(memoryAddress, wordsSize);
 
         }
 

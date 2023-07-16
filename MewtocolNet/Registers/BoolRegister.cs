@@ -1,19 +1,12 @@
-﻿using MewtocolNet.Exceptions;
-using MewtocolNet.RegisterBuilding;
-using MewtocolNet.UnderlyingRegisters;
-using System;
-using System.ComponentModel;
-using System.Net;
+﻿using System;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace MewtocolNet.Registers {
 
     /// <summary>
     /// Defines a register containing a boolean
     /// </summary>
-    public class BoolRegister : BaseRegister {
+    public class BoolRegister : Register {
 
         internal byte specialAddress;
         /// <summary>
@@ -22,9 +15,9 @@ namespace MewtocolNet.Registers {
         public byte SpecialAddress => specialAddress;
 
         [Obsolete("Creating registers directly is not supported use IPlc.Register instead")]
-        public BoolRegister() => 
-        throw new NotSupportedException("Direct register instancing is not supported, use the builder pattern");   
-        
+        public BoolRegister() =>
+        throw new NotSupportedException("Direct register instancing is not supported, use the builder pattern");
+
         internal BoolRegister(IOType _io, byte _spAddress = 0x0, uint _areaAdress = 0, string _name = null) {
 
             lastValue = null;
@@ -58,24 +51,6 @@ namespace MewtocolNet.Registers {
         public override byte? GetSpecialAddress() => SpecialAddress;
 
         /// <inheritdoc/>
-        public override string BuildMewtocolQuery() {
-
-            //(R|X|Y)(area add [3] + special add [1])
-            StringBuilder asciistring = new StringBuilder();
-
-            string prefix = RegisterType.ToString();
-            string mem = MemoryAddress.ToString();
-            string sp = SpecialAddress.ToString("X1");
-
-            asciistring.Append(prefix);
-            asciistring.Append(mem.PadLeft(3, '0'));
-            asciistring.Append(sp);
-
-            return asciistring.ToString();
-
-        }
-
-        /// <inheritdoc/>
         public override string GetMewName() {
 
             var spAdressEnd = SpecialAddress.ToString("X1");
@@ -97,7 +72,7 @@ namespace MewtocolNet.Registers {
         }
 
         /// <inheritdoc/>
-        public override uint GetRegisterAddressLen () => 1;
+        public override uint GetRegisterAddressLen() => 1;
 
     }
 

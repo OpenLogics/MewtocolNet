@@ -2,7 +2,7 @@
 using System.Text;
 
 namespace MewtocolNet {
-    
+
     internal static class CRCCalculator {
 
         private static readonly ushort[] crcTable_CRC16_MCRF4XX = {
@@ -40,7 +40,7 @@ namespace MewtocolNet {
            0x7bc7, 0x6a4e, 0x58d5, 0x495c, 0x3de3, 0x2c6a, 0x1ef1, 0x0f78,
         };
 
-        internal static string BCC_Mew (this string msg) {
+        internal static string BCC_Mew(this string msg) {
 
             byte[] bytes = Encoding.ASCII.GetBytes(msg);
             byte crc = CRC8(bytes);
@@ -49,7 +49,7 @@ namespace MewtocolNet {
 
         }
 
-        internal static string BCC_Mew7 (this string msg) {
+        internal static string BCC_Mew7(this string msg) {
 
             byte[] bytes = Encoding.ASCII.GetBytes(msg);
             ushort crc = CRC16_MCRF4XX(bytes);
@@ -58,10 +58,10 @@ namespace MewtocolNet {
 
         }
 
-        private static ushort CRC16_MCRF4XX (byte[] bytes) {
+        private static ushort CRC16_MCRF4XX(byte[] bytes) {
 
             int icrc = 0xFFFF;
-            
+
             for (int i = 0; i < bytes.Length; i++) {
                 icrc = (icrc >> 8) ^ crcTable_CRC16_MCRF4XX[(icrc ^ bytes[i]) & 0xff];
             }
@@ -72,7 +72,7 @@ namespace MewtocolNet {
 
         }
 
-        private static byte CRC8 (byte[] bytes) {
+        private static byte CRC8(byte[] bytes) {
 
             byte xorTotalByte = 0;
 

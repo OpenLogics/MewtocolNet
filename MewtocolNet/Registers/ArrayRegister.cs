@@ -1,10 +1,8 @@
 ﻿using MewtocolNet.Exceptions;
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.ComponentModel;
+using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace MewtocolNet.Registers {
@@ -12,7 +10,9 @@ namespace MewtocolNet.Registers {
     /// <summary>
     /// Defines a register containing a string
     /// </summary>
-    public class ArrayRegister : BaseRegister {
+    public class ArrayRegister<T> : Register {
+
+        internal int[] indicies;
 
         internal uint addressLength;
 
@@ -21,24 +21,21 @@ namespace MewtocolNet.Registers {
         /// </summary>
         public uint AddressLength => addressLength;
 
-        internal uint ReservedBytesSize { get; set; }
-
-        internal ushort? ReservedBitSize { get; set; }
-
         [Obsolete("Creating registers directly is not supported use IPlc.Register instead")]
         public ArrayRegister() =>
         throw new NotSupportedException("Direct register instancing is not supported, use the builder pattern");
 
-        internal ArrayRegister(uint _address, uint _reservedByteSize, string _name = null) {
+        internal ArrayRegister(uint _address, uint _reservedByteSize, int[] _indicies , DynamicSizeState dynamicSizeSt, string _name = null) {
 
             name = _name;
             memoryAddress = _address;
-            ReservedBytesSize = _reservedByteSize;
+            dynamicSizeState = dynamicSizeSt;
+            indicies = _indicies;   
 
             //calc mem length 
             //because one register is always 1 word (2 bytes) long, if the bytecount is uneven we get the trailing word too
-            var byteSize = ReservedBytesSize;
-            if (ReservedBytesSize % 2 != 0) byteSize++;
+            var byteSize = _reservedByteSize;
+            if (byteSize % 2 != 0) byteSize++;
 
             RegisterType = RegisterType.DT_BYTE_RANGE;
             addressLength = Math.Max((byteSize / 2), 1);
@@ -53,27 +50,8 @@ namespace MewtocolNet.Registers {
 
             if (Value == null) return "null";
 
-            if(Value != null && Value is BitArray bitArr) {
+            return ((byte[])Value).ToHexString("-");
 
-                return bitArr.ToBitString();
-
-            } else {
-
-                return ((byte[])Value).ToHexString("-");
-
-            }
-
-        }
-
-        /// <inheritdoc/>
-        public override string BuildMewtocolQuery() {
-
-            StringBuilder asciistring = new StringBuilder("D");
-
-            asciistring.Append(MemoryAddress.ToString().PadLeft(5, '0'));
-            asciistring.Append((MemoryAddress + AddressLength - 1).ToString().PadLeft(5, '0'));
-
-            return asciistring.ToString();
         }
 
         /// <inheritdoc/>
@@ -81,6 +59,62 @@ namespace MewtocolNet.Registers {
 
         /// <inheritdoc/>
         public override uint GetRegisterAddressLen() => AddressLength;
+
+        /// <inheritdoc/>
+        public override async Task<bool> WriteAsync(object value) {
+
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
+
+            var encoded = PlcValueParser.Encode(this, (T)value);
+            var res = await attachedInterface.WriteByteRange((int)MemoryAddress, encoded);
+
+            if (res) {
+
+                //find the underlying memory
+                var matchingReg = attachedInterface.memoryManager.GetAllRegisters()
+                .FirstOrDefault(x => x.IsSameAddressAndType(this));
+
+                if (matchingReg != null)
+                    matchingReg.underlyingMemory.SetUnderlyingBytes(matchingReg, encoded);
+
+                AddSuccessWrite();
+                UpdateHoldingValue(value);
+
+            }
+
+            return res;
+
+        }
+
+        /// <inheritdoc/>
+        public override async Task<object> ReadAsync() {
+
+            if (!attachedInterface.IsConnected)
+                throw MewtocolException.NotConnectedSend();
+
+            var res = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, (int)GetRegisterAddressLen() * 2);
+            if (res == null) return null;
+
+            //var matchingReg = attachedInterface.memoryManager.GetAllRegisters()
+            //.FirstOrDefault(x => x.IsSameAddressAndType(this));
+
+            //if (matchingReg != null)
+            //    matchingReg.underlyingMemory.SetUnderlyingBytes(matchingReg, res);
+
+            return SetValueFromBytes(res);
+
+        }
+
+        internal override object SetValueFromBytes(byte[] bytes) {
+
+            AddSuccessRead();
+
+            var parsed = PlcValueParser.ParseArray<T>(this, indicies, bytes);
+            UpdateHoldingValue(parsed);
+            return parsed;
+
+        }
 
         /// <inheritdoc/>
         internal override void UpdateHoldingValue(object val) {

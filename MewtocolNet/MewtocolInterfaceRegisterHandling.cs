@@ -1,19 +1,11 @@
-﻿using MewtocolNet.Exceptions;
-using MewtocolNet.Logging;
+﻿using MewtocolNet.Logging;
 using MewtocolNet.RegisterAttributes;
 using MewtocolNet.RegisterBuilding;
 using MewtocolNet.Registers;
-using MewtocolNet.SetupClasses;
-using MewtocolNet.UnderlyingRegisters;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace MewtocolNet {
@@ -27,7 +19,7 @@ namespace MewtocolNet {
 
         private List<RegisterCollection> registerCollections = new List<RegisterCollection>();
 
-        internal IEnumerable<BaseRegister> RegistersInternal => GetAllRegistersInternal();
+        internal IEnumerable<Register> RegistersInternal => GetAllRegistersInternal();
 
         public IEnumerable<IRegister> Registers => GetAllRegisters();
 
@@ -46,7 +38,7 @@ namespace MewtocolNet {
         }
 
         /// <inheritdoc/>
-        public RBuild Register => new RBuild(this);
+        public RBuildAnon Register => new RBuildAnon(this);
 
         #region Register Polling
 
@@ -200,7 +192,7 @@ namespace MewtocolNet {
             if (registerCollections.Count != 0)
                 throw new NotSupportedException("Register collections can only be build once");
 
-            var regBuild = RBuild.Factory;
+            var regBuild = new RBuildMult(this);
 
             foreach (var collection in collections) {
 
@@ -259,7 +251,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Writes back the values changes of the underlying registers to the corrosponding property
         /// </summary>
-        private void OnRegisterChangedUpdateProps(IRegisterInternal reg) {
+        private void OnRegisterChangedUpdateProps(Register reg) {
 
             var collection = reg.ContainedCollection;
             if (collection == null) return;
@@ -278,19 +270,19 @@ namespace MewtocolNet {
 
         #region Register Adding
 
-        internal void AddRegisters (params BaseRegister[] registers) {
+        internal void AddRegisters(params Register[] registers) {
 
             InsertRegistersToMemoryStack(registers.ToList());
 
         }
 
-        internal void InsertRegistersToMemoryStack (List<BaseRegister> registers) {
+        internal void InsertRegistersToMemoryStack(List<Register> registers) {
 
             memoryManager.LinkAndMergeRegisters(registers);
 
         }
 
-        private bool CheckDuplicateRegister (IRegisterInternal instance, out IRegisterInternal foundDupe) {
+        private bool CheckDuplicateRegister(Register instance, out Register foundDupe) {
 
             foundDupe = RegistersInternal.FirstOrDefault(x => x.CompareIsDuplicate(instance));
 
@@ -298,7 +290,7 @@ namespace MewtocolNet {
 
         }
 
-        private bool CheckDuplicateRegister(IRegisterInternal instance) {
+        private bool CheckDuplicateRegister(Register instance) {
 
             var foundDupe = RegistersInternal.FirstOrDefault(x => x.CompareIsDuplicate(instance));
 
@@ -306,13 +298,13 @@ namespace MewtocolNet {
 
         }
 
-        private bool CheckDuplicateNameRegister(IRegisterInternal instance) {
+        private bool CheckDuplicateNameRegister(Register instance) {
 
             return RegistersInternal.Any(x => x.CompareIsNameDuplicate(instance));
 
         }
 
-        private bool CheckOverlappingRegister (IRegisterInternal instance, out IRegisterInternal regB) {
+        private bool CheckOverlappingRegister(Register instance, out Register regB) {
 
             //ignore bool registers, they have their own address spectrum
             regB = null;
@@ -349,20 +341,20 @@ namespace MewtocolNet {
         #region Register accessing
 
         /// <inheritdoc/>>
-        public IRegister GetRegister (string name) {
+        public IRegister GetRegister(string name) {
 
             return RegistersInternal.FirstOrDefault(x => x.Name == name);
 
         }
 
         /// <inheritdoc/>
-        public IEnumerable<IRegister> GetAllRegisters () {
+        public IEnumerable<IRegister> GetAllRegisters() {
 
             return memoryManager.GetAllRegisters().Cast<IRegister>();
 
         }
 
-        internal IEnumerable<BaseRegister> GetAllRegistersInternal () {
+        internal IEnumerable<Register> GetAllRegistersInternal() {
 
             return memoryManager.GetAllRegisters();
 
@@ -378,7 +370,7 @@ namespace MewtocolNet {
 
             for (int i = 0; i < internals.Count; i++) {
 
-                var reg = (IRegisterInternal)internals[i];
+                var reg = (Register)internals[i];
                 reg.ClearValue();
 
             }
@@ -391,7 +383,7 @@ namespace MewtocolNet {
 
         }
 
-        internal void InvokeRegisterChanged(BaseRegister reg) {
+        internal void InvokeRegisterChanged(Register reg) {
 
             RegisterChanged?.Invoke(reg);
 

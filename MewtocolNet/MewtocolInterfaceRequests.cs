@@ -1,18 +1,15 @@
 using MewtocolNet.Exceptions;
 using MewtocolNet.Logging;
-using MewtocolNet.Registers;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace MewtocolNet {
 
     public abstract partial class MewtocolInterface {
+
+        internal int maxDataBlocksPerWrite = 8;
 
         #region PLC info getters
 
@@ -23,7 +20,7 @@ namespace MewtocolNet {
         public async Task<PLCInfo?> GetPLCInfoAsync(int timeout = -1) {
 
             var resRT = await SendCommandAsync("%EE#RT", timeoutMs: timeout);
-            
+
             if (!resRT.Success) {
 
                 //timeouts are ok and dont throw
@@ -54,7 +51,7 @@ namespace MewtocolNet {
 
             }
 
-            PlcInfo = plcInf;   
+            PlcInfo = plcInf;
 
             return plcInf;
 
@@ -65,7 +62,7 @@ namespace MewtocolNet {
         #region Operation mode changing 
 
         /// <inheritdoc/>
-        public async Task<bool> SetOperationModeAsync (bool setRun) {
+        public async Task<bool> SetOperationModeAsync(bool setRun) {
 
             string modeChar = setRun ? "R" : "P";
 
@@ -84,7 +81,7 @@ namespace MewtocolNet {
 
         #endregion
 
-        #region Byte range writingv / reading to registers
+        #region Byte range writing / reading to registers
 
         /// <summary>
         /// Writes a byte array to a span over multiple registers at once,
@@ -94,19 +91,15 @@ namespace MewtocolNet {
         /// /// <param name="start">start address of the array</param>
         /// <param name="byteArr"></param>
         /// <returns></returns>
-        public async Task<bool> WriteByteRange (int start, byte[] byteArr, bool flipBytes = false) {
+        public async Task<bool> WriteByteRange(int start, byte[] byteArr) {
 
-            string byteString;
+            if (!IsConnected)
+                throw MewtocolException.NotConnectedSend();
 
-            if(flipBytes) {
-                byteString = byteArr.BigToMixedEndian().ToHexString();
-            } else {
-                byteString = byteArr.ToHexString();
-            }
+            string byteString = byteArr.ToHexString();
 
             var wordLength = byteArr.Length / 2;
-            if (byteArr.Length % 2 != 0)
-                wordLength++;
+            if (byteArr.Length % 2 != 0) wordLength++;
 
             string startStr = start.ToString().PadLeft(5, '0');
             string endStr = (start + wordLength - 1).ToString().PadLeft(5, '0');
@@ -123,52 +116,85 @@ namespace MewtocolNet {
         /// doesn't block the receive thread
         /// </summary>
         /// <param name="start">Start adress</param>
-        /// <param name="count">Number of bytes to get</param>
-        /// <param name="flipBytes">Flips bytes from big to mixed endian</param>
-        /// <param name="onProgress">Gets invoked when the progress changes, contains the progress as a double</param>
-        /// <returns>A byte array or null of there was an error</returns>
-        public async Task<byte[]> ReadByteRangeNonBlocking (int start, int count, bool flipBytes = false, Action<double> onProgress = null) {
+        /// <param name="byteCount">Number of bytes to get</param>
+        /// <param name="onProgress">Gets invoked when the progress changes, contains the progress as a double from 0 - 1.0</param>
+        /// <returns>A byte array of the requested DT area</returns>
+        public async Task<byte[]> ReadByteRangeNonBlocking(int start, int byteCount, Action<double> onProgress = null) {
 
-            var byteList = new List<byte>();
+            if (!IsConnected)
+                throw MewtocolException.NotConnectedSend();
 
-            var wordLength = count / 2;
-            if (count % 2 != 0)
-                wordLength++;
+            onProgress += (p) => Console.WriteLine($"{p * 100:N2}%");
 
-            int blockSize = 8;
+            //on odd bytes add one word
+            var wordLength = byteCount / 2;
+            if (byteCount % 2 != 0) wordLength++;
 
-            //read blocks of max 4 words per msg
-            for (int i = 0; i < wordLength; i += blockSize) {
+            int maxReadBlockSize = maxDataBlocksPerWrite;
 
-                int curWordStart = start + i;
-                int curWordEnd = curWordStart + blockSize - 1;
+            if (byteCount < (maxReadBlockSize * 2)) maxReadBlockSize = wordLength;
 
-                string startStr = curWordStart.ToString().PadLeft(5, '0');
-                string endStr = (curWordEnd).ToString().PadLeft(5, '0');
+            int blocksToReadNoOverflow = wordLength / maxReadBlockSize;
+            int blocksOverflow = wordLength % maxReadBlockSize;
+            int totalBlocksToRead = blocksOverflow != 0 ? blocksToReadNoOverflow + 1 : blocksToReadNoOverflow;
+
+            List<byte> readBytes = new List<byte>();    
+
+            async Task ReadBlock (int wordStart, int wordEnd, Action<double> readProg) {
+
+                int blockSize = wordEnd - wordStart + 1;
+                string startStr = wordStart.ToString().PadLeft(5, '0');
+                string endStr = wordEnd.ToString().PadLeft(5, '0');
 
                 string requeststring = $"%{GetStationNumber()}#RDD{startStr}{endStr}";
-                var result = await SendCommandAsync(requeststring);
+
+                var result = await SendCommandAsync(requeststring, onReceiveProgress: readProg);
 
                 if (result.Success && !string.IsNullOrEmpty(result.Response)) {
 
-                    var bytes = result.Response.ParseDTByteString(blockSize * 4).HexStringToByteArray();
-
-                    if (bytes == null) return null;
-
-                    if (flipBytes) {
-                        byteList.AddRange(bytes.BigToMixedEndian().Take(count).ToArray());
-                    } else {
-                        byteList.AddRange(bytes.Take(count).ToArray());
-                    }
+                    var bytes = result.Response.ParseDTRawStringAsBytes();
+                    readBytes.AddRange(bytes);
 
                 }
 
-                if (onProgress != null)
-                    onProgress((double)i / wordLength);
+            }
+
+            //get all full blocks
+            for (int i = 0; i < blocksToReadNoOverflow; i++) {
+
+                int curWordStart, curWordEnd;
+
+                curWordStart = start + (i * maxReadBlockSize);
+                curWordEnd = curWordStart + maxReadBlockSize - 1;
+
+                await ReadBlock(curWordStart, curWordEnd, (p) => {
+
+                    if (onProgress != null && p != 0) {
+                        var toplevelProg = (double)(i + 1) / totalBlocksToRead;
+                        onProgress(toplevelProg * p);
+                    }
+                        
+                });
+
+                //read remaining block
+                if (i == blocksToReadNoOverflow - 1 && blocksOverflow != 0) {
+
+                    if (onProgress != null)
+                        onProgress((double)readBytes.Count / byteCount);
+
+                    curWordStart = start + ((i + 1) * maxReadBlockSize);
+                    curWordEnd = curWordStart + blocksOverflow - 1;
+
+                    await ReadBlock(curWordStart, curWordEnd, (p) => {});
+
+                }
 
             }
 
-            return byteList.ToArray();
+            if (onProgress != null)
+                onProgress((double)1);
+
+            return readBytes.ToArray();
 
         }
 
@@ -181,7 +207,7 @@ namespace MewtocolNet {
             if (StationNumber != 0xEE && StationNumber > 99)
                 throw new NotSupportedException("Station number was greater 99");
 
-            if(StationNumber == 0xEE) return "EE";
+            if (StationNumber == 0xEE) return "EE";
 
             return StationNumber.ToString().PadLeft(2, '0');
 

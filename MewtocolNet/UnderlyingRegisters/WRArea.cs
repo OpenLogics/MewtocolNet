@@ -1,5 +1,4 @@
 ﻿using MewtocolNet.Registers;
-using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,7 +14,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         internal byte[] wordData = new byte[2];
 
-        internal List<BaseRegister> linkedRegisters = new List<BaseRegister>();
+        internal List<Register> linkedRegisters = new List<Register>();
 
         public ulong AddressStart => addressStart;
 
@@ -25,37 +24,37 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        public void UpdateAreaRegisterValues () {
+        public void UpdateAreaRegisterValues() {
 
 
 
         }
-        public void SetUnderlyingBytes(BaseRegister reg, byte[] bytes) {
+        public void SetUnderlyingBytes(Register reg, byte[] bytes) {
 
 
         }
 
-        public byte[] GetUnderlyingBytes(BaseRegister reg) {
+        public byte[] GetUnderlyingBytes(Register reg) {
 
             return null;
 
         }
 
-        public async Task<bool> ReadRegisterAsync(BaseRegister reg) {
+        public async Task<bool> ReadRegisterAsync(Register reg) {
 
             return true;
 
         }
 
-        public async Task<bool> WriteRegisterAsync(BaseRegister reg, byte[] bytes) {
+        public async Task<bool> WriteRegisterAsync(Register reg, byte[] bytes) {
 
-            return true;    
-        
+            return true;
+
         }
 
         public string GetMewtocolIdent() => GetMewtocolIdentsAllBits();
 
-        public string GetMewtocolIdentsAllBits () {
+        public string GetMewtocolIdentsAllBits() {
 
             StringBuilder asciistring = new StringBuilder();
 
@@ -69,7 +68,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        public string GetMewtocolIdentSingleBit (byte specialAddress) {
+        public string GetMewtocolIdentSingleBit(byte specialAddress) {
 
             //(R|X|Y)(area add [3] + special add [1])
             StringBuilder asciistring = new StringBuilder();

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace MewtocolNet {
+﻿namespace MewtocolNet {
 
     /// <summary>
     /// The register prefixed type

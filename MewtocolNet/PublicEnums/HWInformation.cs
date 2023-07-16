@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace MewtocolNet {
 
@@ -13,7 +11,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Has user ROM
         /// </summary>
-        UserROM = 1,   
+        UserROM = 1,
         /// <summary>
         /// Has IC card
         /// </summary>

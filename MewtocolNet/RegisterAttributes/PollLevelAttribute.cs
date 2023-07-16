@@ -9,7 +9,7 @@ namespace MewtocolNet.RegisterAttributes {
     public class PollLevelAttribute : Attribute {
 
         internal int pollLevel;
-        
+
         public PollLevelAttribute(int level) {
 
             pollLevel = level;

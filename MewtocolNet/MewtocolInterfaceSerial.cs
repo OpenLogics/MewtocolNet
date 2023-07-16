@@ -1,19 +1,14 @@
 ﻿using MewtocolNet.Logging;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.IO.Ports;
 using System.Linq;
 using System.Net.Sockets;
-using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using System.Threading;
-using MewtocolNet.RegisterAttributes;
 
 namespace MewtocolNet {
-    
+
     public sealed class MewtocolInterfaceSerial : MewtocolInterface, IPlcSerial {
 
         private bool autoSerial;
@@ -40,11 +35,11 @@ namespace MewtocolNet {
         //Serial
         internal SerialPort serialClient;
 
-        internal MewtocolInterfaceSerial () : base() { }
+        internal MewtocolInterfaceSerial() : base() { }
 
         /// <inheritdoc/>
-        public IPlcSerial WithPoller () {
-             
+        public IPlcSerial WithPoller() {
+
             usePoller = true;
             return this;
 
@@ -81,12 +76,12 @@ namespace MewtocolNet {
         }
 
         /// <inheritdoc/>
-        public void ConfigureConnection (string _portName, int _baudRate = 19200, int _dataBits = 8, Parity _parity = Parity.Odd, StopBits _stopBits = StopBits.One, int _station = 0xEE) {
+        public void ConfigureConnection(string _portName, int _baudRate = 19200, int _dataBits = 8, Parity _parity = Parity.Odd, StopBits _stopBits = StopBits.One, int _station = 0xEE) {
 
             PortName = _portName;
             SerialBaudRate = _baudRate;
-            SerialDataBits = _dataBits;    
-            SerialParity = _parity;    
+            SerialDataBits = _dataBits;
+            SerialParity = _parity;
             SerialStopBits = _stopBits;
             stationNumber = _station;
 
@@ -98,7 +93,7 @@ namespace MewtocolNet {
 
         }
 
-        internal void ConfigureConnectionAuto () {
+        internal void ConfigureConnectionAuto() {
 
             autoSerial = true;
 
@@ -107,7 +102,7 @@ namespace MewtocolNet {
         public override async Task ConnectAsync() => await ConnectAsync(null);
 
         /// <inheritdoc/>
-        public async Task ConnectAsync (Action onTryingConfig = null) {
+        public async Task ConnectAsync(Action onTryingConfig = null) {
 
             void OnTryConfig() {
                 onTryingConfig();
@@ -120,7 +115,7 @@ namespace MewtocolNet {
 
                 PLCInfo? gotInfo = null;
 
-                if(autoSerial) {
+                if (autoSerial) {
 
                     Logger.Log($"Connecting [AUTO CONFIGURE]: {PortName}", LogLevel.Info, this);
                     gotInfo = await TryConnectAsyncMulti();
@@ -132,8 +127,9 @@ namespace MewtocolNet {
 
                 }
 
-                if(gotInfo != null) {
+                if (gotInfo != null) {
 
+                    await base.ConnectAsync();
                     OnConnected(gotInfo.Value);
 
                 } else {
@@ -155,7 +151,7 @@ namespace MewtocolNet {
 
         }
 
-        private async Task<PLCInfo?> TryConnectAsyncMulti () {
+        private async Task<PLCInfo?> TryConnectAsyncMulti() {
 
             var baudRates = Enum.GetValues(typeof(BaudRate)).Cast<BaudRate>();
 
@@ -171,7 +167,7 @@ namespace MewtocolNet {
                 BaudRate._4800,
                 BaudRate._38400,
                 BaudRate._57600,
-                BaudRate._230400, 
+                BaudRate._230400,
             };
 
             var dataBits = Enum.GetValues(typeof(DataBits)).Cast<DataBits>();
@@ -187,7 +183,7 @@ namespace MewtocolNet {
                         foreach (var stopBit in stopBits) {
 
                             var res = await TryConnectAsyncSingle(PortName, (int)baud, (int)databit, parity, stopBit);
-                            if(res != null) return res;
+                            if (res != null) return res;
 
                         }
 
@@ -201,7 +197,7 @@ namespace MewtocolNet {
 
         }
 
-        private async Task<PLCInfo?> TryConnectAsyncSingle (string port, int baud, int dbits, Parity par, StopBits sbits) {
+        private async Task<PLCInfo?> TryConnectAsyncSingle(string port, int baud, int dbits, Parity par, StopBits sbits) {
 
             try {
 
@@ -251,15 +247,15 @@ namespace MewtocolNet {
 
         }
 
-        private void CloseClient () {
+        private void CloseClient() {
 
-            if(serialClient.IsOpen) {
+            if (serialClient.IsOpen) {
 
                 serialClient.Close();
                 Logger.Log($"Closed [SERIAL]", LogLevel.Verbose, this);
 
             }
-            
+
         }
 
         private protected override void OnDisconnect() {
@@ -274,7 +270,7 @@ namespace MewtocolNet {
 
         }
 
-        private void OnSerialPropsChanged () {
+        private void OnSerialPropsChanged() {
 
             OnPropChange(nameof(PortName));
             OnPropChange(nameof(SerialBaudRate));

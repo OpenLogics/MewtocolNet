@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,7 +14,7 @@ namespace MewtocolNet.ComCassette {
     /// </summary>
     public class CassetteFinder {
 
-        public static async Task<IEnumerable<CassetteInformation>> FindClientsAsync (string ipSource = null, int timeoutMs = 100) {
+        public static async Task<IEnumerable<CassetteInformation>> FindClientsAsync(string ipSource = null, int timeoutMs = 100) {
 
             var from = new IPEndPoint(IPAddress.Any, 0);
 
@@ -55,7 +53,7 @@ namespace MewtocolNet.ComCassette {
             //run the interface querys
             var grouped = await Task.WhenAll(interfacesTasks);
 
-            var decomposed = new List<CassetteInformation>();     
+            var decomposed = new List<CassetteInformation>();
 
             foreach (var grp in grouped) {
 
@@ -73,7 +71,7 @@ namespace MewtocolNet.ComCassette {
 
         }
 
-        private static IEnumerable<NetworkInterface> GetUseableNetInterfaces () {
+        private static IEnumerable<NetworkInterface> GetUseableNetInterfaces() {
 
             foreach (NetworkInterface netInterface in NetworkInterface.GetAllNetworkInterfaces()) {
 
@@ -103,9 +101,9 @@ namespace MewtocolNet.ComCassette {
 
         }
 
-        private static async Task<List<CassetteInformation>> FindClientsForEndpoint (IPEndPoint from, int timeoutMs, string ipEndpointName) {
+        private static async Task<List<CassetteInformation>> FindClientsForEndpoint(IPEndPoint from, int timeoutMs, string ipEndpointName) {
 
-            var cassettesFound = new List<CassetteInformation>();       
+            var cassettesFound = new List<CassetteInformation>();
 
             int plcPort = 9090;
 
@@ -115,7 +113,7 @@ namespace MewtocolNet.ComCassette {
             // The start code of the status transmission response
             byte[] startCode = new byte[] { 0x88, 0xC0, 0x00 };
 
-            using(var udpClient = new UdpClient()) {
+            using (var udpClient = new UdpClient()) {
 
                 udpClient.EnableBroadcast = true;
 

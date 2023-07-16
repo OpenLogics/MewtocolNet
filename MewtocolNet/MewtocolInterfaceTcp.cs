@@ -1,6 +1,5 @@
 using MewtocolNet.Exceptions;
 using MewtocolNet.Logging;
-using MewtocolNet.RegisterAttributes;
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -27,12 +26,12 @@ namespace MewtocolNet {
         /// <inheritdoc/>
         public IPEndPoint HostEndpoint { get; set; }
 
-        internal MewtocolInterfaceTcp () : base() { }
+        internal MewtocolInterfaceTcp() : base() { }
 
         #region TCP connection state handling
 
         /// <inheritdoc/>
-        public void ConfigureConnection (string ip, int port = 9094, int station = 0xEE) {
+        public void ConfigureConnection(string ip, int port = 9094, int station = 0xEE) {
 
             if (!IPAddress.TryParse(ip, out ipAddr))
                 throw new MewtocolException($"The ip: {ip} is no valid ip address");
@@ -63,7 +62,7 @@ namespace MewtocolNet {
         }
 
         /// <inheritdoc/>
-        public override async Task ConnectAsync () {
+        public override async Task ConnectAsync() {
 
             try {
 
@@ -109,6 +108,8 @@ namespace MewtocolNet {
                 var plcinf = await GetPLCInfoAsync();
 
                 if (plcinf != null) {
+
+                    await base.ConnectAsync();
 
                     OnConnected(plcinf.Value);
 

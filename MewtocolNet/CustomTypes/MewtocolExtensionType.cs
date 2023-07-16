@@ -1,7 +1,7 @@
 ﻿namespace MewtocolNet {
 
-    internal interface MewtocolExtensionTypeDT { }
+    internal interface MewtocolExtTypeInit1Word { }
 
-    internal interface MewtocolExtensionTypeDDT { }
+    internal interface MewtocolExtTypeInit2Word { }
 
 }

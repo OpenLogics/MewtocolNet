@@ -15,7 +15,7 @@ namespace MewtocolNet.RegisterAttributes {
 
             var sb = new StringBuilder();
             sb.Append($"{BoundProperty}");
-            if(LinkLength != null) sb.Append($" -Len: {LinkLength}");
+            if (LinkLength != null) sb.Append($" -Len: {LinkLength}");
 
             return sb.ToString();
 

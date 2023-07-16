@@ -18,7 +18,7 @@ namespace MewtocolNet.ComCassette {
         /// <summary>
         /// Indicates if the cassette is currently configurating
         /// </summary>
-        public bool IsConfigurating { get; private set; }   
+        public bool IsConfigurating { get; private set; }
 
         /// <summary>
         /// Name of the COM cassette
@@ -38,7 +38,7 @@ namespace MewtocolNet.ComCassette {
         /// <summary>
         /// Subnet mask of the cassette
         /// </summary>
-        public IPAddress SubnetMask { get; set; }   
+        public IPAddress SubnetMask { get; set; }
 
         /// <summary>
         /// Default gateway of the cassette
@@ -101,7 +101,7 @@ namespace MewtocolNet.ComCassette {
             return new CassetteInformation {
 
                 Name = name,
-                UsesDHCP = dhcpOn,  
+                UsesDHCP = dhcpOn,
                 IPAddress = ipAdd,
                 SubnetMask = subnetMask,
                 GatewayAddress = gateWaysAdd,
@@ -109,14 +109,14 @@ namespace MewtocolNet.ComCassette {
                 Endpoint = endpoint,
                 EndpointName = endpointName,
                 FirmwareVersion = firmwareV,
-                Port = port,    
+                Port = port,
                 Status = status,
 
             };
 
         }
 
-        public async Task SendNewConfigAsync () {
+        public async Task SendNewConfigAsync() {
 
             if (IsConfigurating) return;
 
@@ -166,7 +166,7 @@ namespace MewtocolNet.ComCassette {
 
             var sendBytesArr = sendBytes.ToArray();
 
-            using(var udpClient = new UdpClient()) {
+            using (var udpClient = new UdpClient()) {
 
                 udpClient.Client.Bind(Endpoint);
 
