@@ -1,5 +1,4 @@
-﻿using MewtocolNet.Exceptions;
-using MewtocolNet.RegisterAttributes;
+﻿using MewtocolNet.RegisterAttributes;
 using MewtocolNet.Registers;
 using System;
 using System.Collections.Generic;
@@ -50,7 +49,7 @@ namespace MewtocolNet.RegisterBuilding {
 
                 Type elementType = data.dotnetVarType.GetElementType();
 
-                uint numericSizePerElement = (uint)elementType.DetermineTypeByteSize();
+                uint numericSizePerElement = (uint)elementType.DetermineTypeByteIntialSize();
 
                 if (elementType.IsEnum && numericSizePerElement > 4) {
                     if (data.boundProperty != null) {
@@ -60,25 +59,10 @@ namespace MewtocolNet.RegisterBuilding {
                     }
                 }
 
-                var sizeStateFlags = DynamicSizeState.None;
-
-                //string with size hint
-                if (elementType == typeof(string) && data.perElementByteSizeHint != null) {
-
-                    numericSizePerElement = (uint)data.byteSizeHint + 4;
-                    sizeStateFlags = DynamicSizeState.DynamicallySized | DynamicSizeState.WasSizeUpdated;
-
-                } else if (elementType == typeof(string)) {
-
-                    sizeStateFlags = DynamicSizeState.DynamicallySized | DynamicSizeState.NeedsSizeUpdate;
-
-                }
-
                 var parameters = new object[] { 
                     data.memAddress, 
                     data.byteSizeHint,
                     data.arrayIndicies, 
-                    sizeStateFlags,
                     data.name 
                 };
 
@@ -89,7 +73,6 @@ namespace MewtocolNet.RegisterBuilding {
                     typeof(uint), 
                     typeof(uint), 
                     typeof(int[]), 
-                    typeof(DynamicSizeState), 
                     typeof(string)
                 }, null);
 
@@ -107,7 +90,7 @@ namespace MewtocolNet.RegisterBuilding {
                 //-------------------------------------------
                 //as single register
 
-                uint numericSize = (uint)data.dotnetVarType.DetermineTypeByteSize();
+                uint numericSize = (uint)data.dotnetVarType.DetermineTypeByteIntialSize();
 
                 if (data.dotnetVarType.IsEnum && numericSize > 4) {
                     if (data.boundProperty != null) {
@@ -117,17 +100,15 @@ namespace MewtocolNet.RegisterBuilding {
                     }
                 }
 
-                var sizeStateFlags = DynamicSizeState.None;
+                if(data.dotnetVarType == typeof(string)) {
 
-                //string with size hint
-                if(data.dotnetVarType == typeof(string) && data.byteSizeHint != null) {
+                    if(data.byteSizeHint == null)
+                        throw new NotSupportedException($"Can't create a STRING register without a string size hint");
 
-                    numericSize = (uint)data.byteSizeHint + 4;
-                    sizeStateFlags = DynamicSizeState.DynamicallySized | DynamicSizeState.WasSizeUpdated;
+                    if(data.byteSizeHint < 0)
+                        throw new NotSupportedException($"Can't create a STRING register with a string size hint < 0");
 
-                } else if (data.dotnetVarType == typeof(string)) {
-
-                    sizeStateFlags = DynamicSizeState.DynamicallySized | DynamicSizeState.NeedsSizeUpdate;
+                    numericSize = 4 + data.byteSizeHint.Value;
 
                 }
                 
@@ -135,13 +116,12 @@ namespace MewtocolNet.RegisterBuilding {
 
                 Type paramedClass = typeof(SingleRegister<>).MakeGenericType(data.dotnetVarType);
                 ConstructorInfo constr = paramedClass.GetConstructor(flags, null, new Type[] {
-                    typeof(uint), typeof(uint), typeof(DynamicSizeState) ,typeof(string)
+                    typeof(uint), typeof(uint) ,typeof(string)
                 }, null);
 
                 var parameters = new object[] { 
                     data.memAddress, 
                     numericSize, 
-                    sizeStateFlags, 
                     data.name 
                 };
 
@@ -167,7 +147,7 @@ namespace MewtocolNet.RegisterBuilding {
             //finalize set for every
 
             if (generatedInstance == null)
-                throw new MewtocolException("Failed to build register");
+                throw new ArgumentException("Failed to build register");
 
             if (collectionTarget != null)
                 generatedInstance.WithRegisterCollection(collectionTarget);

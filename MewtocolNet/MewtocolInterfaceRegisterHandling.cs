@@ -1,4 +1,5 @@
-﻿using MewtocolNet.Logging;
+﻿using MewtocolNet.Events;
+using MewtocolNet.Logging;
 using MewtocolNet.RegisterAttributes;
 using MewtocolNet.RegisterBuilding;
 using MewtocolNet.Registers;
@@ -210,19 +211,19 @@ namespace MewtocolNet {
                         if (attr is RegisterAttribute cAttribute) {
 
                             var pollFreqAttr = (PollLevelAttribute)attributes.FirstOrDefault(x => x.GetType() == typeof(PollLevelAttribute));
+                            var stringHintAttr = (StringHintAttribute)attributes.FirstOrDefault(x => x.GetType() == typeof(StringHintAttribute));
 
                             var dotnetType = prop.PropertyType;
                             int pollLevel = 1;
+                            uint? byteHint = (uint?)stringHintAttr?.size;
 
                             if (pollFreqAttr != null) pollLevel = pollFreqAttr.pollLevel;
 
                             //add builder item
                             var stp1 = regBuild
-                            .AddressFromAttribute(cAttribute.MewAddress, cAttribute.TypeDef)
+                            .AddressFromAttribute(cAttribute.MewAddress, cAttribute.TypeDef, collection, prop, byteHint)
                             .AsType(dotnetType.IsEnum ? dotnetType.UnderlyingSystemType : dotnetType)
-                            .PollLevel(pollLevel)
-                            .RegCollection(collection)
-                            .BoundProp(prop);
+                            .PollLevel(pollLevel);
 
                         }
 
@@ -235,7 +236,7 @@ namespace MewtocolNet {
                     collection.OnInterfaceLinked(this);
                 }
 
-                Connected += (i) => {
+                Connected += (s,e) => {
                     if (collection != null)
                         collection.OnInterfaceLinkedAndOnline(this);
                 };
@@ -279,6 +280,9 @@ namespace MewtocolNet {
         internal void InsertRegistersToMemoryStack(List<Register> registers) {
 
             memoryManager.LinkAndMergeRegisters(registers);
+
+            //run a second iteration
+            //memoryManager.LinkAndMergeRegisters();
 
         }
 
@@ -383,9 +387,14 @@ namespace MewtocolNet {
 
         }
 
-        internal void InvokeRegisterChanged(Register reg) {
+        internal void InvokeRegisterChanged(Register reg, object preValue, string preValueString) {
 
-            RegisterChanged?.Invoke(reg);
+            RegisterChanged?.Invoke(this, new RegisterChangedArgs {
+                Register = reg,
+                PreviousValue = preValue,
+                PreviousValueString = preValueString,
+                Value = reg.Value,
+            });
 
         }
 

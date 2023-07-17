@@ -25,32 +25,6 @@ namespace MewtocolNet.RegisterBuilding {
 
             interf.AddRegisters(registers.ToArray());
 
-            Task.Run(interf.memoryManager.CheckAllDynamicallySizedAreas);
-
-            return registers.First();
-
-        }
-
-        /// <summary>
-        /// Adds a single register to the plc stack and returns the generated <see cref="IRegister"/>
-        /// Waits
-        /// </summary>
-        /// <returns>The generated <see cref="IRegister"/></returns>
-        public static async Task<IRegister> AddRegisterAsync (this IPlc plc, Action<RBuildSingle> builder) {
-
-            var assembler = new RegisterAssembler((MewtocolInterface)plc);
-            var regBuilder = new RBuildSingle((MewtocolInterface)plc);
-
-            builder.Invoke(regBuilder);
-
-            var registers = assembler.AssembleAll(regBuilder);
-
-            var interf = (MewtocolInterface)plc;
-
-            interf.AddRegisters(registers.ToArray());
-
-            await interf.memoryManager.CheckAllDynamicallySizedAreas();
-
             return registers.First();
 
         }
@@ -76,33 +50,6 @@ namespace MewtocolNet.RegisterBuilding {
             var interf = (MewtocolInterface)plc;
 
             interf.AddRegisters(registers.ToArray());
-
-            Task.Run(interf.memoryManager.CheckAllDynamicallySizedAreas);
-
-            return plc;
-
-        }
-
-        /// <summary>
-        /// Adds multiple registers to the plc stack at once <br/>
-        /// Using this over adding each register individually will result in better generation time performance
-        /// of the <see cref="UnderlyingRegisters.MemoryAreaManager"/><br/><br/>
-        /// This waits for the memory manager to size all dynamic registers correctly
-        /// </summary>
-        public static async Task<IPlc> AddRegistersAsync (this IPlc plc, Action<RBuildMult> builder) {
-
-            var assembler = new RegisterAssembler((MewtocolInterface)plc);
-            var regBuilder = new RBuildMult((MewtocolInterface)plc);
-
-            builder.Invoke(regBuilder);
-
-            var registers = assembler.AssembleAll(regBuilder);
-
-            var interf = (MewtocolInterface)plc;
-
-            interf.AddRegisters(registers.ToArray());
-
-            await interf.memoryManager.CheckAllDynamicallySizedAreas();
 
             return plc;
 

@@ -1,5 +1,4 @@
-﻿using MewtocolNet.Exceptions;
-using MewtocolNet.Registers;
+﻿using MewtocolNet.Registers;
 using MewtocolNet.TypeConversion;
 using System;
 using System.Collections.Generic;
@@ -30,7 +29,7 @@ namespace MewtocolNet {
             converter = conversions.FirstOrDefault(x => x.GetDotnetType() == underlyingType);
 
             if (converter == null)
-                throw new MewtocolException($"A converter for the dotnet type {underlyingType} doesn't exist");
+                throw new Exception($"A converter for the dotnet type {underlyingType} doesn't exist");
 
             return (T)converter.FromRawData(register, bytes);
 
@@ -55,7 +54,7 @@ namespace MewtocolNet {
             converter = conversions.FirstOrDefault(x => x.GetDotnetType() == underlyingElementType);
 
             if (converter == null)
-                throw new MewtocolException($"A converter for the dotnet type {underlyingElementType} doesn't exist");
+                throw new Exception($"A converter for the dotnet type {underlyingElementType} doesn't exist");
 
             //parse the array from one to n dimensions
             var outArray = Array.CreateInstance(underlyingElementType, indices);
@@ -66,10 +65,10 @@ namespace MewtocolNet {
             
             }
 
-            int sizePerItem = underlyingElementType.DetermineTypeByteSize();
+            int sizePerItem = underlyingElementType.DetermineTypeByteIntialSize();
+
             var iterateItems = indices.Aggregate((a, x) => a * x);
             var indexer = new int[indices.Length];
-
             for (int i = 0; i < iterateItems; i++) {
 
                 int j = i * sizePerItem;    
@@ -150,7 +149,7 @@ namespace MewtocolNet {
             converter = conversions.FirstOrDefault(x => x.GetDotnetType() == underlyingType);
 
             if (converter == null)
-                throw new MewtocolException($"A converter for the type {underlyingType} doesn't exist");
+                throw new Exception($"A converter for the type {underlyingType} doesn't exist");
 
             return converter.ToRawData(register, value);
 

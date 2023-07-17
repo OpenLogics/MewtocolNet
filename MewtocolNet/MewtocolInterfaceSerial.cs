@@ -113,7 +113,10 @@ namespace MewtocolNet {
 
             try {
 
-                PLCInfo? gotInfo = null;
+                Logger.Log($">> Intial connection start <<", LogLevel.Verbose, this);
+                isConnectingStage = true;
+
+                PLCInfo gotInfo = null;
 
                 if (autoSerial) {
 
@@ -129,8 +132,9 @@ namespace MewtocolNet {
 
                 if (gotInfo != null) {
 
+                    IsConnected = true;
                     await base.ConnectAsync();
-                    OnConnected(gotInfo.Value);
+                    OnConnected(gotInfo);
 
                 } else {
 
@@ -145,13 +149,15 @@ namespace MewtocolNet {
 
                 OnMajorSocketExceptionWhileConnecting();
 
+                isConnectingStage = false;
+
             }
 
             tryingSerialConfig -= OnTryConfig;
 
         }
 
-        private async Task<PLCInfo?> TryConnectAsyncMulti() {
+        private async Task<PLCInfo> TryConnectAsyncMulti() {
 
             var baudRates = Enum.GetValues(typeof(BaudRate)).Cast<BaudRate>();
 
@@ -197,7 +203,7 @@ namespace MewtocolNet {
 
         }
 
-        private async Task<PLCInfo?> TryConnectAsyncSingle(string port, int baud, int dbits, Parity par, StopBits sbits) {
+        private async Task<PLCInfo> TryConnectAsyncSingle(string port, int baud, int dbits, Parity par, StopBits sbits) {
 
             try {
 

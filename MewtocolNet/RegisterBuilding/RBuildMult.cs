@@ -34,11 +34,16 @@ namespace MewtocolNet.RegisterBuilding {
         }
 
         //internal use only, adds a type definition (for use when building from attibute)
-        internal SAddress AddressFromAttribute(string plcAddrName, string typeDef) {
+        internal SAddress AddressFromAttribute(string plcAddrName, string typeDef, RegisterCollection regCol, PropertyInfo prop, uint? bytesizeHint = null) {
 
             var built = Address(plcAddrName);
+            
             built.Data.typeDef = typeDef;
             built.Data.buildSource = RegisterBuildSource.Attribute;
+            built.Data.regCollection = regCol;
+            built.Data.boundProperty = prop;
+            built.Data.byteSizeHint = bytesizeHint; 
+
             return built;
 
         }
@@ -49,15 +54,38 @@ namespace MewtocolNet.RegisterBuilding {
 
         public new class SAddress : RBuildBase.SAddress {
 
-            public new TempRegister<T> AsType<T>(int? sizeHint = null) => new TempRegister<T>().Map(base.AsType<T>(sizeHint));
+            public new TypedRegister AsType<T>() => new TypedRegister().Map(base.AsType<T>());
 
-            public new TempRegister AsType(Type type) => new TempRegister().Map(base.AsType(type));
+            public new TypedRegister AsType(Type type) => new TypedRegister().Map(base.AsType(type));
 
-            public new TempRegister AsType(PlcVarType type) => new TempRegister().Map(base.AsType(type));
+            public new TypedRegister AsType(PlcVarType type) => new TypedRegister().Map(base.AsType(type));
 
-            public new TempRegister AsType(string type) => new TempRegister().Map(base.AsType(type));
+            public new TypedRegister AsType(string type) => new TypedRegister().Map(base.AsType(type));
 
-            public new TempRegister AsTypeArray<T>(params int[] indicies) => new TempRegister().Map(base.AsTypeArray<T>(indicies));
+            public new TypedRegister AsTypeArray<T>(params int[] indicies) => new TypedRegister().Map(base.AsTypeArray<T>(indicies));
+
+
+        }
+
+        #endregion
+
+        #region Typing size hint
+
+        public new class TypedRegister : RBuildBase.TypedRegister {
+
+            public new OptionsRegister SizeHint(int hint) => new OptionsRegister().Map(base.SizeHint(hint));
+
+            ///<inheritdoc cref="RBuildBase.OptionsRegister.PollLevel(int)"/>
+            public new OutRegister PollLevel(int level) => new OutRegister().Map(base.PollLevel(level));
+
+            /// <summary>
+            /// Outputs the generated <see cref="IRegister"/>
+            /// </summary>
+            public void Out(Action<IRegister> registerOut) {
+
+                Data.registerOut = registerOut;
+
+            }
 
         }
 
@@ -65,64 +93,36 @@ namespace MewtocolNet.RegisterBuilding {
 
         #region Options stage
 
-        public new class TempRegister<T> : RBuildBase.TempRegister<T> {
+        public new class OptionsRegister : RBuildBase.OptionsRegister {
 
-            internal TempRegister() { }
-
-            internal TempRegister(StepData data, RBuildBase bldr) : base(data, bldr) { }
-
-            ///<inheritdoc cref="RBuildBase.TempRegister.PollLevel(int)"/>
-            public new TempRegister<T> PollLevel(int level) => new TempRegister<T>().Map(base.PollLevel(level));
+            ///<inheritdoc cref="RBuildBase.OptionsRegister.PollLevel(int)"/>
+            public new OutRegister PollLevel(int level) => new OutRegister().Map(base.PollLevel(level));
 
             /// <summary>
             /// Outputs the generated <see cref="IRegister"/>
             /// </summary>
-            public TempRegister<T> Out(Action<IRegister> registerOut) {
+            public void Out(Action<IRegister> registerOut) {
 
                 Data.registerOut = registerOut;
-                return this;
-
-            }
-
-        }
-
-        public new class TempRegister : RBuildBase.TempRegister {
-
-            internal TempRegister() { }
-
-            internal TempRegister(StepData data, RBuildBase bldr) : base(data, bldr) { }
-
-            ///<inheritdoc cref="RBuildBase.TempRegister.PollLevel(int)"/>
-            public new TempRegister PollLevel(int level) => new TempRegister().Map(base.PollLevel(level));
-
-            /// <summary>
-            /// Outputs the generated <see cref="IRegister"/>
-            /// </summary>
-            public TempRegister Out(Action<IRegister> registerOut) {
-
-                Data.registerOut = registerOut;
-                return this;
-
-            }
-
-            //internal use only
-            internal TempRegister RegCollection(RegisterCollection col) {
-
-                Data.regCollection = col;
-                return this;
-
-            }
-
-            internal TempRegister BoundProp(PropertyInfo prop) {
-
-                Data.boundProperty = prop;
-                return this;
 
             }
 
         }
 
         #endregion
+
+        public class OutRegister : SBase {
+
+            /// <summary>
+            /// Outputs the generated <see cref="IRegister"/>
+            /// </summary>
+            public void Out(Action<IRegister> registerOut) {
+
+                Data.registerOut = registerOut;
+
+            }
+
+        }
 
     }
 

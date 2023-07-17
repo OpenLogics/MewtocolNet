@@ -1,4 +1,6 @@
-﻿using System.Globalization;
+﻿using System.ComponentModel;
+using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 namespace MewtocolNet {
@@ -6,42 +8,84 @@ namespace MewtocolNet {
     /// <summary>
     /// Holds various informations about the PLC
     /// </summary>
-    public struct PLCInfo {
+    public class PLCInfo : INotifyPropertyChanged {
 
+        private PlcType typeCode;
+        private string typeName;
+        private OPMode operationMode;
+        private HWInformation hardwareInformation;
+        private string selfDiagnosticError;
+       
         /// <summary>
         /// The type of the PLC named by Panasonic
         /// </summary>
-        public PlcType TypeCode { get; private set; }
+        public PlcType TypeCode {
+            get => typeCode;
+            internal set {
+                typeCode = value;
+                OnPropChange();
+                //update name
+                typeName = typeCode.ToName();
+                OnPropChange(nameof(TypeName));
+            }
+        }
 
         /// <summary>
-        /// Contains information about the PLCs operation modes as flags
+        /// The full qualified name of the PLC 
         /// </summary>
-        public OPMode OperationMode { get; private set; }
-
-        /// <summary>
-        /// Hardware information flags about the PLC
-        /// </summary>
-        public HWInformation HardwareInformation { get; private set; }
+        public string TypeName => typeName;
 
         /// <summary>
         /// Program capacity in 1K steps
         /// </summary>
-        public int ProgramCapacity { get; private set; }
+        public int ProgramCapacity { get; internal set; }
 
         /// <summary>
         /// Version of the cpu
         /// </summary>
-        public string CpuVersion { get; private set; }
+        public string CpuVersion { get; internal set; }
+
+        /// <summary>
+        /// Contains information about the PLCs operation modes as flags
+        /// </summary>
+        public OPMode OperationMode { 
+            get => operationMode; 
+            internal set {
+                operationMode = value;
+                OnPropChange();
+                OnPropChange(nameof(IsRunMode));
+            }
+        }
+
+        /// <summary>
+        /// Hardware information flags about the PLC
+        /// </summary>
+        public HWInformation HardwareInformation { 
+            get => hardwareInformation; 
+            internal set {
+                hardwareInformation = value;
+                OnPropChange();
+
+            }
+        }
 
         /// <summary>
         /// Current error code of the PLC
         /// </summary>
-        public string SelfDiagnosticError { get; internal set; }
+        public string SelfDiagnosticError { 
+            get => selfDiagnosticError; 
+            internal set {
+                selfDiagnosticError = value;
+                OnPropChange();
+            }
+        }
 
         /// <summary>
         /// Quickcheck for the runmode flag
         /// </summary>
         public bool IsRunMode => OperationMode.HasFlag(OPMode.RunMode);
+
+        public event PropertyChangedEventHandler PropertyChanged;
 
         internal bool TryExtendFromEXRT(string msg) {
 
@@ -114,7 +158,25 @@ namespace MewtocolNet {
 
         public override string ToString() {
 
-            return $"{TypeCode.ToName()}, OP: {OperationMode}";
+            return $"{TypeName}, OP: {OperationMode}";
+
+        }
+
+        public override bool Equals(object obj) {
+
+            if ((obj == null) || !this.GetType().Equals(obj.GetType())) {
+                return false;
+            } else {
+                return (PLCInfo)obj == this;
+            }
+
+        }
+
+        public override int GetHashCode() => GetHashCode();
+
+        private protected void OnPropChange([CallerMemberName] string propertyName = null) {
+
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
         }
 

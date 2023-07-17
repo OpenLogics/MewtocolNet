@@ -19,14 +19,16 @@ namespace MewtocolNet {
 
         #region Byte and string operation helpers
 
-        public static int DetermineTypeByteSize(this Type type) {
+        public static int DetermineTypeByteIntialSize(this Type type) {
 
             //enums can only be of numeric types
             if (type.IsEnum) return Marshal.SizeOf(Enum.GetUnderlyingType(type));
 
             //strings get always set with 4 bytes because the first 4 bytes contain the length
             if (type == typeof(string)) return 4;
-            
+            if (type == typeof(TimeSpan)) return 4;
+            if (type == typeof(DateTime)) return 4;
+
             if (type.Namespace.StartsWith("System")) return Marshal.SizeOf(type);
 
             if (typeof(MewtocolExtTypeInit1Word).IsAssignableFrom(type)) return 2;
@@ -155,6 +157,15 @@ namespace MewtocolNet {
             for (var i = 0; i < s.Length; i += partLength)
                 yield return s.Substring(i, Math.Min(partLength, s.Length - i));
 
+        }
+
+        public static string Ellipsis(this string str, int maxLength) {
+
+            if (string.IsNullOrEmpty(str) || str.Length <= maxLength)
+                return str;
+
+            return  $"{str.Substring(0, maxLength - 3)}...";
+        
         }
 
         /// <summary>

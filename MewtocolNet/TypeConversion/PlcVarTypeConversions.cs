@@ -1,5 +1,4 @@
-﻿using MewtocolNet.Exceptions;
-using MewtocolNet.Registers;
+﻿using MewtocolNet.Registers;
 using System;
 using System.Collections.Generic;
 
@@ -45,7 +44,7 @@ namespace MewtocolNet {
 
             }
 
-            throw new MewtocolException("No default register type found");
+            throw new Exception("No default register type found");
 
         }
 
@@ -59,7 +58,7 @@ namespace MewtocolNet {
 
             }
 
-            throw new MewtocolException("No default plcvar type found");
+            throw new Exception("No default plcvar type found");
 
         }
 

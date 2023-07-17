@@ -1,13 +1,15 @@
-using MewtocolNet.Exceptions;
 using MewtocolNet.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 
 namespace MewtocolNet {
 
     public abstract partial class MewtocolInterface {
+
+        internal bool isConnectingStage = false;
 
         internal int maxDataBlocksPerWrite = 8;
 
@@ -17,20 +19,26 @@ namespace MewtocolNet {
         /// Gets generic information about the PLC
         /// </summary>
         /// <returns>A PLCInfo class</returns>
-        public async Task<PLCInfo?> GetPLCInfoAsync(int timeout = -1) {
+        public async Task<PLCInfo> GetPLCInfoAsync(int timeout = -1) {
 
-            var resRT = await SendCommandAsync("%EE#RT", timeoutMs: timeout);
+            MewtocolFrameResponse resRT = await SendCommandAsync("%EE#RT", timeoutMs: timeout);
 
             if (!resRT.Success) {
 
-                //timeouts are ok and dont throw
+                //timeouts are ok and don't throw
                 if (resRT == MewtocolFrameResponse.Timeout) return null;
 
-                throw new MewtocolException(resRT.Error);
+                throw new Exception(resRT.Error);
 
             }
 
-            var resEXRT = await SendCommandAsync("%EE#EX00RT00", timeoutMs: timeout);
+            MewtocolFrameResponse? resEXRT = null;
+
+            if(isConnectingStage) {
+
+                resEXRT = await SendCommandAsync("%EE#EX00RT00", timeoutMs: timeout);
+
+            }
 
             //timeouts are ok and dont throw
             if (!resRT.Success && resRT == MewtocolFrameResponse.Timeout) return null;
@@ -40,20 +48,27 @@ namespace MewtocolNet {
             //dont overwrite, use first
             if (!PLCInfo.TryFromRT(resRT.Response, out plcInf)) {
 
-                throw new MewtocolException("The RT message could not be parsed");
+                throw new Exception("The RT message could not be parsed");
 
             }
 
-            //overwrite first with EXRT
-            if (resEXRT.Success && !plcInf.TryExtendFromEXRT(resEXRT.Response)) {
+            //overwrite first with EXRT only on connecting stage
+            if (isConnectingStage && resEXRT != null && resEXRT.Value.Success && !plcInf.TryExtendFromEXRT(resEXRT.Value.Response)) {
 
-                throw new MewtocolException("The EXRT message could not be parsed");
+                throw new Exception("The EXRT message could not be parsed");
 
+            } 
+
+            if(isConnectingStage) {
+                //set the intial obj
+                PlcInfo = plcInf;
+            } else {
+                //update the obj with RT dynamic values only
+                PlcInfo.SelfDiagnosticError = plcInf.SelfDiagnosticError;   
+                PlcInfo.OperationMode = plcInf.OperationMode;
             }
 
-            PlcInfo = plcInf;
-
-            return plcInf;
+            return PlcInfo;
 
         }
 
@@ -93,9 +108,6 @@ namespace MewtocolNet {
         /// <returns></returns>
         public async Task<bool> WriteByteRange(int start, byte[] byteArr) {
 
-            if (!IsConnected)
-                throw MewtocolException.NotConnectedSend();
-
             string byteString = byteArr.ToHexString();
 
             var wordLength = byteArr.Length / 2;
@@ -120,11 +132,6 @@ namespace MewtocolNet {
         /// <param name="onProgress">Gets invoked when the progress changes, contains the progress as a double from 0 - 1.0</param>
         /// <returns>A byte array of the requested DT area</returns>
         public async Task<byte[]> ReadByteRangeNonBlocking(int start, int byteCount, Action<double> onProgress = null) {
-
-            if (!IsConnected)
-                throw MewtocolException.NotConnectedSend();
-
-            onProgress += (p) => Console.WriteLine($"{p * 100:N2}%");
 
             //on odd bytes add one word
             var wordLength = byteCount / 2;

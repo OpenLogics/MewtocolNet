@@ -1,5 +1,4 @@
-﻿using MewtocolNet.Exceptions;
-using MewtocolNet.Registers;
+﻿using MewtocolNet.Registers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -136,9 +135,11 @@ namespace MewtocolNet.TypeConversion {
                 PlcVarType = PlcVarType.STRING,
                 FromRaw = (reg, bytes) => {
 
-                    if(bytes == null || bytes.Length <= 4) {
+                    if(bytes.Length == 4) return string.Empty;
 
-                        throw new MewtocolException("Failed to convert string bytes, response not long enough");
+                    if(bytes == null || bytes.Length < 4) {
+
+                        throw new Exception("Failed to convert string bytes, response not long enough");
 
                     }
 

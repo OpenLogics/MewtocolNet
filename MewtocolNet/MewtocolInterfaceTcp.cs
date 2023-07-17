@@ -1,4 +1,3 @@
-using MewtocolNet.Exceptions;
 using MewtocolNet.Logging;
 using System;
 using System.Net;
@@ -34,7 +33,7 @@ namespace MewtocolNet {
         public void ConfigureConnection(string ip, int port = 9094, int station = 0xEE) {
 
             if (!IPAddress.TryParse(ip, out ipAddr))
-                throw new MewtocolException($"The ip: {ip} is no valid ip address");
+                throw new NotSupportedException($"The ip: {ip} is no valid ip address");
 
             if (stationNumber != 0xEE && stationNumber > 99)
                 throw new NotSupportedException("Station number can't be greater than 99");
@@ -65,6 +64,9 @@ namespace MewtocolNet {
         public override async Task ConnectAsync() {
 
             try {
+
+                Logger.Log($">> Intial connection start <<", LogLevel.Verbose, this);
+                isConnectingStage = true;
 
                 if (HostEndpoint != null) {
 
@@ -109,9 +111,9 @@ namespace MewtocolNet {
 
                 if (plcinf != null) {
 
+                    IsConnected = true;
                     await base.ConnectAsync();
-
-                    OnConnected(plcinf.Value);
+                    OnConnected(plcinf);
 
                 } else {
 
@@ -125,8 +127,9 @@ namespace MewtocolNet {
             } catch (SocketException) {
 
                 OnMajorSocketExceptionWhileConnecting();
+                isConnectingStage = false;
 
-            }
+            } 
 
         }
 

@@ -1,11 +1,12 @@
-﻿using MewtocolNet.Exceptions;
-using MewtocolNet.RegisterAttributes;
+﻿using MewtocolNet.RegisterAttributes;
+using MewtocolNet.RegisterBuilding;
 using MewtocolNet.SetupClasses;
 using System;
 using System.Collections.Generic;
 using System.IO.Ports;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 
 namespace MewtocolNet {
 
@@ -96,7 +97,7 @@ namespace MewtocolNet {
             var portnames = SerialPort.GetPortNames();
 
             if (!portnames.Any(x => x == portName))
-                throw new MewtocolException($"The port {portName} is no valid port");
+                throw new NotSupportedException($"The port {portName} is no valid port");
 
         }
 
@@ -256,6 +257,32 @@ namespace MewtocolNet {
                     return new EndInit<T> {
                         postInit = this
                     };
+
+                } catch {
+
+                    throw;
+
+                }
+
+            }
+
+            /// <summary>
+            /// A builder for attaching register collections
+            /// </summary>
+            public PostInit<T> WithRegisters(Action<RBuildMult> builder) {
+
+                try {
+
+                    var plc = (MewtocolInterface)(object)intf;
+                    var assembler = new RegisterAssembler(plc);
+                    var regBuilder = new RBuildMult(plc);
+
+                    builder.Invoke(regBuilder);
+
+                    var registers = assembler.AssembleAll(regBuilder);
+                    plc.AddRegisters(registers.ToArray());
+
+                    return this;
 
                 } catch {
 

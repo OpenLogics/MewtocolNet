@@ -64,8 +64,6 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         internal async Task<bool> RequestByteReadAsync(ulong addStart, ulong addEnd) {
 
-            await CheckDynamicallySizedRegistersAsync();
-
             var station = mewInterface.GetStationNumber();
 
             string requeststring = $"%{station}#RD{GetMewtocolIdent(addStart, addEnd)}";
@@ -113,22 +111,6 @@ namespace MewtocolNet.UnderlyingRegisters {
             bytes.CopyTo(underlyingBytes, copyOffset);
 
             UpdateAreaRegisterValues();
-
-        }
-
-        internal async Task CheckDynamicallySizedRegistersAsync() {
-
-            //calibrating at runtime sized registers
-            var uncalibratedStringRegisters = managedRegisters
-            .SelectMany(x => x.Linked)
-            .Where(x => x.dynamicSizeState.HasFlag(DynamicSizeState.DynamicallySized | DynamicSizeState.NeedsSizeUpdate))
-            .ToList();
-
-            foreach (var register in uncalibratedStringRegisters)
-                await register.UpdateDynamicSize();
-
-            if (uncalibratedStringRegisters.Count > 0)
-                mewInterface.memoryManager.LinkAndMergeRegisters();
 
         }
 

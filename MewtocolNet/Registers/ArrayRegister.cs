@@ -1,6 +1,6 @@
-﻿using MewtocolNet.Exceptions;
-using System;
+﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,7 +12,7 @@ namespace MewtocolNet.Registers {
     /// </summary>
     public class ArrayRegister<T> : Register {
 
-        internal int[] indicies;
+        internal int[] indices;
 
         internal uint addressLength;
 
@@ -25,12 +25,11 @@ namespace MewtocolNet.Registers {
         public ArrayRegister() =>
         throw new NotSupportedException("Direct register instancing is not supported, use the builder pattern");
 
-        internal ArrayRegister(uint _address, uint _reservedByteSize, int[] _indicies , DynamicSizeState dynamicSizeSt, string _name = null) {
+        internal ArrayRegister(uint _address, uint _reservedByteSize, int[] _indicies, string _name = null) {
 
             name = _name;
             memoryAddress = _address;
-            dynamicSizeState = dynamicSizeSt;
-            indicies = _indicies;   
+            indices = _indicies;   
 
             //calc mem length 
             //because one register is always 1 word (2 bytes) long, if the bytecount is uneven we get the trailing word too
@@ -50,7 +49,22 @@ namespace MewtocolNet.Registers {
 
             if (Value == null) return "null";
 
-            return ((byte[])Value).ToHexString("-");
+            if(typeof(T) == typeof(byte[])) {
+
+                return ((byte[])Value).ToHexString("-");
+
+            }
+
+            StringBuilder sb = new StringBuilder();
+            var valueIenum = (IEnumerable)Value;
+
+            foreach (var el in valueIenum) {
+
+                sb.Append($"{el}, ");
+
+            }
+          
+            return ArrayToString((Array)Value);
 
         }
 
@@ -62,9 +76,6 @@ namespace MewtocolNet.Registers {
 
         /// <inheritdoc/>
         public override async Task<bool> WriteAsync(object value) {
-
-            if (!attachedInterface.IsConnected)
-                throw MewtocolException.NotConnectedSend();
 
             var encoded = PlcValueParser.Encode(this, (T)value);
             var res = await attachedInterface.WriteByteRange((int)MemoryAddress, encoded);
@@ -90,9 +101,6 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public override async Task<object> ReadAsync() {
 
-            if (!attachedInterface.IsConnected)
-                throw MewtocolException.NotConnectedSend();
-
             var res = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, (int)GetRegisterAddressLen() * 2);
             if (res == null) return null;
 
@@ -110,8 +118,9 @@ namespace MewtocolNet.Registers {
 
             AddSuccessRead();
 
-            var parsed = PlcValueParser.ParseArray<T>(this, indicies, bytes);
+            var parsed = PlcValueParser.ParseArray<T>(this, indices, bytes);
             UpdateHoldingValue(parsed);
+
             return parsed;
 
         }
@@ -127,11 +136,59 @@ namespace MewtocolNet.Registers {
 
             if (changeTriggerBitArr || changeTriggerGeneral) {
 
+                var beforeVal = lastValue;
+                var beforeValStr = GetValueString();
+
                 lastValue = val;
 
                 TriggerNotifyChange();
-                attachedInterface.InvokeRegisterChanged(this);
+                attachedInterface.InvokeRegisterChanged(this, beforeVal, beforeValStr);
 
+            }
+
+        }
+
+
+        private string ArrayToString(Array array) {
+
+            int rank = array.Rank;
+            int[] lengths = new int[rank];
+            int[] indices = new int[rank];
+            for (int i = 0; i < rank; i++) {
+                lengths[i] = array.GetLength(i);
+            }
+
+            string result = "[";
+            result += ArrayToStringRecursive(array, lengths, indices, 0);
+            result += "]";
+            return result;
+
+        }
+
+        private string ArrayToStringRecursive(Array array, int[] lengths, int[] indices, int dimension) {
+
+            if (dimension == array.Rank - 1) {
+                
+                string result = "[";
+                for (indices[dimension] = 0; indices[dimension] < lengths[dimension]; indices[dimension]++) {
+                    result += array.GetValue(indices).ToString();
+                    if (indices[dimension] < lengths[dimension] - 1) {
+                        result += ",";
+                    }
+                }
+                result += "]";
+                return result;
+
+            } else {
+                string result = "[";
+                for (indices[dimension] = 0; indices[dimension] < lengths[dimension]; indices[dimension]++) {
+                    result += ArrayToStringRecursive(array, lengths, indices, dimension + 1);
+                    if (indices[dimension] < lengths[dimension] - 1) {
+                        result += ",";
+                    }
+                }
+                result += "]";
+                return result;
             }
 
         }

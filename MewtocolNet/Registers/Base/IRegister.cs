@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using MewtocolNet.Events;
 
 namespace MewtocolNet.Registers {
 
@@ -11,7 +12,7 @@ namespace MewtocolNet.Registers {
         /// <summary>
         /// Gets called whenever the value was changed
         /// </summary>
-        event Action<object> ValueChanged;
+        event RegisterChangedEventHandler ValueChanged;
 
         /// <summary>
         /// Type of the underlying register

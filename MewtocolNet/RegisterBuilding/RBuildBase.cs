@@ -305,7 +305,7 @@ namespace MewtocolNet.RegisterBuilding {
             /// <typeparam name="T">
             /// <include file="../Documentation/docs.xml" path='extradoc/class[@name="support-conv-types"]/*' />
             /// </typeparam>
-            public TempRegister<T> AsType<T>(int? sizeHint = null) {
+            public TypedRegister AsType<T>() {
 
                 if (!typeof(T).IsAllowedPlcCastingType()) {
 
@@ -313,10 +313,9 @@ namespace MewtocolNet.RegisterBuilding {
 
                 }
 
-                Data.byteSizeHint = (uint?)sizeHint;
                 Data.dotnetVarType = typeof(T);
 
-                return new TempRegister<T>(Data, builder);
+                return new TypedRegister().Map(this);
 
             }
 
@@ -327,7 +326,7 @@ namespace MewtocolNet.RegisterBuilding {
             /// <param name="type">
             /// <include file="../Documentation/docs.xml" path='extradoc/class[@name="support-conv-types"]/*' />
             /// </param>
-            public TempRegister AsType(Type type) {
+            public TypedRegister AsType(Type type) {
 
                 //was ranged syntax array build
                 if (Data.wasAddressStringRangeBased && type.IsArray && type.GetArrayRank() == 1) {
@@ -344,14 +343,14 @@ namespace MewtocolNet.RegisterBuilding {
 
                     }
 
-                    int byteSizePerItem = elementType.DetermineTypeByteSize();
+                    int byteSizePerItem = elementType.DetermineTypeByteIntialSize();
 
                     //check if it fits without remainder
                     if (Data.byteSizeHint % byteSizePerItem != 0) {
                         throw new NotSupportedException($"The array element type {elementType} doesn't fit into the adress range");
                     }
 
-                    return (TempRegister)generic.Invoke(this, new object[] { 
+                    return (TypedRegister)generic.Invoke(this, new object[] { 
                         //element count
                         new int[] { (int)((Data.byteSizeHint / byteSizePerItem)) }
                     });
@@ -369,9 +368,9 @@ namespace MewtocolNet.RegisterBuilding {
 
                         return AsType(Data.typeDef);
 
-                    } else if ((type.IsArray || type == typeof(string)) && Data.typeDef == null) {
+                    } else if (type.IsArray && Data.typeDef == null) {
 
-                        throw new NotSupportedException("Typedef parameter is needed for array or string types");
+                        throw new NotSupportedException("Typedef parameter is needed for array types");
 
                     } else if (Data.typeDef != null) {
 
@@ -389,18 +388,18 @@ namespace MewtocolNet.RegisterBuilding {
 
                 Data.dotnetVarType = type;
 
-                return new TempRegister(Data, builder);
+                return new TypedRegister().Map(this);
 
             }
 
             /// <summary>
             /// Sets the register type as a predefined <see cref="PlcVarType"/>
             /// </summary>
-            public TempRegister AsType(PlcVarType type) {
+            public TypedRegister AsType(PlcVarType type) {
 
                 Data.dotnetVarType = type.GetDefaultDotnetType();
 
-                return new TempRegister(Data, builder);
+                return new TypedRegister().Map(this);
 
             }
 
@@ -421,10 +420,13 @@ namespace MewtocolNet.RegisterBuilding {
             /// <item><term>DWORD</term><description>32 bit double word interpreted as <see cref="uint"/></description></item>
             /// </list>
             /// </summary>
-            public TempRegister AsType(string type) {
+            public TypedRegister AsType(string type) {
 
-                var stringMatch = Regex.Match(type, @"STRING *\[(?<len>[0-9]*)\]", RegexOptions.IgnoreCase);
-                var arrayMatch = Regex.Match(type, @"ARRAY *\[(?<S1>[0-9]*)..(?<E1>[0-9]*)(?:\,(?<S2>[0-9]*)..(?<E2>[0-9]*))?(?:\,(?<S3>[0-9]*)..(?<E3>[0-9]*))?\] *OF {1,}(?<t>.*)", RegexOptions.IgnoreCase);
+                var regexString = new Regex(@"^STRING *\[(?<len>[0-9]*)\]$", RegexOptions.IgnoreCase);
+                var regexArray = new Regex(@"^ARRAY *\[(?<S1>[0-9]*)..(?<E1>[0-9]*)(?:\,(?<S2>[0-9]*)..(?<E2>[0-9]*))?(?:\,(?<S3>[0-9]*)..(?<E3>[0-9]*))?\] *OF {1,}(?<t>.*)$", RegexOptions.IgnoreCase);
+
+                var stringMatch = regexString.Match(type);
+                var arrayMatch = regexArray.Match(type);
 
                 if (Enum.TryParse<PlcVarType>(type, out var parsed)) {
 
@@ -440,44 +442,55 @@ namespace MewtocolNet.RegisterBuilding {
                     //invoke generic AsTypeArray
 
                     string arrTypeString = arrayMatch.Groups["t"].Value;
+                    Type dotnetArrType = null;
 
-                    if (Enum.TryParse<PlcVarType>(arrTypeString, out var parsedArrType)) {
+                    var stringMatchInArray = regexString.Match(arrTypeString);
 
-                        var dotnetArrType = parsedArrType.GetDefaultDotnetType();
-                        var indices = new List<int>();
+                    if (Enum.TryParse<PlcVarType>(arrTypeString, out var parsedArrType) && parsedArrType != PlcVarType.STRING) {
 
-                        for (int i = 1; i < 4; i++) {
+                        dotnetArrType = parsedArrType.GetDefaultDotnetType();
 
-                            var arrStart = arrayMatch.Groups[$"S{i}"]?.Value;
-                            var arrEnd = arrayMatch.Groups[$"E{i}"]?.Value;
-                            if (string.IsNullOrEmpty(arrStart) || string.IsNullOrEmpty(arrEnd)) break;
 
-                            var arrStartInt = int.Parse(arrStart);
-                            var arrEndInt = int.Parse(arrEnd);
+                    } else if (stringMatchInArray.Success) {
 
-                            indices.Add(arrEndInt - arrStartInt + 1);
-
-                        }
-
-                        var arr = Array.CreateInstance(dotnetArrType, indices.ToArray());
-                        var arrType = arr.GetType();
-
-                        MethodInfo method = typeof(SAddress).GetMethod(nameof(AsTypeArray));
-                        MethodInfo generic = method.MakeGenericMethod(arrType);
-
-                        var tmp = (TempRegister)generic.Invoke(this, new object[] {
-                            indices.ToArray()
-                        });
-
-                        tmp.builder = builder;
-                        tmp.Data = Data;
-
-                        return tmp;
+                        dotnetArrType = typeof(string);
+                        //Data.byteSizeHint = uint.Parse(stringMatch.Groups["len"].Value);
 
                     } else {
 
                         throw new NotSupportedException($"The FP type '{arrTypeString}' was not recognized");
+
                     }
+
+                    var indices = new List<int>();
+
+                    for (int i = 1; i < 4; i++) {
+
+                        var arrStart = arrayMatch.Groups[$"S{i}"]?.Value;
+                        var arrEnd = arrayMatch.Groups[$"E{i}"]?.Value;
+                        if (string.IsNullOrEmpty(arrStart) || string.IsNullOrEmpty(arrEnd)) break;
+
+                        var arrStartInt = int.Parse(arrStart);
+                        var arrEndInt = int.Parse(arrEnd);
+
+                        indices.Add(arrEndInt - arrStartInt + 1);
+
+                    }
+
+                    var arr = Array.CreateInstance(dotnetArrType, indices.ToArray());
+                    var arrType = arr.GetType();
+
+                    MethodInfo method = typeof(SAddress).GetMethod(nameof(AsTypeArray));
+                    MethodInfo generic = method.MakeGenericMethod(arrType);
+
+                    var tmp = (TypedRegister)generic.Invoke(this, new object[] {
+                        indices.ToArray()
+                    });
+
+                    tmp.builder = builder;
+                    tmp.Data = Data;
+
+                    return tmp;
 
                 } else {
 
@@ -485,7 +498,7 @@ namespace MewtocolNet.RegisterBuilding {
 
                 }
 
-                return new TempRegister(Data, builder);
+                return new TypedRegister().Map(this);
 
             }
 
@@ -507,7 +520,7 @@ namespace MewtocolNet.RegisterBuilding {
             /// ARRAY [0..2, 0..3, 0..4] OF INT = <c>AsTypeArray&lt;short[,,]&gt;(3,4,5)</c><br/>
             /// ARRAY [5..6, 0..2] OF DWORD = <c>AsTypeArray&lt;DWord[,]&gt;(2, 3)</c><br/>
             /// </example>
-            public TempRegister AsTypeArray<T>(params int[] indicies) {
+            public TypedRegister AsTypeArray<T>(params int[] indicies) {
 
                 if (!typeof(T).IsArray)
                     throw new NotSupportedException($"The type {typeof(T)} was no array");
@@ -526,7 +539,7 @@ namespace MewtocolNet.RegisterBuilding {
 
                 Data.dotnetVarType = typeof(T);
 
-                int byteSizePerItem = elBaseType.DetermineTypeByteSize();
+                int byteSizePerItem = elBaseType.DetermineTypeByteIntialSize();
                 int calcedTotalByteSize = indicies.Aggregate((a, x) => a * x) * byteSizePerItem;
 
                 Data.byteSizeHint = (uint)calcedTotalByteSize;
@@ -536,7 +549,31 @@ namespace MewtocolNet.RegisterBuilding {
                     throw new NotSupportedException($"The array element type {elBaseType} doesn't fit into the adress range");
                 }
 
-                return new TempRegister(Data, builder);
+                return new TypedRegister().Map(this);
+
+            }
+
+        }
+
+        #endregion
+
+        #region Typing size hint
+
+        public class TypedRegister : SBase {
+
+            public OptionsRegister SizeHint(int hint) {
+
+                Data.byteSizeHint = (uint)hint;
+
+                return new OptionsRegister().Map(this);
+
+            }
+
+            public OptionsRegister PollLevel(int level) {
+
+                Data.pollLevel = level;
+
+                return new OptionsRegister().Map(this); 
 
             }
 
@@ -546,37 +583,20 @@ namespace MewtocolNet.RegisterBuilding {
 
         #region Options stage
 
-        public class TempRegister<T> : SBase {
+        public class OptionsRegister : SBase {
 
-            internal TempRegister() { }
+            internal OptionsRegister() { }
 
-            internal TempRegister(StepData data, RBuildBase bldr) : base(data, bldr) { }
-
-            /// <summary>
-            /// Sets the poll level of the register
-            /// </summary>
-            public TempRegister<T> PollLevel(int level) {
-
-                Data.pollLevel = level;
-                return this;
-
-            }
-
-        }
-
-        public class TempRegister : SBase {
-
-            internal TempRegister() { }
-
-            internal TempRegister(StepData data, RBuildBase bldr) : base(data, bldr) { }
+            internal OptionsRegister(StepData data, RBuildBase bldr) : base(data, bldr) { }
 
             /// <summary>
             /// Sets the poll level of the register
             /// </summary>
-            public TempRegister PollLevel(int level) {
+            public OptionsRegister PollLevel(int level) {
 
                 Data.pollLevel = level;
-                return this;
+
+                return this;    
 
             }
 
