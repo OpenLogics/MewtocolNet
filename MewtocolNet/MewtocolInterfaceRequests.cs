@@ -108,6 +108,9 @@ namespace MewtocolNet {
         /// <returns></returns>
         public async Task<bool> WriteByteRange(int start, byte[] byteArr) {
 
+            if (byteArr == null)
+                throw new ArgumentNullException(nameof(byteArr));
+
             string byteString = byteArr.ToHexString();
 
             var wordLength = byteArr.Length / 2;

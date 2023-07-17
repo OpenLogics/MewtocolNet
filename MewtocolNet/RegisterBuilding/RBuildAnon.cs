@@ -1,4 +1,5 @@
-﻿using MewtocolNet.Registers;
+﻿using System;
+using MewtocolNet.Registers;
 using System.Threading.Tasks;
 
 namespace MewtocolNet.RegisterBuilding {
@@ -33,16 +34,18 @@ namespace MewtocolNet.RegisterBuilding {
             /// <returns>True if success</returns>
             public async Task<bool> WriteToAsync<T>(T value) {
 
-                try {
+                throw new NotImplementedException();
 
-                    var tempRegister = AssembleTemporaryRegister<T>();
-                    return await tempRegister.WriteAsync(value);
+                //try {
 
-                } catch {
+                //    var tempRegister = AssembleTemporaryRegister<T>();
+                //    return await tempRegister.WriteAsync(value);
 
-                    throw;
+                //} catch {
 
-                }
+                //    throw;
+
+                //}
 
             }
 
@@ -52,16 +55,18 @@ namespace MewtocolNet.RegisterBuilding {
             /// <returns>The value read or null if failed</returns>
             public async Task<T> ReadFromAsync<T>() {
 
-                try {
+                throw new NotImplementedException();
 
-                    var tempRegister = AssembleTemporaryRegister<T>();
-                    return (T)await tempRegister.ReadAsync();
+                //try {
 
-                } catch {
+                //    var tempRegister = AssembleTemporaryRegister<T>();
+                //    return (T)await tempRegister.ReadAsync();
 
-                    throw;
+                //} catch {
 
-                }
+                //    throw;
+
+                //}
 
             }
 

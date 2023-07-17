@@ -393,7 +393,7 @@ namespace MewtocolNet {
                 Register = reg,
                 PreviousValue = preValue,
                 PreviousValueString = preValueString,
-                Value = reg.Value,
+                Value = reg.ValueObj,
             });
 
         }

@@ -15,6 +15,8 @@ namespace MewtocolNet.RegisterBuilding {
 
         #region String parse stage
 
+        //at runtime constructor
+
         /// <summary>
         /// Starts the register builder for a new mewtocol address <br/>
         /// Examples:
@@ -26,8 +28,72 @@ namespace MewtocolNet.RegisterBuilding {
 
             var data = ParseAddress(plcAddrName, name);
 
+            unfinishedList.Add(data);
+
             return new SAddress {
                 Data = data,
+                builder = this,
+            };
+
+        }
+
+        //struct constructor
+
+        public SAddressStruct<T> Address<T>(string plcAddrName, string name = null) where T : struct {
+
+            var data = ParseAddress(plcAddrName, name);
+
+            data.dotnetVarType = typeof(T);
+
+            unfinishedList.Add(data);
+
+            return new SAddressStruct<T>(data) {
+                builder = this,
+            };
+
+        }
+
+        public SAddressString<T> AddressString<T>(string plcAddrName, int sizeHint, string name = null) where T : class {
+
+            var data = ParseAddress(plcAddrName, name);
+
+            data.dotnetVarType = typeof(T);
+
+            unfinishedList.Add(data);
+
+            if (typeof(T).IsArray) {
+
+                return new SAddressString<T>(data, true) {
+                    Data = data,
+                    builder = this,
+                };
+
+            }
+
+            return new SAddressString<T>(data) {
+                builder = this,
+            };
+
+        }
+
+        public SAddressArray<T> AddressArray<T>(string plcAddrName, string name = null) where T : class {
+
+            var data = ParseAddress(plcAddrName, name);
+
+            data.dotnetVarType = typeof(T);
+
+            unfinishedList.Add(data);
+
+            if (typeof(T).IsArray) {
+
+                return new SAddressArray<T>(data, true) {
+                    Data = data,
+                    builder = this,
+                };
+
+            }
+
+            return new SAddressArray<T>(data) {
                 builder = this,
             };
 
@@ -52,6 +118,7 @@ namespace MewtocolNet.RegisterBuilding {
 
         #region Typing stage
 
+        //non generic
         public new class SAddress : RBuildBase.SAddress {
 
             public new TypedRegister AsType<T>() => new TypedRegister().Map(base.AsType<T>());
@@ -64,8 +131,94 @@ namespace MewtocolNet.RegisterBuilding {
 
             public new TypedRegister AsTypeArray<T>(params int[] indicies) => new TypedRegister().Map(base.AsTypeArray<T>(indicies));
 
+        }
+
+        //structs
+        public class SAddressStruct<T> : RBuildBase.SAddress where T : struct {
+
+            internal SAddressStruct(StepData data) {
+
+                this.Data = data;    
+
+                this.Map(AsType(typeof(T)));
+
+            }
+
+            internal SAddressStruct(StepData data, bool arrayed) {
+
+                this.Data = data;
+
+            }
+
+            /// <summary>
+            /// Outputs the generated <see cref="IRegister"/>
+            /// </summary>
+            public void Out(Action<IRegister<T>> registerOut) {
+
+                Data.registerOut = new Action<object>(o => registerOut((IRegister<T>)o));
+
+            }
 
         }
+
+        //strings
+        public class SAddressString<T> : RBuildBase.SAddress where T : class {
+
+            internal SAddressString(StepData data) {
+
+                this.Data = data;
+
+                this.Map(AsType(typeof(T)));
+
+            }
+
+            internal SAddressString(StepData data, bool arrayed) {
+
+                this.Data = data;
+
+            }
+
+            /// <summary>
+            /// Outputs the generated <see cref="IRegister"/>
+            /// </summary>
+            public void Out(Action<IStringRegister<T>> registerOut) {
+
+                Data.registerOut = new Action<object>(o => registerOut((IStringRegister<T>)o));
+
+            }
+
+        }
+
+        //arrays
+        public class SAddressArray<T> : RBuildBase.SAddress {
+
+            internal SAddressArray(StepData data) {
+
+                this.Data = data;
+
+                this.Map(AsType(typeof(T)));
+
+            }
+
+            internal SAddressArray(StepData data, bool arrayed) {
+
+                this.Data = data;
+
+            }
+
+            public TypedRegister Indicies(params int[] indicies) => new TypedRegister().Map(base.AsTypeArray<T>(indicies));
+
+            /// <summary>
+            /// Outputs the generated <see cref="IRegister"/>
+            /// </summary>
+            public void Out(Action<IArrayRegister<T>> registerOut) {
+
+                Data.registerOut = new Action<object>(o => registerOut((IArrayRegister<T>)o));
+
+            }
+
+        }
+
 
         #endregion
 
@@ -83,7 +236,7 @@ namespace MewtocolNet.RegisterBuilding {
             /// </summary>
             public void Out(Action<IRegister> registerOut) {
 
-                Data.registerOut = registerOut;
+                Data.registerOut = (Action<object>)registerOut;
 
             }
 
@@ -103,7 +256,7 @@ namespace MewtocolNet.RegisterBuilding {
             /// </summary>
             public void Out(Action<IRegister> registerOut) {
 
-                Data.registerOut = registerOut;
+                Data.registerOut = (Action<object>)registerOut;
 
             }
 
@@ -118,7 +271,7 @@ namespace MewtocolNet.RegisterBuilding {
             /// </summary>
             public void Out(Action<IRegister> registerOut) {
 
-                Data.registerOut = registerOut;
+                Data.registerOut = (Action<object>)registerOut;
 
             }
 

@@ -14,7 +14,7 @@ namespace MewtocolNet.Registers {
     /// Defines a register containing a number
     /// </summary>
     /// <typeparam name="T">The type of the numeric value</typeparam>
-    public class SingleRegister<T> : Register {
+    public class StructRegister<T> : Register, IRegister<T> where T : struct {
 
         internal uint byteLength;
 
@@ -25,11 +25,13 @@ namespace MewtocolNet.Registers {
         /// </summary>
         public uint AddressLength => addressLength;
 
+        public T? Value => (T?)ValueObj;
+
         [Obsolete("Creating registers directly is not supported use IPlc.Register instead")]
-        public SingleRegister() =>
+        public StructRegister() =>
         throw new NotSupportedException("Direct register instancing is not supported, use the builder pattern");
 
-        internal SingleRegister(uint _address, uint _reservedByteSize, string _name = null) {
+        internal StructRegister(uint _address, uint _reservedByteSize, string _name = null) {
 
             memoryAddress = _address;
             name = _name;
@@ -56,33 +58,33 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public override string GetAsPLC() {
 
-            if (typeof(T) == typeof(TimeSpan)) return ((TimeSpan)Value).ToPlcTime();
+            if (typeof(T) == typeof(TimeSpan)) return ((TimeSpan)(object)ValueObj).ToPlcTime();
 
-            return Value.ToString();
+            return ValueObj.ToString();
 
         }
 
         /// <inheritdoc/>
         public override string GetValueString() {
 
-            if (Value != null && typeof(T) == typeof(TimeSpan)) return $"{Value} [{((TimeSpan)Value).ToPlcTime()}]";
+            if (ValueObj != null && typeof(T) == typeof(TimeSpan)) return $"{ValueObj} [{((TimeSpan)(object)ValueObj).ToPlcTime()}]";
 
-            if (Value != null && typeof(T) == typeof(Word)) return $"{Value} [{((Word)Value).ToStringBitsPlc()}]";
+            if (ValueObj != null && typeof(T) == typeof(Word)) return $"{ValueObj} [{((Word)(object)ValueObj).ToStringBitsPlc()}]";
 
-            if (Value != null && typeof(T) == typeof(DWord)) return $"{Value} [{((DWord)Value).ToStringBitsPlc()}]";
+            if (ValueObj != null && typeof(T) == typeof(DWord)) return $"{ValueObj} [{((DWord)(object)ValueObj).ToStringBitsPlc()}]";
 
             var hasFlags = typeof(T).GetCustomAttribute<FlagsAttribute>() != null;
 
-            if (Value != null && typeof(T).IsEnum && !hasFlags) {
+            if (ValueObj != null && typeof(T).IsEnum && !hasFlags) {
 
                 var underlying = Enum.GetUnderlyingType(typeof(T));
-                object val = Convert.ChangeType(Value, underlying);
-                return $"{Value} [{val}]";
+                object val = Convert.ChangeType(ValueObj, underlying);
+                return $"{ValueObj} [{val}]";
             } 
             
-            if (Value != null && typeof(T).IsEnum && hasFlags) return $"{Value}";
+            if (ValueObj != null && typeof(T).IsEnum && hasFlags) return $"{ValueObj}";
 
-            return Value?.ToString() ?? "null";
+            return ValueObj?.ToString() ?? "null";
 
         }
 
@@ -90,7 +92,7 @@ namespace MewtocolNet.Registers {
         public override uint GetRegisterAddressLen() => AddressLength;
 
         /// <inheritdoc/>
-        public override async Task<bool> WriteAsync(object value) {
+        public async Task<bool> WriteAsync(T value) {
 
             var encoded = PlcValueParser.Encode(this, (T)value);
             var res = await attachedInterface.WriteByteRange((int)MemoryAddress, encoded);
@@ -114,25 +116,27 @@ namespace MewtocolNet.Registers {
         }
 
         /// <inheritdoc/>
-        public override async Task<object> ReadAsync() {
+        public async Task<T?> ReadAsync() {
 
             var res = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, (int)GetRegisterAddressLen() * 2);
-            if (res == null) return null;
+            if (res == null) return (T?)(object)null;
 
             var matchingReg = attachedInterface.memoryManager.GetAllRegisters()
             .FirstOrDefault(x => x.IsSameAddressAndType(this));
 
             if (matchingReg != null) {
 
-                if (matchingReg is SingleRegister<string> sreg && this is SingleRegister<string> selfSreg) {
-                    sreg.addressLength = selfSreg.addressLength;
-                }
+                //if (matchingReg is StructRegister<string> sreg && this.GetType() == typeof(StructRegister<string>)) {
+
+                //    sreg.addressLength = selfSreg.addressLength;
+                
+                //}
 
                 matchingReg.underlyingMemory.SetUnderlyingBytes(matchingReg, res);
 
             }
 
-            return SetValueFromBytes(res);
+            return (T)SetValueFromBytes(res);
 
         }
 

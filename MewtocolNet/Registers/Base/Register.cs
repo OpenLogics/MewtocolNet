@@ -44,7 +44,7 @@ namespace MewtocolNet.Registers {
         public MewtocolInterface AttachedInterface => attachedInterface;
 
         /// <inheritdoc/>
-        public object Value => lastValue;
+        public object ValueObj => lastValue;
 
         /// <inheritdoc/>
         public RegisterType RegisterType { get; internal set; }
@@ -62,7 +62,7 @@ namespace MewtocolNet.Registers {
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public void TriggerNotifyChange() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
+        public void TriggerNotifyChange() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ValueObj)));
 
         #endregion
 
@@ -97,23 +97,13 @@ namespace MewtocolNet.Registers {
 
         }
 
-        #region Read / Write
-
-        public virtual Task<object> ReadAsync() => throw new NotImplementedException();
-
-        public virtual Task<bool> WriteAsync(object data) => throw new NotImplementedException();
-
-        internal virtual Task UpdateDynamicSize () => throw new NotImplementedException();    
-
-        #endregion
-
         #region Default accessors
 
         public virtual byte? GetSpecialAddress() => null;
 
-        public virtual string GetValueString() => Value?.ToString() ?? "null";
+        public virtual string GetValueString() => ValueObj?.ToString() ?? "null";
 
-        public virtual string GetAsPLC() => Value?.ToString() ?? "null";
+        public virtual string GetAsPLC() => ValueObj?.ToString() ?? "null";
 
         public virtual string GetRegisterString() => RegisterType == RegisterType.DT_BYTE_RANGE ? "DT" : RegisterType.ToString();
 
@@ -202,7 +192,7 @@ namespace MewtocolNet.Registers {
             sb.Append(GetMewName());
             if (Name != null) sb.Append($" ({Name})");
             sb.Append($" [{this.GetType().Name}({underlyingSystemType.Name})]");
-            if (Value != null) sb.Append($" Val: {GetValueString()}");
+            if (ValueObj != null) sb.Append($" Val: {GetValueString()}");
 
             return sb.ToString();
 
@@ -235,7 +225,7 @@ namespace MewtocolNet.Registers {
 
             sb.Append($"Name: {Name ?? "Not named"}\n");
 
-            if (Value != null)
+            if (ValueObj != null)
                 sb.Append($"Value: {GetValueString()}\n");
 
             sb.Append($"Reads: {successfulReads}, Writes: {successfulWrites}\n");

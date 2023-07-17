@@ -37,7 +37,7 @@ namespace MewtocolNet.RegisterAttributes {
 
             if (value is IRegister reg) {
 
-                privateField = (T)reg.Value;
+                privateField = (T)reg.ValueObj;
                 return;
 
             }

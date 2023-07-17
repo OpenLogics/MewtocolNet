@@ -10,7 +10,7 @@ namespace MewtocolNet.Registers {
     /// <summary>
     /// Defines a register containing a string
     /// </summary>
-    public class ArrayRegister<T> : Register {
+    public class ArrayRegister<T> : Register, IArrayRegister<T> {
 
         internal int[] indices;
 
@@ -20,6 +20,8 @@ namespace MewtocolNet.Registers {
         /// The rgisters memory length
         /// </summary>
         public uint AddressLength => addressLength;
+
+        public T[] Value => (T[])ValueObj;
 
         [Obsolete("Creating registers directly is not supported use IPlc.Register instead")]
         public ArrayRegister() =>
@@ -47,16 +49,16 @@ namespace MewtocolNet.Registers {
 
         public override string GetValueString() {
 
-            if (Value == null) return "null";
+            if (ValueObj == null) return "null";
 
             if(typeof(T) == typeof(byte[])) {
 
-                return ((byte[])Value).ToHexString("-");
+                return ((byte[])ValueObj).ToHexString("-");
 
             }
 
             StringBuilder sb = new StringBuilder();
-            var valueIenum = (IEnumerable)Value;
+            var valueIenum = (IEnumerable)ValueObj;
 
             foreach (var el in valueIenum) {
 
@@ -64,7 +66,7 @@ namespace MewtocolNet.Registers {
 
             }
           
-            return ArrayToString((Array)Value);
+            return ArrayToString((Array)ValueObj);
 
         }
 
@@ -75,9 +77,9 @@ namespace MewtocolNet.Registers {
         public override uint GetRegisterAddressLen() => AddressLength;
 
         /// <inheritdoc/>
-        public override async Task<bool> WriteAsync(object value) {
+        public async Task<bool> WriteAsync(T value) {
 
-            var encoded = PlcValueParser.Encode(this, (T)value);
+            var encoded = PlcValueParser.EncodeArray(this, value);
             var res = await attachedInterface.WriteByteRange((int)MemoryAddress, encoded);
 
             if (res) {
@@ -99,18 +101,18 @@ namespace MewtocolNet.Registers {
         }
 
         /// <inheritdoc/>
-        public override async Task<object> ReadAsync() {
+        async Task<T[]> IArrayRegister<T>.ReadAsync() {
 
             var res = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, (int)GetRegisterAddressLen() * 2);
-            if (res == null) return null;
+            if (res == null) throw new Exception();
 
-            //var matchingReg = attachedInterface.memoryManager.GetAllRegisters()
-            //.FirstOrDefault(x => x.IsSameAddressAndType(this));
+            var matchingReg = attachedInterface.memoryManager.GetAllRegisters()
+            .FirstOrDefault(x => x.IsSameAddressAndType(this));
 
-            //if (matchingReg != null)
-            //    matchingReg.underlyingMemory.SetUnderlyingBytes(matchingReg, res);
+            if (matchingReg != null)
+                matchingReg.underlyingMemory.SetUnderlyingBytes(matchingReg, res);
 
-            return SetValueFromBytes(res);
+            return (T[])SetValueFromBytes(res);
 
         }
 

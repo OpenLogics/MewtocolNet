@@ -16,7 +16,7 @@ namespace MewtocolNet.RegisterBuilding {
 
         internal RBuildBase(MewtocolInterface plc) => attachedPLC = plc;
 
-        internal List<StepData> unfinishedList = new List<StepData>();
+        internal List<BaseStepData> unfinishedList = new List<BaseStepData>();
 
         #region Parser stage
 
@@ -50,7 +50,7 @@ namespace MewtocolNet.RegisterBuilding {
 
             internal string hardFailReason;
 
-            internal StepData stepData;
+            internal BaseStepData stepData;
 
         }
 
@@ -277,9 +277,7 @@ namespace MewtocolNet.RegisterBuilding {
                     res.stepData.originalParseStr = plcAddrName;
                     res.stepData.buildSource = RegisterBuildSource.Manual;
 
-                    unfinishedList.Add(res.stepData);
-
-                    return res.stepData;
+                    return new StepData().Map(res.stepData);
 
                 } else if (res.state == ParseResultState.FailedHard) {
 
@@ -305,7 +303,7 @@ namespace MewtocolNet.RegisterBuilding {
             /// <typeparam name="T">
             /// <include file="../Documentation/docs.xml" path='extradoc/class[@name="support-conv-types"]/*' />
             /// </typeparam>
-            public TypedRegister AsType<T>() {
+            internal TypedRegister AsType<T>() {
 
                 if (!typeof(T).IsAllowedPlcCastingType()) {
 
@@ -326,7 +324,7 @@ namespace MewtocolNet.RegisterBuilding {
             /// <param name="type">
             /// <include file="../Documentation/docs.xml" path='extradoc/class[@name="support-conv-types"]/*' />
             /// </param>
-            public TypedRegister AsType(Type type) {
+            internal TypedRegister AsType(Type type) {
 
                 //was ranged syntax array build
                 if (Data.wasAddressStringRangeBased && type.IsArray && type.GetArrayRank() == 1) {
@@ -395,7 +393,7 @@ namespace MewtocolNet.RegisterBuilding {
             /// <summary>
             /// Sets the register type as a predefined <see cref="PlcVarType"/>
             /// </summary>
-            public TypedRegister AsType(PlcVarType type) {
+            internal TypedRegister AsType(PlcVarType type) {
 
                 Data.dotnetVarType = type.GetDefaultDotnetType();
 
@@ -420,7 +418,7 @@ namespace MewtocolNet.RegisterBuilding {
             /// <item><term>DWORD</term><description>32 bit double word interpreted as <see cref="uint"/></description></item>
             /// </list>
             /// </summary>
-            public TypedRegister AsType(string type) {
+            internal TypedRegister AsType(string type) {
 
                 var regexString = new Regex(@"^STRING *\[(?<len>[0-9]*)\]$", RegexOptions.IgnoreCase);
                 var regexArray = new Regex(@"^ARRAY *\[(?<S1>[0-9]*)..(?<E1>[0-9]*)(?:\,(?<S2>[0-9]*)..(?<E2>[0-9]*))?(?:\,(?<S3>[0-9]*)..(?<E3>[0-9]*))?\] *OF {1,}(?<t>.*)$", RegexOptions.IgnoreCase);
@@ -520,7 +518,7 @@ namespace MewtocolNet.RegisterBuilding {
             /// ARRAY [0..2, 0..3, 0..4] OF INT = <c>AsTypeArray&lt;short[,,]&gt;(3,4,5)</c><br/>
             /// ARRAY [5..6, 0..2] OF DWORD = <c>AsTypeArray&lt;DWord[,]&gt;(2, 3)</c><br/>
             /// </example>
-            public TypedRegister AsTypeArray<T>(params int[] indicies) {
+            internal TypedRegister AsTypeArray<T>(params int[] indicies) {
 
                 if (!typeof(T).IsArray)
                     throw new NotSupportedException($"The type {typeof(T)} was no array");

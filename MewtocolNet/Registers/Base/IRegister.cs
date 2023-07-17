@@ -32,7 +32,7 @@ namespace MewtocolNet.Registers {
         /// <summary>
         /// The current value of the register
         /// </summary>
-        object Value { get; }
+        object ValueObj { get; }
 
         /// <summary>
         /// The plc memory address of the register
@@ -54,18 +54,6 @@ namespace MewtocolNet.Registers {
         /// Builds a readable string with all important register informations and additional infos
         /// </summary>
         string ToString(bool detailed);
-
-        /// <summary>
-        /// Reads the register value async from the plc
-        /// </summary>
-        /// <returns>The register value</returns>
-        Task<object> ReadAsync();
-
-        /// <summary>
-        /// Writes the register content async to the plc
-        /// </summary>
-        /// <returns>True if successfully set</returns>
-        Task<bool> WriteAsync(object data);
 
     }
 
