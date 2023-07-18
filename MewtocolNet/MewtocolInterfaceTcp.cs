@@ -61,7 +61,7 @@ namespace MewtocolNet {
         }
 
         /// <inheritdoc/>
-        public override async Task ConnectAsync() {
+        public override async Task ConnectAsync(Func<Task> callBack = null) {
 
             try {
 
@@ -112,7 +112,7 @@ namespace MewtocolNet {
                 if (plcinf != null) {
 
                     IsConnected = true;
-                    await base.ConnectAsync();
+                    await base.ConnectAsync(callBack);
                     OnConnected(plcinf);
 
                 } else {

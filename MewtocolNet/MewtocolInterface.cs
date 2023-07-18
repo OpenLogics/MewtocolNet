@@ -186,7 +186,7 @@ namespace MewtocolNet {
         }
 
         /// <inheritdoc/>
-        public virtual async Task ConnectAsync() {
+        public virtual async Task ConnectAsync(Func<Task> callBack = null) {
 
             isConnectingStage = false;
 
@@ -201,6 +201,14 @@ namespace MewtocolNet {
             Logger.Log($"CPU VER:   {PlcInfo.CpuVersion}", LogLevel.Verbose, this);
 
             Logger.Log($">> Intial connection end <<", LogLevel.Verbose, this);
+
+            if (callBack != null) {
+
+                await Task.Run(callBack);
+
+                Logger.Log($">> OnConnected run complete <<", LogLevel.Verbose, this);
+
+            } 
 
         }
 
@@ -243,7 +251,7 @@ namespace MewtocolNet {
         public virtual string GetConnectionInfo() => throw new NotImplementedException();
 
         /// <inheritdoc/>
-        public async Task<MewtocolFrameResponse> SendCommandAsync(string _msg, bool withTerminator = true, int timeoutMs = -1, Action<double> onReceiveProgress = null) {
+        public async Task<MewtocolFrameResponse> SendCommandAsync (string _msg, bool withTerminator = true, int timeoutMs = -1, Action<double> onReceiveProgress = null) {
 
             if (!IsConnected && !isConnectingStage)
                 throw new NotSupportedException("The device must be connected to send a message");

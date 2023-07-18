@@ -73,11 +73,11 @@ namespace MewtocolNet {
         /// useful if you want to use a custom update frequency
         /// </summary>
         /// <returns>The number of inidvidual mewtocol commands sent</returns>
-        public async Task<int> RunPollerCylceManualAsync() {
+        public async Task<int> UpdateAsync() {
 
             if (!pollerTaskStopped)
                 throw new NotSupportedException($"The poller is already running, " +
-                $"please make sure there is no polling active before calling {nameof(RunPollerCylceManualAsync)}");
+                $"please make sure there is no polling active before calling {nameof(UpdateAsync)}");
 
             tcpMessagesSentThisCycle = 0;
 
@@ -123,8 +123,6 @@ namespace MewtocolNet {
             //await UpdateDTRegisters();
 
             await memoryManager.PollAllAreasAsync();
-
-            await GetPLCInfoAsync();
 
             sw.Stop();
             PollerCycleDurationMs = (int)sw.ElapsedMilliseconds;

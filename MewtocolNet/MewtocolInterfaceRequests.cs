@@ -94,6 +94,14 @@ namespace MewtocolNet {
 
         }
 
+        /// <inheritdoc/>
+        public async Task<bool> RestartProgramAsync () {
+
+            return await SetOperationModeAsync(false) &&
+                   await SetOperationModeAsync(true);
+
+        }
+
         #endregion
 
         #region Byte range writing / reading to registers

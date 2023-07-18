@@ -35,7 +35,7 @@ namespace MewtocolNet.RegisterBuilding {
 
         internal void InvokeBuilt(Register reg) {
 
-            registerOut.Invoke(reg);
+            registerOut?.Invoke(reg);
 
             //var selftype = this.GetType();
 

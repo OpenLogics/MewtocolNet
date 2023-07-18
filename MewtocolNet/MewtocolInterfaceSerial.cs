@@ -99,10 +99,12 @@ namespace MewtocolNet {
 
         }
 
-        public override async Task ConnectAsync() => await ConnectAsync(null);
+        public override async Task ConnectAsync(Func<Task> callBack = null) => await ConnectAsyncPriv(callBack);
+
+        public async Task ConnectAsync(Func<Task> callBack = null, Action onTryingConfig = null) => await ConnectAsyncPriv(callBack, onTryingConfig);
 
         /// <inheritdoc/>
-        public async Task ConnectAsync(Action onTryingConfig = null) {
+        private async Task ConnectAsyncPriv(Func<Task> callBack, Action onTryingConfig = null) {
 
             void OnTryConfig() {
                 onTryingConfig();
@@ -133,7 +135,7 @@ namespace MewtocolNet {
                 if (gotInfo != null) {
 
                     IsConnected = true;
-                    await base.ConnectAsync();
+                    await base.ConnectAsync(callBack);
                     OnConnected(gotInfo);
 
                 } else {

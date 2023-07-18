@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace MewtocolNet {
@@ -22,11 +23,6 @@ namespace MewtocolNet {
         /// The host ip endpoint, leave it null to use an automatic interface
         /// </summary>
         IPEndPoint HostEndpoint { get; set; }
-
-        /// <summary>
-        /// Tries to establish a connection with the device asynchronously
-        /// </summary>
-        Task ConnectAsync();
 
         /// <summary>
         /// Configures the serial interface

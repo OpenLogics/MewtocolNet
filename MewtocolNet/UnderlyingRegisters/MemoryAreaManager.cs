@@ -339,6 +339,13 @@ namespace MewtocolNet.UnderlyingRegisters {
 
             }
 
+            //get the plc status each n iterations
+            if (pollIteration % 5 == 0) {
+
+                await mewInterface.GetPLCInfoAsync();
+
+            }
+
             if (pollIteration == uint.MaxValue) {
                 pollIteration = uint.MinValue;
             } else {

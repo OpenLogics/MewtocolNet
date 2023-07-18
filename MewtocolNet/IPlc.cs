@@ -65,7 +65,9 @@ namespace MewtocolNet {
         /// <summary>
         /// Tries to establish a connection with the device asynchronously
         /// </summary>
-        Task ConnectAsync();
+        /// <param name="onConnected">A callback for excecuting something right after the plc connected</param>
+        /// <returns></returns>
+        Task ConnectAsync(Func<Task> onConnected = null);
 
         /// <summary>
         /// Disconnects the device from its current plc connection 
@@ -95,6 +97,12 @@ namespace MewtocolNet {
         Task<bool> SetOperationModeAsync(bool setRun);
 
         /// <summary>
+        /// Restarts the plc program
+        /// </summary>
+        /// <returns>The success state of the write operation</returns>
+        Task<bool> RestartProgramAsync();
+
+        /// <summary>
         /// Use this to await the first poll iteration after connecting,
         /// This also completes if the initial connection fails
         /// </summary>
@@ -105,7 +113,7 @@ namespace MewtocolNet {
         /// useful if you want to use a custom update frequency
         /// </summary>
         /// <returns>The number of inidvidual mewtocol commands sent</returns>
-        Task<int> RunPollerCylceManualAsync();
+        Task<int> UpdateAsync();
 
         /// <summary>
         /// Gets the connection info string

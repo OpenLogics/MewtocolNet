@@ -559,7 +559,7 @@ namespace MewtocolNet.RegisterBuilding {
 
         public class TypedRegister : SBase {
 
-            public OptionsRegister SizeHint(int hint) {
+            internal OptionsRegister SizeHint(int hint) {
 
                 Data.byteSizeHint = (uint)hint;
 
@@ -567,7 +567,7 @@ namespace MewtocolNet.RegisterBuilding {
 
             }
 
-            public OptionsRegister PollLevel(int level) {
+            internal OptionsRegister PollLevel(int level) {
 
                 Data.pollLevel = level;
 
