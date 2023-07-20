@@ -1,14 +1,18 @@
 ﻿using MewtocolNet.RegisterAttributes;
 using MewtocolNet.RegisterBuilding;
+using MewtocolNet.RegisterBuilding.BuilderPatterns;
 using MewtocolNet.SetupClasses;
 using System;
 using System.Collections.Generic;
 using System.IO.Ports;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 
-namespace MewtocolNet {
+namespace MewtocolNet
+{
 
     /// <summary>
     /// Builder helper for mewtocol interfaces
@@ -24,11 +28,11 @@ namespace MewtocolNet {
         /// <param name="port"></param>
         /// <param name="station">Plc station number 0xEE for direct communication</param>
         /// <returns></returns>
-        public static PostInit<IPlcEthernet> Ethernet(string ip, int port = 9094, int station = 0xEE) {
+        public static PostInitEth<IPlcEthernet> Ethernet(string ip, int port = 9094, int station = 0xEE) {
 
             var instance = new MewtocolInterfaceTcp();
             instance.ConfigureConnection(ip, port, station);
-            return new PostInit<IPlcEthernet> {
+            return new PostInitEth<IPlcEthernet> {
                 intf = instance
             };
 
@@ -41,11 +45,11 @@ namespace MewtocolNet {
         /// <param name="port"></param>
         /// <param name="station">Plc station number 0xEE for direct communication</param>
         /// <returns></returns>
-        public static PostInit<IPlcEthernet> Ethernet(IPAddress ip, int port = 9094, int station = 0xEE) {
+        public static PostInitEth<IPlcEthernet> Ethernet(IPAddress ip, int port = 9094, int station = 0xEE) {
 
             var instance = new MewtocolInterfaceTcp();
             instance.ConfigureConnection(ip, port, station);
-            return new PostInit<IPlcEthernet> {
+            return new PostInitEth<IPlcEthernet> {
                 intf = instance
             };
 
@@ -63,8 +67,6 @@ namespace MewtocolNet {
         /// <returns></returns>
         public static PostInit<IPlcSerial> Serial(string portName, BaudRate baudRate = BaudRate._19200, DataBits dataBits = DataBits.Eight, Parity parity = Parity.Odd, StopBits stopBits = StopBits.One, int station = 0xEE) {
 
-            TestPortName(portName);
-
             var instance = new MewtocolInterfaceSerial();
             instance.ConfigureConnection(portName, (int)baudRate, (int)dataBits, parity, stopBits, station);
             return new PostInit<IPlcSerial> {
@@ -81,8 +83,6 @@ namespace MewtocolNet {
         /// <returns></returns>
         public static PostInit<IPlcSerial> SerialAuto(string portName, int station = 0xEE) {
 
-            TestPortName(portName);
-
             var instance = new MewtocolInterfaceSerial();
             instance.ConfigureConnection(portName, station);
             instance.ConfigureConnectionAuto();
@@ -92,12 +92,52 @@ namespace MewtocolNet {
 
         }
 
-        private static void TestPortName(string portName) {
+        /// <summary>
+        /// Lists all useable source endpoints of the device this is running on for usage with PLCs
+        /// </summary>
+        public static IEnumerable<IPEndPoint> GetSourceEndpoints () {
 
-            var portnames = SerialPort.GetPortNames();
+            foreach (var netIf in GetUseableNetInterfaces()) {
 
-            if (!portnames.Any(x => x == portName))
-                throw new NotSupportedException($"The port {portName} is no valid port");
+                var addressInfo = netIf.GetIPProperties().UnicastAddresses
+                .FirstOrDefault(x => x.Address.AddressFamily == AddressFamily.InterNetwork);
+
+                yield return new IPEndPoint(addressInfo.Address, 9094);
+
+            }
+
+        }
+
+        /// <summary>
+        /// Lists all useable network interfaces of the device this is running on for usage with PLCs
+        /// </summary>
+        public static IEnumerable<NetworkInterface> GetUseableNetInterfaces () {
+
+            foreach (NetworkInterface netInterface in NetworkInterface.GetAllNetworkInterfaces()) {
+
+                bool isEthernet =
+                netInterface.NetworkInterfaceType == NetworkInterfaceType.Ethernet ||
+                netInterface.NetworkInterfaceType == NetworkInterfaceType.Ethernet3Megabit ||
+                netInterface.NetworkInterfaceType == NetworkInterfaceType.FastEthernetFx ||
+                netInterface.NetworkInterfaceType == NetworkInterfaceType.FastEthernetT ||
+                netInterface.NetworkInterfaceType == NetworkInterfaceType.GigabitEthernet;
+
+                bool isWlan = netInterface.NetworkInterfaceType == NetworkInterfaceType.Wireless80211;
+
+                bool isUsable = netInterface.OperationalStatus == OperationalStatus.Up;
+
+                if (!isUsable) continue;
+                if (!(isWlan || isEthernet)) continue;
+
+                IPInterfaceProperties ipProps = netInterface.GetIPProperties();
+                var hasUnicastInfo = ipProps.UnicastAddresses
+                .Any(x => x.Address.AddressFamily == AddressFamily.InterNetwork);
+
+                if (!hasUnicastInfo) continue;
+
+                yield return netInterface;
+
+            }
 
         }
 
@@ -116,8 +156,8 @@ namespace MewtocolNet {
             /// <param name="interval">Delay between poll requests</param>
             public PollLevelConfigurator SetLevel(int level, TimeSpan interval) {
 
-                if (level <= 1)
-                    throw new NotSupportedException($"The poll level {level} is not configurable");
+                if (level == PollLevel.Always || level == PollLevel.Never || level == PollLevel.FirstIteration)
+                    throw new NotSupportedException("The poll level is reserved for the library");
 
                 if (!levelConfigs.ContainsKey(level)) {
                     levelConfigs.Add(level, new PollLevelConfig {
@@ -133,8 +173,8 @@ namespace MewtocolNet {
 
             public PollLevelConfigurator SetLevel(int level, int skipNth) {
 
-                if (level <= 1)
-                    throw new NotSupportedException($"The poll level {level} is not configurable");
+                if (level == PollLevel.Always || level == PollLevel.Never || level == PollLevel.FirstIteration)
+                    throw new NotSupportedException("The poll level is reserved for the library");
 
                 if (!levelConfigs.ContainsKey(level)) {
                     levelConfigs.Add(level, new PollLevelConfig {
@@ -167,6 +207,56 @@ namespace MewtocolNet {
                 var instance = (RegisterCollection)Activator.CreateInstance(typeof(T));
 
                 collections.Add(instance);
+
+                return this;
+
+            }
+
+        }
+
+        public class PostInitEth<T> : PostInit<T> {
+
+            /// <summary>
+            /// Sets the source of the outgoing ethernet connection
+            /// </summary>
+            public PostInit<T> FromSource (IPEndPoint endpoint) {
+
+                if(endpoint == null)    
+                    throw new ArgumentNullException("Endpoint can't be null", nameof(endpoint));  
+
+                if(intf is MewtocolInterfaceTcp imew) {
+
+                    imew.HostEndpoint = endpoint;   
+
+                }
+
+                return this;
+
+            }
+
+            /// <summary>
+            /// Sets the source of the outgoing ethernet connection
+            /// </summary>
+            /// <param name="ip">IP address of the source interface (Format: 127.0.0.1)</param>
+            /// <param name="port">Port of the source interface</param>
+            /// <returns></returns>
+            /// <exception cref="ArgumentException"></exception>
+            public PostInit<T> FromSource(string ip, int port) {
+
+                if (intf is MewtocolInterfaceTcp imew) {
+
+                    if(port < IPEndPoint.MinPort)
+                        throw new ArgumentException($"Source port cant be smaller than {IPEndPoint.MinPort}", nameof(port));
+
+                    if (port > IPEndPoint.MaxPort)
+                        throw new ArgumentException($"Source port cant be larger than {IPEndPoint.MaxPort}", nameof(port));
+
+                    if (!IPAddress.TryParse(ip, out var ipParsed))
+                        throw new ArgumentException("Failed to parse the source IP", nameof(ip));
+
+                    imew.HostEndpoint = new IPEndPoint(ipParsed, port);
+
+                }
 
                 return this;
 
@@ -269,18 +359,16 @@ namespace MewtocolNet {
             /// <summary>
             /// A builder for attaching register collections
             /// </summary>
-            public PostInit<T> WithRegisters(Action<RBuildMult> builder) {
+            public PostInit<T> WithRegisters(Action<RBuild> builder) {
 
                 try {
 
                     var plc = (MewtocolInterface)(object)intf;
-                    var assembler = new RegisterAssembler(plc);
-                    var regBuilder = new RBuildMult(plc);
+                    var regBuilder = new RBuild(plc);
 
                     builder.Invoke(regBuilder);
 
-                    var registers = assembler.AssembleAll(regBuilder);
-                    plc.AddRegisters(registers.ToArray());
+                    plc.AddRegisters(regBuilder.assembler.assembled.ToArray());
 
                     return this;
 

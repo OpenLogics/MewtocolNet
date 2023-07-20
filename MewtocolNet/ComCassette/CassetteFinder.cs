@@ -20,7 +20,7 @@ namespace MewtocolNet.ComCassette {
 
             var interfacesTasks = new List<Task<List<CassetteInformation>>>();
 
-            var usableInterfaces = GetUseableNetInterfaces();
+            var usableInterfaces = Mewtocol.GetUseableNetInterfaces();
 
             if (ipSource == null) {
 
@@ -68,36 +68,6 @@ namespace MewtocolNet.ComCassette {
             }
 
             return decomposed;
-
-        }
-
-        private static IEnumerable<NetworkInterface> GetUseableNetInterfaces() {
-
-            foreach (NetworkInterface netInterface in NetworkInterface.GetAllNetworkInterfaces()) {
-
-                bool isEthernet =
-                netInterface.NetworkInterfaceType == NetworkInterfaceType.Ethernet ||
-                netInterface.NetworkInterfaceType == NetworkInterfaceType.Ethernet3Megabit ||
-                netInterface.NetworkInterfaceType == NetworkInterfaceType.FastEthernetFx ||
-                netInterface.NetworkInterfaceType == NetworkInterfaceType.FastEthernetT ||
-                netInterface.NetworkInterfaceType == NetworkInterfaceType.GigabitEthernet;
-
-                bool isWlan = netInterface.NetworkInterfaceType == NetworkInterfaceType.Wireless80211;
-
-                bool isUsable = netInterface.OperationalStatus == OperationalStatus.Up;
-
-                if (!isUsable) continue;
-                if (!(isWlan || isEthernet)) continue;
-
-                IPInterfaceProperties ipProps = netInterface.GetIPProperties();
-                var hasUnicastInfo = ipProps.UnicastAddresses
-                .Any(x => x.Address.AddressFamily == AddressFamily.InterNetwork);
-
-                if (!hasUnicastInfo) continue;
-
-                yield return netInterface;
-
-            }
 
         }
 

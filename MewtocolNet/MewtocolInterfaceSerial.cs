@@ -78,6 +78,9 @@ namespace MewtocolNet {
         /// <inheritdoc/>
         public void ConfigureConnection(string _portName, int _baudRate = 19200, int _dataBits = 8, Parity _parity = Parity.Odd, StopBits _stopBits = StopBits.One, int _station = 0xEE) {
 
+            if (IsConnected)
+                throw new NotSupportedException("Can't change the connection settings while the PLC is connected");
+
             PortName = _portName;
             SerialBaudRate = _baudRate;
             SerialDataBits = _dataBits;
@@ -95,6 +98,9 @@ namespace MewtocolNet {
 
         internal void ConfigureConnectionAuto() {
 
+            if (IsConnected)
+                throw new NotSupportedException("Can't change the connection settings while the PLC is connected");
+
             autoSerial = true;
 
         }
@@ -106,6 +112,10 @@ namespace MewtocolNet {
         /// <inheritdoc/>
         private async Task ConnectAsyncPriv(Func<Task> callBack, Action onTryingConfig = null) {
 
+            var portnames = SerialPort.GetPortNames();
+            if (!portnames.Any(x => x == PortName))
+                throw new NotSupportedException($"The port {PortName} is no valid port");
+
             void OnTryConfig() {
                 onTryingConfig();
             }
@@ -114,6 +124,8 @@ namespace MewtocolNet {
                 tryingSerialConfig += OnTryConfig;
 
             try {
+
+                firstPollTask = new Task(() => { });
 
                 Logger.Log($">> Intial connection start <<", LogLevel.Verbose, this);
                 isConnectingStage = true;

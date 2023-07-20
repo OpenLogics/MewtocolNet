@@ -130,48 +130,48 @@ namespace MewtocolNet.TypeConversion {
             //default string DT Range conversion Example bytes: (04 00 03 00 XX XX XX) 
             //first 4 bytes are reserved size (2 bytes) and used size (2 bytes)
             //the remaining bytes are the ascii bytes for the string
-            //new PlcTypeConversion<string>(RegisterType.DT_BYTE_RANGE) {
-            //    HoldingRegisterType = typeof(StructRegister<string>),
-            //    PlcVarType = PlcVarType.STRING,
-            //    FromRaw = (reg, bytes) => {
+            new PlcTypeConversion<string>(RegisterType.DT_BYTE_RANGE) {
+                HoldingRegisterType = typeof(StringRegister),
+                PlcVarType = PlcVarType.STRING,
+                FromRaw = (reg, bytes) => {
 
-            //        if(bytes.Length == 4) return string.Empty;
+                    if(bytes.Length == 4) return string.Empty;
 
-            //        if(bytes == null || bytes.Length < 4) {
+                    if(bytes == null || bytes.Length < 4) {
 
-            //            throw new Exception("Failed to convert string bytes, response not long enough");
+                        throw new Exception("Failed to convert string bytes, response not long enough");
 
-            //        }
+                    }
 
-            //        //get actual showed size
-            //        short actualLen = BitConverter.ToInt16(bytes, 2);
+                    //get actual showed size
+                    short actualLen = BitConverter.ToInt16(bytes, 2);
 
-            //        //skip 4 bytes because they only describe the length
-            //        string gotVal = Encoding.UTF8.GetString(bytes.Skip(4).Take(actualLen).ToArray());
+                    //skip 4 bytes because they only describe the length
+                    string gotVal = Encoding.UTF8.GetString(bytes.Skip(4).Take(actualLen).ToArray());
 
-            //        return gotVal;
+                    return gotVal;
 
-            //    },
-            //    ToRaw = (reg, value) => {
+                },
+                ToRaw = (reg, value) => {
 
-            //        int padLen = value.Length;
-            //        if(value.Length % 2 != 0) padLen++;
+                    int padLen = value.Length;
+                    if(value.Length % 2 != 0) padLen++;
 
-            //        var strBytes = Encoding.UTF8.GetBytes(value.PadRight(padLen, '\0'));
+                    var strBytes = Encoding.UTF8.GetBytes(value.PadRight(padLen, '\0'));
 
-            //        List<byte> finalBytes = new List<byte>();
+                    List<byte> finalBytes = new List<byte>();
 
-            //        short reserved = (short)(reg.GetRegisterAddressLen() * 2 - 4);
-            //        short used = (short)value.Length;
+                    short reserved = (short)(reg.GetRegisterAddressLen() * 2 - 4);
+                    short used = (short)value.Length;
 
-            //        finalBytes.AddRange(BitConverter.GetBytes(reserved));
-            //        finalBytes.AddRange(BitConverter.GetBytes(used));
-            //        finalBytes.AddRange(strBytes);
+                    finalBytes.AddRange(BitConverter.GetBytes(reserved));
+                    finalBytes.AddRange(BitConverter.GetBytes(used));
+                    finalBytes.AddRange(strBytes);
 
-            //        return finalBytes.ToArray();
+                    return finalBytes.ToArray();
 
-            //    },
-            //},
+                },
+            },
 
         };
 

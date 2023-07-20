@@ -55,7 +55,7 @@ namespace MewtocolNet {
         private protected AsyncQueue queue = new AsyncQueue();
         private protected Stopwatch speedStopwatchUpstr;
         private protected Stopwatch speedStopwatchDownstr;
-        private protected Task firstPollTask = new Task(() => { });
+        private protected Task firstPollTask;
 
         private protected bool wasInitialStatusReceived;
         private protected MewtocolVersion mewtocolVersion;
@@ -143,6 +143,8 @@ namespace MewtocolNet {
         #region Methods
 
         private protected MewtocolInterface() {
+
+            Logger.Start();
 
             memoryManager = new MemoryAreaManager(this);
 

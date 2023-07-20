@@ -1,12 +1,18 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
+using MewtocolNet.Events;
 
 namespace MewtocolNet.Registers {
-    public interface IStringRegister<T> : IRegister where T : class {
+
+    /// <summary>
+    /// An interface for all struct register types
+    /// </summary>
+    public interface IRegister<T> : IRegister where T : struct {
 
         /// <summary>
         /// The current value of the register
         /// </summary>
-        T Value { get; }
+        T? Value { get; }
 
         /// <summary>
         /// Reads the register value async from the plc
@@ -18,7 +24,7 @@ namespace MewtocolNet.Registers {
         /// Writes the register content async to the plc
         /// </summary>
         /// <returns>True if successfully set</returns>
-        Task<bool> WriteAsync(T data);
+        Task WriteAsync(T data);
 
     }
 

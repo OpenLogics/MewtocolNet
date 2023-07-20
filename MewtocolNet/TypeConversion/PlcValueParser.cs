@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace MewtocolNet {
 
@@ -36,10 +37,10 @@ namespace MewtocolNet {
 
         }
 
-        internal static T ParseArray <T>(Register register, int[] indices, byte[] bytes) {
+        internal static object ParseArray <T>(ArrayRegister<T> register, byte[] bytes) {
 
             //if byte array directly return the bytes
-            if (typeof(T) == typeof(byte[])) return (T)(object)bytes;
+            if (typeof(T) == typeof(byte[])) return bytes;
 
             IPlcTypeConverter converter;
             Type underlyingElementType;
@@ -47,11 +48,11 @@ namespace MewtocolNet {
             //special case for enums
             if (typeof(T).IsEnum) {
 
-                underlyingElementType = typeof(T).GetElementType().GetEnumUnderlyingType();
+                underlyingElementType = typeof(T).GetEnumUnderlyingType();
 
             } else {
 
-                underlyingElementType = typeof(T).GetElementType();
+                underlyingElementType = typeof(T);
 
             }
 
@@ -61,17 +62,18 @@ namespace MewtocolNet {
                 throw new Exception($"A converter for the type {underlyingElementType} doesn't exist");
 
             //parse the array from one to n dimensions
-            var outArray = Array.CreateInstance(underlyingElementType, indices);
+            var outArray = Array.CreateInstance(typeof(T), register.indices);
 
             int sizePerItem = 0;
+
             if(underlyingElementType == typeof(string)) {
-                throw new NotImplementedException();
+                sizePerItem = register.byteSizePerItem;
             } else {
                 sizePerItem = underlyingElementType.DetermineTypeByteIntialSize();
             }
 
-            var iterateItems = indices.Aggregate((a, x) => a * x);
-            var indexer = new int[indices.Length];
+            var iterateItems = register.indices.Aggregate((a, x) => a * x);
+            var indexer = new int[register.indices.Length];
             for (int i = 0; i < iterateItems; i++) {
 
                 int j = i * sizePerItem;    
@@ -79,9 +81,9 @@ namespace MewtocolNet {
                 var currentItem = bytes.Skip(j).Take(sizePerItem).ToArray();
                 var value = converter.FromRawData(register, currentItem);
 
-                for (int remainder = i, k = indices.Length - 1; k >= 0; k--) {
+                for (int remainder = i, k = register.indices.Length - 1; k >= 0; k--) {
 
-                    int currentDimension = indices[k];
+                    int currentDimension = register.indices[k];
                     indexer[k] = remainder % currentDimension;
                     remainder = remainder / currentDimension;
                 
@@ -91,7 +93,7 @@ namespace MewtocolNet {
 
             }
 
-            return (T)(object)outArray;
+            return (object)outArray;
 
         }
 
@@ -120,10 +122,10 @@ namespace MewtocolNet {
 
         }
 
-        internal static byte[] EncodeArray<T>(Register register, T value) {
+        internal static byte[] EncodeArray<T>(ArrayRegister<T> register, object value) {
 
             //if byte array directly return the bytes
-            if (typeof(T) == typeof(byte[])) return (byte[])(object)value;
+            if (value.GetType() == typeof(byte[])) return (byte[])value;
 
             IPlcTypeConverter converter;
             Type underlyingElementType;
@@ -131,11 +133,11 @@ namespace MewtocolNet {
             //special case for enums
             if (typeof(T).IsEnum) {
 
-                underlyingElementType = typeof(T).GetElementType().GetEnumUnderlyingType();
+                underlyingElementType = typeof(T).GetEnumUnderlyingType();
 
             } else {
 
-                underlyingElementType = typeof(T).GetElementType();
+                underlyingElementType = typeof(T);
 
             }
 
@@ -145,8 +147,9 @@ namespace MewtocolNet {
                 throw new Exception($"A converter for the type {underlyingElementType} doesn't exist");
 
             int sizePerItem = 0;
+
             if (underlyingElementType == typeof(string)) {
-                throw new NotImplementedException();
+                sizePerItem = register.byteSizePerItem;
             } else {
                 sizePerItem = underlyingElementType.DetermineTypeByteIntialSize();
             }
@@ -158,11 +161,18 @@ namespace MewtocolNet {
 
                 var encoded = converter.ToRawData(register, item);
 
+                if(encoded.Length > register.byteSizePerItem)
+                    throw new ArgumentOutOfRangeException(nameof(value), "Input mismatched register target size");
+
                 encoded.CopyTo(encodedData, i);
 
                 i += sizePerItem;
 
             }
+
+
+            if (encodedData.Length != register.reservedByteSize)
+                throw new ArgumentOutOfRangeException(nameof(value), "Input mismatched register target size");
 
             return encodedData;
 

@@ -66,18 +66,18 @@ namespace MewtocolTests {
 
         }
 
-        [Fact(DisplayName = nameof(MewtocolHelpers.ParseDTByteString))]
+        [Fact(DisplayName = nameof(MewtocolHelpers.ParseDTRawStringAsBytes))]
         public void ParseDTByteStringGeneration() {
 
-            var testList = new List<string>() {
-                "1112",
-                "1C2C",
-                "FFFF",
+            var testList = new List<byte[]>() {
+                new byte[] {0x11, 0x12},
+                new byte[] {0x1C, 0x2C},
+                new byte[] {0xFF, 0xFF},
             };
 
             foreach (var item in testList) {
 
-                Assert.Equal(item, $"%01$RD{item}".BCC_Mew().ParseDTByteString());
+                Assert.Equal(item, $"%01$RD{item.ToHexString()}".BCC_Mew().ParseDTRawStringAsBytes());
 
             }
 

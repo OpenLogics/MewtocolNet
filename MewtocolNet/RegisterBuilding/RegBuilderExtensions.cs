@@ -1,4 +1,5 @@
-﻿using MewtocolNet.Registers;
+﻿using MewtocolNet.RegisterBuilding.BuilderPatterns;
+using MewtocolNet.Registers;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,22 +13,22 @@ namespace MewtocolNet.RegisterBuilding {
         /// This waits for the memory manager to size all dynamic registers correctly
         /// </summary>
         /// <returns>The generated <see cref="IRegister"/></returns>
-        public static IRegister AddRegister(this IPlc plc, Action<RBuildSingle> builder) {
+        //public static IRegister AddRegister(this IPlc plc, Action<RBuildSingle> builder) {
 
-            var assembler = new RegisterAssembler((MewtocolInterface)plc);
-            var regBuilder = new RBuildSingle((MewtocolInterface)plc);
+        //    var assembler = new RegisterAssembler((MewtocolInterface)plc);
+        //    var regBuilder = new RBuildSingle((MewtocolInterface)plc);
 
-            builder.Invoke(regBuilder);
+        //    builder.Invoke(regBuilder);
 
-            var registers = assembler.AssembleAll(regBuilder);
+        //    var registers = assembler.AssembleAll(regBuilder);
 
-            var interf = (MewtocolInterface)plc;
+        //    var interf = (MewtocolInterface)plc;
 
-            interf.AddRegisters(registers.ToArray());
+        //    interf.AddRegisters(registers.ToArray());
 
-            return registers.First();
+        //    return registers.First();
 
-        }
+        //}
 
         /// <summary>
         /// Adds multiple registers to the plc stack at once <br/>
@@ -38,22 +39,22 @@ namespace MewtocolNet.RegisterBuilding {
         /// use <see cref="AddRegistersAsync"/>
         /// for this case
         /// </summary>
-        public static IPlc AddRegisters (this IPlc plc, Action<RBuildMult> builder) {
+        //public static IPlc AddRegisters (this IPlc plc, Action<RBuild> builder) {
 
-            var assembler = new RegisterAssembler((MewtocolInterface)plc);
-            var regBuilder = new RBuildMult((MewtocolInterface)plc);
+        //    var assembler = new RegisterAssembler((MewtocolInterface)plc);
+        //    var regBuilder = new RBuild((MewtocolInterface)plc);
 
-            builder.Invoke(regBuilder);
+        //    builder.Invoke(regBuilder);
 
-            var registers = assembler.AssembleAll(regBuilder);
+        //    var registers = assembler.AssembleAll(regBuilder);
 
-            var interf = (MewtocolInterface)plc;
+        //    var interf = (MewtocolInterface)plc;
 
-            interf.AddRegisters(registers.ToArray());
+        //    interf.AddRegisters(registers.ToArray());
 
-            return plc;
+        //    return plc;
 
-        }
+        //}
 
     }
 

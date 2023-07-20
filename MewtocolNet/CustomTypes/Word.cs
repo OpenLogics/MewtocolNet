@@ -13,17 +13,13 @@ namespace MewtocolNet {
 
         internal ushort value;
 
-        public ushort Value {
-            get => value;
-            set {
-                this.value = value;
-            }
-        }
+        public ushort Value => value;
 
         public Word(ushort bytes) {
             value = bytes;
             bitLength = Marshal.SizeOf(value) * 8;
         }
+
         public Word(byte[] bytes) {
             bytes = bytes.Take(2).ToArray();
             value = BitConverter.ToUInt16(bytes, 0);
@@ -53,7 +49,7 @@ namespace MewtocolNet {
         public static bool operator !=(Word a, Word b) => a.value != b.value;
 
         /// <summary>
-        /// Gets or sets the bit value at the given position
+        /// Gets the bit value at the given position
         /// </summary>
         public bool this[int bitIndex] {
             get {
@@ -62,16 +58,7 @@ namespace MewtocolNet {
 
                 return (value & (1 << bitIndex)) != 0;
             }
-            set {
-                if (bitIndex > bitLength - 1)
-                    throw new IndexOutOfRangeException($"The word bit index was out of range ({bitIndex}/{bitLength - 1})");
-
-                int mask = 1 << bitIndex;
-                this.value = value ? this.value |= (ushort)mask : this.value &= (ushort)~mask;
-            }
         }
-
-        public void ClearBits() => this.value = 0;
 
         public override bool Equals(object obj) {
 

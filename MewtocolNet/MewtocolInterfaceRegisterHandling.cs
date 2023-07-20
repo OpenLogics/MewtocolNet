@@ -2,6 +2,7 @@
 using MewtocolNet.Logging;
 using MewtocolNet.RegisterAttributes;
 using MewtocolNet.RegisterBuilding;
+using MewtocolNet.RegisterBuilding.BuilderPatterns;
 using MewtocolNet.Registers;
 using System;
 using System.Collections.Generic;
@@ -37,9 +38,6 @@ namespace MewtocolNet {
                 OnPropChange();
             }
         }
-
-        /// <inheritdoc/>
-        public RBuildAnon Register => new RBuildAnon(this);
 
         #region Register Polling
 
@@ -191,7 +189,7 @@ namespace MewtocolNet {
             if (registerCollections.Count != 0)
                 throw new NotSupportedException("Register collections can only be build once");
 
-            var regBuild = new RBuildMult(this);
+            var regBuild = new RBuildFromAttributes(this);
 
             foreach (var collection in collections) {
 
@@ -218,7 +216,7 @@ namespace MewtocolNet {
                             if (pollFreqAttr != null) pollLevel = pollFreqAttr.pollLevel;
 
                             //add builder item
-                            var stp1 = regBuild
+                            regBuild
                             .AddressFromAttribute(cAttribute.MewAddress, cAttribute.TypeDef, collection, prop, byteHint)
                             .AsType(dotnetType.IsEnum ? dotnetType.UnderlyingSystemType : dotnetType)
                             .PollLevel(pollLevel);
@@ -242,8 +240,8 @@ namespace MewtocolNet {
             }
 
             var assembler = new RegisterAssembler(this);
-            var registers = assembler.AssembleAll(regBuild, true);
-            AddRegisters(registers.ToArray());
+
+            AddRegisters(assembler.assembled.ToArray());
 
         }
 

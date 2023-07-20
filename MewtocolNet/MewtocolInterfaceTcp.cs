@@ -1,5 +1,6 @@
 using MewtocolNet.Logging;
 using System;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -23,7 +24,7 @@ namespace MewtocolNet {
         public int Port { get; private set; }
 
         /// <inheritdoc/>
-        public IPEndPoint HostEndpoint { get; set; }
+        public IPEndPoint HostEndpoint { get; internal set; }
 
         internal MewtocolInterfaceTcp() : base() { }
 
@@ -31,6 +32,9 @@ namespace MewtocolNet {
 
         /// <inheritdoc/>
         public void ConfigureConnection(string ip, int port = 9094, int station = 0xEE) {
+
+            if (IsConnected)
+                throw new NotSupportedException("Can't change the connection settings while the PLC is connected");
 
             if (!IPAddress.TryParse(ip, out ipAddr))
                 throw new NotSupportedException($"The ip: {ip} is no valid ip address");
@@ -47,6 +51,9 @@ namespace MewtocolNet {
 
         /// <inheritdoc/>
         public void ConfigureConnection(IPAddress ip, int port = 9094, int station = 0xEE) {
+
+            if (IsConnected)
+                throw new NotSupportedException("Can't change the connection settings while the PLC is connected");
 
             ipAddr = ip;
             Port = port;
@@ -65,10 +72,21 @@ namespace MewtocolNet {
 
             try {
 
+                firstPollTask = new Task(() => { });
+
                 Logger.Log($">> Intial connection start <<", LogLevel.Verbose, this);
                 isConnectingStage = true;
 
                 if (HostEndpoint != null) {
+
+                    var hasEndpoint = Mewtocol
+                    .GetSourceEndpoints()
+                    .Any(x => x.Address.ToString() == HostEndpoint.Address.ToString());
+
+                    if (!hasEndpoint)
+                        throw new NotSupportedException($"The specified source endpoint: " +
+                                                        $"{HostEndpoint}, doesn't exist on the device, " +
+                                                        $"use 'Mewtocol.GetSourceEndpoints()' to find applicable ones");
 
                     client = new TcpClient(HostEndpoint) {
                         ReceiveBufferSize = RecBufferSize,

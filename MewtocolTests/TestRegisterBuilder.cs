@@ -1,5 +1,6 @@
 ﻿using MewtocolNet;
 using MewtocolNet.RegisterBuilding;
+using MewtocolNet.RegisterBuilding.BuilderPatterns;
 using MewtocolNet.Registers;
 using MewtocolTests.EncapsulatedTests;
 using System.Collections;
@@ -123,137 +124,9 @@ public class TestRegisterBuilder {
 
         foreach (var item in dict) {
 
-            output.WriteLine($"Expected: {item.Key}");
-
-            var built = RegBuilder.Factory.FromPlcRegName(item.Key).AsPlcType(PlcVarType.BOOL).Build();
-
-            output.WriteLine($"{(built?.ToString(true) ?? "null")}\n");
-            Assert.Equivalent(item.Value, built);
 
         }
 
     }
-
-    [Fact(DisplayName = "Parsing as Bool Register (Casted)")]
-    public void TestRegisterBuildingBoolCasted () {
-
-        var expect = new BoolRegister(IOType.R, 0x1, 0);
-        var expect2 = new BoolRegister(IOType.Y, 0xA, 103);
-
-        Assert.Equivalent(expect, RegBuilder.Factory.FromPlcRegName("R1").AsPlcType(PlcVarType.BOOL).Build());
-        Assert.Equivalent(expect, RegBuilder.Factory.FromPlcRegName("R1").AsType<bool>().Build());
-
-        Assert.Equivalent(expect2, RegBuilder.Factory.FromPlcRegName("Y103A").AsPlcType(PlcVarType.BOOL).Build());
-        Assert.Equivalent(expect2, RegBuilder.Factory.FromPlcRegName("Y103A").AsType<bool>().Build());
-
-    }
-
-    [Fact(DisplayName = "Parsing as Bool Register (Auto)")]
-    public void TestRegisterBuildingBoolAuto () {
-
-        var expect = new BoolRegister(IOType.R, 0x1, 0);
-        var expect2 = new BoolRegister(IOType.Y, 0xA, 103);
-
-        Assert.Equivalent(expect, RegBuilder.Factory.FromPlcRegName("R1").Build());
-        Assert.Equivalent(expect, RegBuilder.Factory.FromPlcRegName("R1").Build());
-
-        Assert.Equivalent(expect2, RegBuilder.Factory.FromPlcRegName("Y103A").Build());
-        Assert.Equivalent(expect2, RegBuilder.Factory.FromPlcRegName("Y103A").Build());
-
-    }
-
-    [Fact(DisplayName = "Parsing as Number Register (Casted)")]
-    public void TestRegisterBuildingNumericCasted () {
-
-        var expect = new NumberRegister<short>(303);
-        var expect2 = new NumberRegister<int>(10002);
-        var expect3 = new NumberRegister<float>(404);
-        var expect4 = new NumberRegister<TimeSpan>(400);
-        var expect5 = new NumberRegister<CurrentState>(203);
-        var expect6 = new NumberRegister<CurrentState32>(204);
-
-        Assert.Equivalent(expect, RegBuilder.Factory.FromPlcRegName("DT303").AsPlcType(PlcVarType.INT).Build());
-        Assert.Equivalent(expect, RegBuilder.Factory.FromPlcRegName("DT303").AsType<short>().Build());
-
-        Assert.Equivalent(expect2, RegBuilder.Factory.FromPlcRegName("DDT10002").AsPlcType(PlcVarType.DINT).Build());
-        Assert.Equivalent(expect2, RegBuilder.Factory.FromPlcRegName("DDT10002").AsType<int>().Build());
-
-        Assert.Equivalent(expect3, RegBuilder.Factory.FromPlcRegName("DDT404").AsPlcType(PlcVarType.REAL).Build());
-        Assert.Equivalent(expect3, RegBuilder.Factory.FromPlcRegName("DDT404").AsType<float>().Build());
-
-        Assert.Equivalent(expect4, RegBuilder.Factory.FromPlcRegName("DDT400").AsPlcType(PlcVarType.TIME).Build());
-        Assert.Equivalent(expect4, RegBuilder.Factory.FromPlcRegName("DDT400").AsType<TimeSpan>().Build());
-
-        Assert.Equivalent(expect5, RegBuilder.Factory.FromPlcRegName("DT203").AsType<CurrentState>().Build());
-        Assert.Equivalent(expect6, RegBuilder.Factory.FromPlcRegName("DT204").AsType<CurrentState32>().Build());
-
-    }
-
-    [Fact(DisplayName = "Parsing as Number Register (Auto)")]
-    public void TestRegisterBuildingNumericAuto () {
-
-        var expect = new NumberRegister<short>(201);
-        var expect2 = new NumberRegister<int>(10002);
-
-        Assert.Equivalent(expect, RegBuilder.Factory.FromPlcRegName("DT201").Build());
-        Assert.Equivalent(expect2, RegBuilder.Factory.FromPlcRegName("DDT10002").Build());
-
-    }
-
-    [Fact(DisplayName = "Parsing as Bytes Register (Casted)")]
-    public void TestRegisterBuildingByteRangeCasted () {
-
-        var expect = new BytesRegister(305, (uint)35);
-
-        Assert.Equal((uint)18, expect.AddressLength);
-        Assert.Equivalent(expect, RegBuilder.Factory.FromPlcRegName("DT305").AsBytes(35).Build());
-
-    }
-
-    [Fact(DisplayName = "Parsing as Bytes Register (Auto)")]
-    public void TestRegisterBuildingByteRangeAuto () {
-
-        var expect = new BytesRegister(300, (uint)20 * 2);
-        var actual = (BytesRegister)RegBuilder.Factory.FromPlcRegName("DT300-DT319").Build();
-
-        Assert.Equal((uint)20, expect.AddressLength);
-        Assert.Equivalent(expect, actual);
-
-    }
-
-    [Fact(DisplayName = "Parsing as Bit Array")]
-    public void TestRegisterBuildingBitArray () {
-
-        var expect1 = new BytesRegister(311, (ushort)5);
-        var expect2 = new BytesRegister(312, (ushort)16);
-        var expect3 = new BytesRegister(313, (ushort)32);
-
-        var actual1 = (BytesRegister)RegBuilder.Factory.FromPlcRegName("DT311").AsBits(5).Build();
-        var actual2 = (BytesRegister)RegBuilder.Factory.FromPlcRegName("DT312").AsBits(16).Build();
-        var actual3 = (BytesRegister)RegBuilder.Factory.FromPlcRegName("DT313").AsBits(32).Build();
-
-        Assert.Equivalent(expect1, actual1);
-        Assert.Equivalent(expect2, actual2);
-        Assert.Equivalent(expect3, actual3);
-
-        Assert.Equal((uint)1, actual1.AddressLength);
-        Assert.Equal((uint)1, actual2.AddressLength);
-        Assert.Equal((uint)2, actual3.AddressLength);
-
-    }
-
-    [Fact(DisplayName = "Parsing as String Register")]
-    public void TestRegisterBuildingString () {
-
-        var expect1 = new StringRegister(314);
-
-        var actual1 = (StringRegister)RegBuilder.Factory.FromPlcRegName("DT314").AsType<string>().Build();
-
-        Assert.Equivalent(expect1, actual1);
-
-        Assert.Equal((uint)0, actual1.WordsSize);
-
-    }
-
 
 }

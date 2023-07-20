@@ -22,7 +22,7 @@ namespace MewtocolNet {
         /// <summary>
         /// The host ip endpoint, leave it null to use an automatic interface
         /// </summary>
-        IPEndPoint HostEndpoint { get; set; }
+        IPEndPoint HostEndpoint { get; }
 
         /// <summary>
         /// Configures the serial interface

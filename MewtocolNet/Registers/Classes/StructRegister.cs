@@ -16,8 +16,6 @@ namespace MewtocolNet.Registers {
     /// <typeparam name="T">The type of the numeric value</typeparam>
     public class StructRegister<T> : Register, IRegister<T> where T : struct {
 
-        internal uint byteLength;
-
         internal uint addressLength;
 
         /// <summary>
@@ -35,23 +33,17 @@ namespace MewtocolNet.Registers {
 
             memoryAddress = _address;
             name = _name;
-            Resize(_reservedByteSize);
+
+            addressLength = _reservedByteSize / 2;
+            if (_reservedByteSize % 2 != 0) addressLength++;
 
             if (_reservedByteSize == 2) RegisterType = RegisterType.DT;
             if(_reservedByteSize == 4) RegisterType = RegisterType.DDT;
-            if (typeof(T) == typeof(string)) RegisterType = RegisterType.DT_BYTE_RANGE;
 
             CheckAddressOverflow(memoryAddress, addressLength);
 
+            underlyingSystemType = typeof(T);   
             lastValue = null;
-
-        }
-
-        private void Resize (uint reservedByteSize) {
-
-            addressLength = reservedByteSize / 2;
-            if (reservedByteSize % 2 != 0) addressLength++;
-            byteLength = reservedByteSize;
 
         }
 
@@ -92,7 +84,7 @@ namespace MewtocolNet.Registers {
         public override uint GetRegisterAddressLen() => AddressLength;
 
         /// <inheritdoc/>
-        public async Task<bool> WriteAsync(T value) {
+        public async Task WriteAsync(T value) {
 
             var encoded = PlcValueParser.Encode(this, (T)value);
             var res = await attachedInterface.WriteByteRange((int)MemoryAddress, encoded);
@@ -111,26 +103,18 @@ namespace MewtocolNet.Registers {
 
             }
 
-            return res;
-
         }
 
         /// <inheritdoc/>
-        public async Task<T?> ReadAsync() {
+        public async Task<T> ReadAsync() {
 
             var res = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, (int)GetRegisterAddressLen() * 2);
-            if (res == null) return (T?)(object)null;
+            if (res == null) throw new Exception($"Failed to read the register {this}");
 
             var matchingReg = attachedInterface.memoryManager.GetAllRegisters()
             .FirstOrDefault(x => x.IsSameAddressAndType(this));
 
             if (matchingReg != null) {
-
-                //if (matchingReg is StructRegister<string> sreg && this.GetType() == typeof(StructRegister<string>)) {
-
-                //    sreg.addressLength = selfSreg.addressLength;
-                
-                //}
 
                 matchingReg.underlyingMemory.SetUnderlyingBytes(matchingReg, res);
 
@@ -141,16 +125,6 @@ namespace MewtocolNet.Registers {
         }
 
         internal override object SetValueFromBytes (byte[] bytes) {
-
-            //if string correct the sizing of the byte hint was wrong
-            if (typeof(T) == typeof(string)) {
-                var reservedSize = BitConverter.ToInt16(bytes, 0);
-                if (reservedSize != byteLength - 4)
-                    throw new NotSupportedException(
-                        $"The STRING register at {GetMewName()} is not correctly sized, " +
-                        $"the size should be STRING[{reservedSize}] instead of STRING[{byteLength - 4}]"
-                    );
-            }
 
             AddSuccessRead();
 

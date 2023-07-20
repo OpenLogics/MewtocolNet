@@ -4,7 +4,7 @@ using System.Collections;
 
 namespace MewtocolTests.EncapsulatedTests {
 
-    public enum CurrentState : short {
+    public enum CurrentState16 : short {
         Undefined = 0,
         State1 = 1,
         State2 = 2,
@@ -51,7 +51,7 @@ namespace MewtocolTests.EncapsulatedTests {
         public ushort UInt16Type { get; set; }
 
         [Register("DT50")]
-        public CurrentState Enum16Type { get; set; }
+        public CurrentState16 Enum16Type { get; set; }
 
     }
 
@@ -95,8 +95,6 @@ namespace MewtocolTests.EncapsulatedTests {
 
     public class TestBitwiseRegisters : RegisterCollection {
 
-        [Register("DT7000")]
-        public BitArray BitArr16 { get; set; }
 
         //[Register("DT7001")]
         //public BitArray BitArr32 { get; set; }

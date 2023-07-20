@@ -13,17 +13,13 @@ namespace MewtocolNet {
 
         internal uint value;
 
-        public uint Value {
-            get => value;
-            set {
-                this.value = value;
-            }
-        }
+        public uint Value => value;
 
         public DWord(uint bytes) {
             value = bytes;
             bitLength = Marshal.SizeOf(value) * 8;
         }
+
         public DWord(byte[] bytes) {
             bytes = bytes.Take(4).ToArray();
             value = BitConverter.ToUInt32(bytes, 0);
@@ -62,16 +58,7 @@ namespace MewtocolNet {
 
                 return (value & (1 << bitIndex)) != 0;
             }
-            set {
-                if (bitIndex > bitLength - 1)
-                    throw new IndexOutOfRangeException($"The DWord bit index was out of range ({bitIndex}/{bitLength - 1})");
-
-                int mask = 1 << bitIndex;
-                this.value = value ? this.value |= (uint)mask : this.value &= (uint)~mask;
-            }
         }
-
-        public void ClearBits() => this.value = 0;
 
         public override bool Equals(object obj) {
 
@@ -106,8 +93,6 @@ namespace MewtocolNet {
             return string.Join("_", parts);
 
         }
-
-        public int GetIntialPlcByteSize() => 4;
 
     }
 

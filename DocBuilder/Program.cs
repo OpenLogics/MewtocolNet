@@ -7,7 +7,6 @@ using System.Reflection;
 using System.Reflection.PortableExecutable;
 using System.Text;
 using MewtocolNet;
-using MewtocolNet.DocAttributes;
 
 Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
 Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;

@@ -6,9 +6,15 @@ using System.Reflection;
 
 namespace MewtocolNet.RegisterBuilding {
 
-    internal class BaseStepData {
+    public class StepBase {
 
-        internal Action<object> registerOut;
+        internal StepData Data;
+
+    }
+
+    public class StepBase<T> : StepBase { }
+
+    internal class StepData {
 
         internal RegisterBuildSource buildSource = RegisterBuildSource.Anonymous;
 
@@ -32,40 +38,6 @@ namespace MewtocolNet.RegisterBuilding {
         internal PropertyInfo boundProperty;
 
         internal string typeDef;
-
-        internal void InvokeBuilt(Register reg) {
-
-            registerOut?.Invoke(reg);
-
-            //var selftype = this.GetType();
-
-            //if ((selftype.IsGenericType && selftype.GetGenericTypeDefinition() == typeof(StepData<>))) {
-
-            //    var field = selftype.GetField("registerOut", BindingFlags.NonPublic | BindingFlags.Instance);
-
-            //    var generic = typeof(IRegister<>).MakeGenericType()
-
-            //    var action = Action.CreateDelegate(typeof(IRegister<T>));
-
-            //    field.SetValue(this,);
-
-            //} 
-
-        }
-
-    }
-
-    internal class StepData<T> : BaseStepData {
-
-        //for referencing the output at builder level
-        //internal Action<IRegister<T>> registerOut;
-
-    }
-
-    internal class StepData : BaseStepData {
-
-        //for referencing the output at builder level
-        //internal Action<IRegister> registerOut;
 
     }
 

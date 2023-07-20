@@ -106,9 +106,21 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         private void TestPollLevelExistence(Register reg) {
 
-            if (!pollLevelConfigs.ContainsKey(1)) {
-                pollLevelConfigs.Add(1, new PollLevelConfig {
+            if (!pollLevelConfigs.ContainsKey(MewtocolNet.PollLevel.Always)) {
+                pollLevelConfigs.Add(MewtocolNet.PollLevel.Always, new PollLevelConfig {
                     skipNth = 1,
+                });
+            }
+
+            if (!pollLevelConfigs.ContainsKey(MewtocolNet.PollLevel.FirstIteration)) {
+                pollLevelConfigs.Add(MewtocolNet.PollLevel.FirstIteration, new PollLevelConfig {
+                    skipAllButFirst = true
+                });
+            }
+
+            if (!pollLevelConfigs.ContainsKey(MewtocolNet.PollLevel.Never)) {
+                pollLevelConfigs.Add(MewtocolNet.PollLevel.Never, new PollLevelConfig {
+                    skipsAll = true,
                 });
             }
 
@@ -294,10 +306,14 @@ namespace MewtocolNet.UnderlyingRegisters {
 
                 var sw = Stopwatch.StartNew();
 
+                var lvlConfig = pollLevelConfigs[pollLevel.level];
+
+                if (lvlConfig.skipsAll) continue;
+                if (lvlConfig.skipAllButFirst && pollIteration > 0) continue;
+
                 //determine to skip poll levels, first iteration is always polled
                 if (pollIteration > 0 && pollLevel.level > 1) {
 
-                    var lvlConfig = pollLevelConfigs[pollLevel.level];
                     var skipIterations = lvlConfig.skipNth;
                     var skipDelay = lvlConfig.delay;
 
@@ -360,14 +376,32 @@ namespace MewtocolNet.UnderlyingRegisters {
 
             foreach (var pollLevel in pollLevels) {
 
-                sb.AppendLine($"\n> ==== Poll lvl {pollLevel.level} ====");
+                if (pollLevel.level == MewtocolNet.PollLevel.Always) {
 
-                sb.AppendLine();
-                if (pollLevelConfigs.ContainsKey(pollLevel.level) && pollLevelConfigs[pollLevel.level].delay != null) {
-                    sb.AppendLine($"> Poll each {pollLevelConfigs[pollLevel.level].delay?.TotalMilliseconds}ms");
-                } else if (pollLevelConfigs.ContainsKey(pollLevel.level)) {
-                    sb.AppendLine($"> Poll every {pollLevelConfigs[pollLevel.level].skipNth} iterations");
+                    sb.AppendLine($"\n> ==== Poll lvl ALWAYS ====\n");
+                    sb.AppendLine($"> Poll each iteration");
+
+                }else if (pollLevel.level == MewtocolNet.PollLevel.FirstIteration) {
+
+                    sb.AppendLine($"\n> ==== Poll lvl FIRST ITERATION ====\n");
+                    sb.AppendLine($"> Poll only on the first iteration");
+
+                } else if (pollLevel.level == MewtocolNet.PollLevel.Never) {
+
+                    sb.AppendLine($"\n> ==== Poll lvl NEVER ====\n");
+                    sb.AppendLine($"> Poll never");
+
+                } else {
+
+                    sb.AppendLine($"\n> ==== Poll lvl {pollLevel.level} ====\n");
+                    if (pollLevelConfigs.ContainsKey(pollLevel.level) && pollLevelConfigs[pollLevel.level].delay != null) {
+                        sb.AppendLine($"> Poll each {pollLevelConfigs[pollLevel.level].delay?.TotalMilliseconds}ms");
+                    } else if (pollLevelConfigs.ContainsKey(pollLevel.level)) {
+                        sb.AppendLine($"> Poll every {pollLevelConfigs[pollLevel.level].skipNth} iterations");
+                    }
+
                 }
+
                 sb.AppendLine($"> Level read time: {pollLevel.lastReadTimeMs}ms");
                 sb.AppendLine($"> Optimization distance: {maxOptimizationDistance}");
                 sb.AppendLine();

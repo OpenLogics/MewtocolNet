@@ -58,11 +58,6 @@ namespace MewtocolNet {
         int ConnectTimeout { get; set; }
 
         /// <summary>
-        /// Provides an anonymous interface for register reading and writing without memory management
-        /// </summary>
-        RBuildAnon Register { get; }
-
-        /// <summary>
         /// Tries to establish a connection with the device asynchronously
         /// </summary>
         /// <param name="onConnected">A callback for excecuting something right after the plc connected</param>
