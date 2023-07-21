@@ -41,7 +41,7 @@ jobs:
 
       - name: 'Run docbuilder'
         continue-on-error: true
-        run: dotnet run --project "./AutoTools.DocBuilder/DocBuilder.csproj" "./AutoTools.DocBuilder/Docs/plctypes.md"
+        run: dotnet run --project "./AutoTools.DocBuilder/AutoTools.DocBuilder.csproj" "./AutoTools.DocBuilder/Docs/plctypes.md"
 
       - name: 'Commit generated docs to branch'
         continue-on-error: true
