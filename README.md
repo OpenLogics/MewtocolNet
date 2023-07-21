@@ -37,7 +37,7 @@ For a full list of supported .NET clrs see [this page](https://docs.microsoft.co
 > This library was only tested with a few PLCs, other types that support the Panasonic Mewtocol protocol might work. 
 > Use at your own risk, others might follow with community feedback
 
-For a **Support List** check [this table](DocBuilder/Docs/plctypes.md)
+For a **Support List** check [this table](AutoTools.DocBuilder/Docs/plctypes.md)
 
 Where is the RS232/Serial support?
 
