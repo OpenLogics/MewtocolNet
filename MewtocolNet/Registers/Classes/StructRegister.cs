@@ -16,6 +16,7 @@ namespace MewtocolNet.Registers {
     /// <typeparam name="T">The type of the numeric value</typeparam>
     public class StructRegister<T> : Register, IRegister<T> where T : struct {
 
+        internal byte specialAddress;
         internal uint addressLength;
 
         /// <summary>
@@ -23,27 +24,64 @@ namespace MewtocolNet.Registers {
         /// </summary>
         public uint AddressLength => addressLength;
 
+        /// <summary>
+        /// The registers memory adress if not a special register
+        /// </summary>
+        public byte SpecialAddress => specialAddress;
+
         public T? Value => (T?)ValueObj;
 
         [Obsolete("Creating registers directly is not supported use IPlc.Register instead")]
         public StructRegister() =>
         throw new NotSupportedException("Direct register instancing is not supported, use the builder pattern");
 
+        //struct for 16-32bit registers
         internal StructRegister(uint _address, uint _reservedByteSize, string _name = null) {
 
             memoryAddress = _address;
+            specialAddress = 0x0;
             name = _name;
 
             addressLength = _reservedByteSize / 2;
             if (_reservedByteSize % 2 != 0) addressLength++;
 
-            if (_reservedByteSize == 2) RegisterType = RegisterType.DT;
-            if(_reservedByteSize == 4) RegisterType = RegisterType.DDT;
+            if (_reservedByteSize == 2) RegisterType = RegisterPrefix.DT;
+            if(_reservedByteSize == 4) RegisterType = RegisterPrefix.DDT;
 
             CheckAddressOverflow(memoryAddress, addressLength);
 
             underlyingSystemType = typeof(T);   
             lastValue = null;
+
+        }
+
+        //struct for one bit registers
+        internal StructRegister(SingleBitPrefix _io, byte _spAddress = 0x0, uint _areaAdress = 0, string _name = null) {
+
+            lastValue = null;
+
+            memoryAddress = _areaAdress;
+            specialAddress = _spAddress;
+            name = _name;
+
+            RegisterType = (RegisterPrefix)(int)_io;
+
+            CheckAddressOverflow(memoryAddress, 0);
+
+        }
+
+        protected override void CheckAddressOverflow(uint addressStart, uint addressLen) {
+
+            if ((int)RegisterType == (int)SingleBitPrefix.R && addressStart >= 512)
+                throw new NotSupportedException("R area addresses cant be greater than 511");
+
+            if (((int)RegisterType == (int)SingleBitPrefix.X || (int)RegisterType == (int)SingleBitPrefix.Y) && addressStart >= 110)
+                throw new NotSupportedException("XY area addresses cant be greater than 110");
+
+            if (specialAddress > 0xF)
+                throw new NotSupportedException("Special address cant be greater than 15 or 0xF");
+
+            base.CheckAddressOverflow(addressStart, addressLen);
 
         }
 

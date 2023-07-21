@@ -75,14 +75,13 @@ namespace MewtocolNet.UnderlyingRegisters {
                 TestPollLevelExistence(reg);
 
                 switch (reg.RegisterType) {
-                    case RegisterType.X:
-                    case RegisterType.Y:
-                    case RegisterType.R:
+                    case RegisterPrefix.X:
+                    case RegisterPrefix.Y:
+                    case RegisterPrefix.R:
                     AddToWRArea(reg);
                     break;
-                    case RegisterType.DT:
-                    case RegisterType.DDT:
-                    case RegisterType.DT_BYTE_RANGE:
+                    case RegisterPrefix.DT:
+                    case RegisterPrefix.DDT:
                     AddToDTArea(reg);
                     break;
                 }
@@ -148,13 +147,13 @@ namespace MewtocolNet.UnderlyingRegisters {
             List<WRArea> collection = null;
 
             switch (insertReg.RegisterType) {
-                case RegisterType.X:
+                case RegisterPrefix.X:
                 collection = pollLevelFound.externalRelayInAreas;
                 break;
-                case RegisterType.Y:
+                case RegisterPrefix.Y:
                 collection = pollLevelFound.externalRelayOutAreas;
                 break;
-                case RegisterType.R:
+                case RegisterPrefix.R:
                 collection = pollLevelFound.internalRelayAreas;
                 break;
             }

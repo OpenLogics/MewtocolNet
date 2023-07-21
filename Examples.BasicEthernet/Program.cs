@@ -13,8 +13,7 @@ internal class Program {
     static async Task AsyncMain () {
 
         //the library provides a logging tool, comment this out if needed
-        Logger.LogLevel = LogLevel.Verbose;
-        Logger.OnNewLogMessage((d, l, m) => Console.WriteLine($"{d}: {m}"));
+        Logger.LogLevel = LogLevel.Critical;
 
         //create a new interface to the plc using ethernet / tcp ip
         //the using keyword is optional, if you want to use your PLC instance
@@ -56,6 +55,11 @@ internal class Program {
             
             //you can then change the connection settings for example to another PLC
             plc.ConfigureConnection("192.168.115.212", 9094);
+            await plc.ConnectAsync();
+
+            plc.Disconnect();
+
+            plc.ConfigureConnection("192.168.115.214", 9094);
             await plc.ConnectAsync();
 
         }

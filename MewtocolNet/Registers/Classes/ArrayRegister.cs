@@ -56,7 +56,7 @@ namespace MewtocolNet.Registers {
             byteSizePerItem = (int)_reservedByteSize / itemCount;
             reservedByteSize = _reservedByteSize;
 
-            RegisterType = RegisterType.DT_BYTE_RANGE;
+            RegisterType = byteSizePerItem == 4 ? RegisterPrefix.DDT : RegisterPrefix.DT;
             addressLength = Math.Max((_reservedByteSize / 2), 1);
 
             CheckAddressOverflow(memoryAddress, addressLength);

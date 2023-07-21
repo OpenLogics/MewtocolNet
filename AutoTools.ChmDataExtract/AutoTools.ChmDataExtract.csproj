@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<IsPublishable>false</IsPublishable>
+	<IsPackable>false</IsPackable>
+	<OutputType>Exe</OutputType>
+	<TargetFramework>net6.0</TargetFramework>
+	<ImplicitUsings>enable</ImplicitUsings>
+	<Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<ProjectReference Include="..\MewtocolNet\MewtocolNet.csproj"/>
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.50" />
+  </ItemGroup>
+
+</Project>

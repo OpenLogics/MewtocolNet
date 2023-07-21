@@ -230,27 +230,27 @@ namespace MewtocolNet {
         /// <summary>
         /// Checks if the register type is boolean
         /// </summary>
-        internal static bool IsBoolean(this RegisterType type) {
+        internal static bool IsBoolean(this RegisterPrefix type) {
 
-            return type == RegisterType.X || type == RegisterType.Y || type == RegisterType.R;
+            return type == RegisterPrefix.X || type == RegisterPrefix.Y || type == RegisterPrefix.R;
 
         }
 
         /// <summary>
         /// Checks if the register type numeric
         /// </summary>
-        internal static bool IsNumericDTDDT(this RegisterType type) {
+        internal static bool IsNumericDTDDT(this RegisterPrefix type) {
 
-            return type == RegisterType.DT || type == RegisterType.DDT;
+            return type == RegisterPrefix.DT || type == RegisterPrefix.DDT;
 
         }
 
         /// <summary>
         /// Checks if the register type is an physical in or output of the plc
         /// </summary>
-        internal static bool IsPhysicalInOutType(this RegisterType type) {
+        internal static bool IsPhysicalInOutType(this RegisterPrefix type) {
 
-            return type == RegisterType.X || type == RegisterType.Y;
+            return type == RegisterPrefix.X || type == RegisterPrefix.Y;
 
         }
 
@@ -299,18 +299,29 @@ namespace MewtocolNet {
 
             if (plcT == 0) return "Unknown";
 
-            return string.Join(" or ", ParsedPlcName.PlcDeconstruct(plcT).Select(x => x.WholeName));
+            if(!Enum.IsDefined(typeof(PlcType), plcT)) return "Unknown";
+
+            return ParsedPlcName.PlcDeconstruct(plcT.ToString()).ToString();
 
         }
 
         /// <summary>
         /// Converts the enum to a decomposed <see cref="ParsedPlcName"/> struct
         /// </summary>
-        public static ParsedPlcName[] ToNameDecompose(this PlcType plcT) {
+        public static ParsedPlcName ToNameDecompose(this PlcType plcT) {
 
-            if ((int)plcT == 0) return Array.Empty<ParsedPlcName>();
+            if ((int)plcT == 0)
+                throw new NotSupportedException("No plc type found");
 
-            return ParsedPlcName.PlcDeconstruct(plcT);
+            if (!Enum.IsDefined(typeof(PlcType), plcT)) return null;
+
+            return ParsedPlcName.PlcDeconstruct(plcT.ToString());
+
+        }
+
+        internal static ParsedPlcName ToNameDecompose(this string plcEnumString) {
+
+            return ParsedPlcName.PlcDeconstruct(plcEnumString);
 
         }
 

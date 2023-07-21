@@ -13,7 +13,7 @@ namespace MewtocolNet {
 
         Type GetHoldingRegisterType();
 
-        RegisterType GetPlcRegisterType();
+        RegisterPrefix GetPlcRegisterType();
 
         PlcVarType GetPlcVarType();
 

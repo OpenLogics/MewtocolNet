@@ -39,7 +39,7 @@ namespace MewtocolNet.Registers {
             reservedStringLength = (int)_reservedByteSize;   
             Resize(_reservedByteSize);
 
-            RegisterType = RegisterType.DT_BYTE_RANGE;
+            RegisterType = RegisterPrefix.DT;
 
             CheckAddressOverflow(memoryAddress, addressLength);
 

@@ -62,8 +62,6 @@ namespace MewtocolNet.RegisterBuilding {
 
                 var instance = (Register)constr.Invoke(parameters);
 
-                instance.RegisterType = RegisterType.DT_BYTE_RANGE;
-
                 if (data.boundProperty != null && data.boundProperty.PropertyType != data.dotnetVarType)
                     throw new TypeAccessException($"The bound property {data.boundProperty} must by of type: {data.dotnetVarType}");
 
@@ -129,7 +127,7 @@ namespace MewtocolNet.RegisterBuilding {
                 //-------------------------------------------
                 //as boolean register
 
-                var io = (IOType)(int)data.regType;
+                var io = (SingleBitPrefix)(int)data.regType;
                 var spAddr = data.specialAddress;
                 var areaAddr = data.memAddress;
 

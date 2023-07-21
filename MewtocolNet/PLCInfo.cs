@@ -1,5 +1,7 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using System.Globalization;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
@@ -38,7 +40,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Program capacity in 1K steps
         /// </summary>
-        public int ProgramCapacity { get; internal set; }
+        public float ProgramCapacity { get; internal set; }
 
         /// <summary>
         /// Version of the cpu
@@ -94,9 +96,11 @@ namespace MewtocolNet {
             if (match.Success) {
 
                 byte typeCodeByte = byte.Parse(match.Groups["mc"].Value, NumberStyles.HexNumber);
+                var overWriteBytes = BitConverter.GetBytes((int)this.TypeCode);
+                overWriteBytes[0] = typeCodeByte;
 
-                this.TypeCode = (PlcType)typeCodeByte;
-                this.CpuVersion = match.Groups["ver"].Value;
+                this.TypeCode = (PlcType)BitConverter.ToInt32(overWriteBytes, 0);
+                this.CpuVersion = match.Groups["ver"].Value.Insert(1, ".");
                 this.HardwareInformation = (HWInformation)byte.Parse(match.Groups["hwif"].Value, NumberStyles.HexNumber);
 
                 return true;
@@ -114,11 +118,27 @@ namespace MewtocolNet {
             if (match.Success) {
 
                 byte typeCodeByte = byte.Parse(match.Groups["cputype"].Value, NumberStyles.HexNumber);
+                byte capacity = byte.Parse(match.Groups["cap"].Value, NumberStyles.Number);
+                var typeCodeFull = (PlcType)BitConverter.ToInt32(new byte[] { typeCodeByte, capacity, 0, 0}, 0);
+
+                float definedProgCapacity = 0;
+                var composedNow = typeCodeFull.ToNameDecompose();
+
+                if (composedNow != null) {
+
+                    //already recognized the type code, use the capacity value encoded in the enum
+                    definedProgCapacity = composedNow.Size;
+
+                } else {
+
+                    definedProgCapacity = int.Parse(match.Groups["cap"].Value);
+                
+                }
 
                 inf = new PLCInfo {
-                    TypeCode = (PlcType)typeCodeByte,
-                    CpuVersion = match.Groups["cpuver"].Value,
-                    ProgramCapacity = int.Parse(match.Groups["cap"].Value),
+                    TypeCode = typeCodeFull,
+                    CpuVersion = match.Groups["cpuver"].Value.Insert(1, "."),
+                    ProgramCapacity = definedProgCapacity,
                     SelfDiagnosticError = match.Groups["sdiag"].Value,
                     OperationMode = (OPMode)byte.Parse(match.Groups["op"].Value, NumberStyles.HexNumber),
                 };

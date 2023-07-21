@@ -182,7 +182,7 @@ namespace MewtocolNet {
 
         public static List<Type> GetAllowRegisterTypes() => conversions.Select(x => x.GetHoldingRegisterType()).ToList();
 
-        public static RegisterType? GetDefaultRegisterType(Type type) =>
+        public static RegisterPrefix? GetDefaultRegisterType(Type type) =>
             conversions.FirstOrDefault(x => x.GetDotnetType() == type)?.GetPlcRegisterType();
 
         public static Type GetDefaultRegisterHoldingType(this PlcVarType type) =>

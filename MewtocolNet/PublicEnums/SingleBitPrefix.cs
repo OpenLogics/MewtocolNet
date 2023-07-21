@@ -6,7 +6,7 @@
     /// <summary>
     /// The type of an input/output register
     /// </summary>
-    public enum IOType {
+    public enum SingleBitPrefix {
 
         /// <summary>
         /// Physical input as a bool (Relay)

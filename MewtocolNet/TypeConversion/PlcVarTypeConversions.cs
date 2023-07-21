@@ -32,9 +32,9 @@ namespace MewtocolNet {
 
         }
 
-        internal static RegisterType ToRegisterTypeDefault(this Type type) {
+        internal static RegisterPrefix ToRegisterTypeDefault(this Type type) {
 
-            if (type.IsEnum) return RegisterType.DT;
+            if (type.IsEnum) return RegisterPrefix.DT;
 
             var found = PlcValueParser.GetDefaultRegisterType(type);
 

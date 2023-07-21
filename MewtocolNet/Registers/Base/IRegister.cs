@@ -17,7 +17,7 @@ namespace MewtocolNet.Registers {
         /// <summary>
         /// Type of the underlying register
         /// </summary>
-        RegisterType RegisterType { get; }
+        RegisterPrefix RegisterType { get; }
 
         /// <summary>
         /// The name of the register

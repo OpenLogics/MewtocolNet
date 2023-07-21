@@ -9,7 +9,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         private MewtocolInterface mewInterface;
 
-        internal RegisterType registerType;
+        internal RegisterPrefix registerType;
         internal ulong addressStart;
         internal ulong addressEnd;
 

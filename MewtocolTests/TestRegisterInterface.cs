@@ -31,7 +31,7 @@ namespace MewtocolTests {
 
             var ex1 = Assert.Throws<NotSupportedException>(() => {
 
-                new BoolRegister(IOType.R, _areaAdress: 512);
+                new BoolRegister(SingleBitPrefix.R, _areaAdress: 512);
 
             });
 
@@ -39,7 +39,7 @@ namespace MewtocolTests {
 
             var ex2 = Assert.Throws<NotSupportedException>(() => {
 
-                new BoolRegister(IOType.X, _areaAdress: 110);
+                new BoolRegister(SingleBitPrefix.X, _areaAdress: 110);
 
             });
 

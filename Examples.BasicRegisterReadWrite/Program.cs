@@ -6,7 +6,8 @@ namespace Examples.BasicRegisterReadWrite;
 
 internal class Program {
 
-    const string PLC_IP = "192.168.178.55";
+    //const string PLC_IP = "192.168.178.55";
+    const string PLC_IP = "192.168.115.210";
 
     static void Main(string[] args) => Task.Run(AsyncMain).Wait();
 
@@ -53,6 +54,8 @@ internal class Program {
 
             //a simple 2 dimensional ARRAY [0..2, 0..2] OF INT at DT2003
             b.Struct<short>("DT2003").AsArray(3, 3).Build(out simpleNumberRegister2Dim);
+
+            b.Struct<bool>("R19A").Build();
 
         })
         .Build();

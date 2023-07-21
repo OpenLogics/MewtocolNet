@@ -41,7 +41,7 @@ jobs:
 
       - name: 'Run docbuilder'
         continue-on-error: true
-        run: dotnet run --project "./DocBuilder/DocBuilder.csproj" "./DocBuilder/Docs/plctypes.md"
+        run: dotnet run --project "./AutoTools.DocBuilder/DocBuilder.csproj" "./AutoTools.DocBuilder/Docs/plctypes.md"
 
       - name: 'Commit generated docs to branch'
         continue-on-error: true
@@ -50,7 +50,7 @@ jobs:
             git checkout ${{ steps.extract_branch.outputs.branch }}
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
-            git add "./DocBuilder/Docs/plctypes.md" -f
+            git add "./AutoTools.DocBuilder/Docs/plctypes.md" -f
             git commit -m "(AUTO_DOC) add documentation for branch ${{ steps.extract_branch.outputs.branch }}"
 
       - name: 'Push docs commit'

@@ -18,7 +18,7 @@ namespace MewtocolNet.Registers {
         public BoolRegister() =>
         throw new NotSupportedException("Direct register instancing is not supported, use the builder pattern");
 
-        internal BoolRegister(IOType _io, byte _spAddress = 0x0, uint _areaAdress = 0, string _name = null) {
+        internal BoolRegister(SingleBitPrefix _io, byte _spAddress = 0x0, uint _areaAdress = 0, string _name = null) {
 
             lastValue = null;
 
@@ -26,7 +26,7 @@ namespace MewtocolNet.Registers {
             specialAddress = _spAddress;
             name = _name;
 
-            RegisterType = (RegisterType)(int)_io;
+            RegisterType = (RegisterPrefix)(int)_io;
 
             CheckAddressOverflow(memoryAddress, 0);
 
@@ -34,10 +34,10 @@ namespace MewtocolNet.Registers {
 
         protected override void CheckAddressOverflow(uint addressStart, uint addressLen) {
 
-            if ((int)RegisterType == (int)IOType.R && addressStart >= 512)
+            if ((int)RegisterType == (int)SingleBitPrefix.R && addressStart >= 512)
                 throw new NotSupportedException("R area addresses cant be greater than 511");
 
-            if (((int)RegisterType == (int)IOType.X || (int)RegisterType == (int)IOType.Y) && addressStart >= 110)
+            if (((int)RegisterType == (int)SingleBitPrefix.X || (int)RegisterType == (int)SingleBitPrefix.Y) && addressStart >= 110)
                 throw new NotSupportedException("XY area addresses cant be greater than 110");
 
             if (specialAddress > 0xF)

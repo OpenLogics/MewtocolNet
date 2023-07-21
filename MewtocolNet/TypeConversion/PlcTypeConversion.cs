@@ -7,7 +7,7 @@ namespace MewtocolNet {
 
         public Type MainType { get; private set; }
 
-        public RegisterType PlcType { get; private set; }
+        public RegisterPrefix PlcType { get; private set; }
 
         public PlcVarType PlcVarType { get; set; }
 
@@ -17,7 +17,7 @@ namespace MewtocolNet {
 
         public Func<Register, T, byte[]> ToRaw { get; set; }
 
-        public PlcTypeConversion(RegisterType plcType) {
+        public PlcTypeConversion(RegisterPrefix plcType) {
 
             MainType = typeof(T);
             PlcType = plcType;
@@ -28,7 +28,7 @@ namespace MewtocolNet {
 
         public Type GetHoldingRegisterType() => HoldingRegisterType;
 
-        public RegisterType GetPlcRegisterType() => PlcType;
+        public RegisterPrefix GetPlcRegisterType() => PlcType;
 
         public PlcVarType GetPlcVarType() => PlcVarType;
 

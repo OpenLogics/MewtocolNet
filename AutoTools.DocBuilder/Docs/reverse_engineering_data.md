@@ -47,27 +47,6 @@
 | 1604 | System register size
 | 96230000001480004 | ?
 
-### %EE$EX00RT with error
- 
-|Reponse Byte|Description|
-|------------|-----------|
-| 00 | Extended mode
-| 32 | Data item count
-| 70 | Machine type
-| 00 | Version (Fixed to 00)
-| 16 | Prog capacity in K
-| 81 | Operation mode / status
-| 00 | Link unit
-| 60 | Error flag
-| 0000 | Self diag error
-| 50 | Version
-| 02 | Hardware information
-| 0 | Number of programs
-| 4100 | Program size BCD
-| 1600 | Header size (no. of words) bcd
-| 1604 | System register size
-| 96230000001480004 | ?                   
-
 What are the last bytes?
 
 FP-X 16k C14R
@@ -95,6 +74,76 @@ FP-XH 16k C14R
 | 00 | Link unit |
 | 60 | Error flag |
 | 0000 | Self diag error |
+
+## FP-X0 2.5k L14,L30
+
+### %EE$RT
+
+|Reponse Byte|Description|
+|------------|-----------|
+| 72 | Model code |
+| 12 | Version |
+| 02 | Prog capacity |
+| 82 | Op mode |
+| 00 | Link unit |
+| 00 | Error flag |
+| 0000 | Self diag error |
+
+### %EE$EX00RT
+
+|Reponse Byte|Description|
+|------------|-----------|
+| 00 | Extended mode
+| 32 | Data item count
+| 72 | Machine type
+| 00 | Version (Fixed to 00)
+| 02 | Prog capacity in K
+| 82 | Operation mode / status
+| 00 | Link unit
+| 00 | Error flag
+| 0000 | Self diag error
+| 23 | Version
+| 01 | Hardware information
+| 0 | Number of programs
+| 4100 | Program size BCD
+| 0301 | Header size (no. of words) bcd
+| 2819 | System register size
+| 0000001480004 | ?
+
+## FP0 2.7k C10,C14
+
+### %EE$RT
+
+|Reponse Byte|Description|
+|------------|-----------|
+| 05 | Model code |
+| 12 | Version |
+| 03 | Prog capacity |
+| 82 | Op mode |
+| 00 | Link unit |
+| 00 | Error flag |
+| 0000 | Self diag error |
+
+### %EE$EX00RT
+
+|Reponse Byte|Description|
+|------------|-----------|
+| 00 | Extended mode
+| 32 | Data item count
+| 40 | Machine type
+| 00 | Version (Fixed to 00)
+| 03 | Prog capacity in K
+| 82 | Operation mode / status
+| 00 | Link unit
+| 00 | Error flag
+| 0000 | Self diag error
+| 23 | Version
+| 01 | Hardware information
+| 0 | Number of programs
+| 4100 | Program size BCD
+| 0301 | Header size (no. of words) bcd
+| 2819 | System register size
+| 20130000080070004 | ?
 
 # Mewtocol-7 Com
 

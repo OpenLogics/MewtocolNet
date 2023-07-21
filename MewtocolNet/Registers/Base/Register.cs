@@ -48,7 +48,7 @@ namespace MewtocolNet.Registers {
         public object ValueObj => lastValue;
 
         /// <inheritdoc/>
-        public RegisterType RegisterType { get; internal set; }
+        public RegisterPrefix RegisterType { get; internal set; }
 
         /// <inheritdoc/>
         public string Name => name;
@@ -106,7 +106,7 @@ namespace MewtocolNet.Registers {
 
         public virtual string GetAsPLC() => ValueObj?.ToString() ?? "null";
 
-        public virtual string GetRegisterString() => RegisterType == RegisterType.DT_BYTE_RANGE ? "DT" : RegisterType.ToString();
+        public virtual string GetRegisterString() => RegisterType.ToString();
 
         public virtual string GetCombinedName() => $"{GetContainerName()}{(GetContainerName() != null ? "." : "")}{Name ?? "Unnamed"}";
 

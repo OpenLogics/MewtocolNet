@@ -21,7 +21,7 @@ namespace MewtocolNet.RegisterBuilding {
         internal bool wasAddressStringRangeBased;
         internal string originalParseStr;
         internal string name;
-        internal RegisterType regType;
+        internal RegisterPrefix regType;
         internal uint memAddress;
         internal byte specialAddress;
         internal Type dotnetVarType;

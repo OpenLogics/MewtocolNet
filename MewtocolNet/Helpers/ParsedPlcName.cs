@@ -9,7 +9,7 @@ namespace MewtocolNet {
     /// <summary>
     /// A structure containing the PLC name parsed
     /// </summary>
-    public struct ParsedPlcName {
+    public class ParsedPlcName {
 
         /// <summary>
         /// Whole name of the PLC
@@ -31,51 +31,75 @@ namespace MewtocolNet {
         /// </summary>
         public string[] SubTypes { get; internal set; }
 
+        /// <summary>
+        /// Typecode of the parsed string
+        /// </summary>
+        public int TypeCode { get; internal set; }  
+
+        /// <summary>
+        /// The encoded name, same as enum name
+        /// </summary>
+        public string EncodedName { get; internal set; }    
+
+        /// <summary>
+        /// True if the model is discontinued
+        /// </summary>
+        public bool IsDiscontinuedModel { get; internal set; }  
+
+        internal bool WasTestedLive { get; set; }
+
+        internal bool UsesEXRT { get; set; }
+
         /// <inheritdoc/>
         public override string ToString() => WholeName;
 
-        internal static ParsedPlcName[] PlcDeconstruct(PlcType plcT) {
+        internal static ParsedPlcName PlcDeconstruct(string wholeStr) {
 
-            string wholeStr = plcT.ToString();
-
-            var split = wholeStr.Replace("_OR_", "|").Split('|');
             var reg = new Regex(@"(?<group>[A-Za-z0-9]*)_(?<size>[A-Za-z0-9]*)(?:__)?(?<additional>.*)");
+            var match = reg.Match(wholeStr);
 
-            var retList = new List<ParsedPlcName>();
+            if (match.Success) {
 
-            foreach (var item in split) {
+                string groupStr = SanitizePlcEncodedString(match.Groups["group"].Value);
+                string sizeStr = SanitizePlcEncodedString(match.Groups["size"].Value);
+                float sizeFl = float.Parse(sizeStr.Replace("k", ""), NumberStyles.Float, CultureInfo.InvariantCulture);
+                string additionalStr = match.Groups["additional"].Value;
+                string[] subTypes = additionalStr.Split('_').Select(x => SanitizePlcEncodedString(x)).ToArray();
 
-                var match = reg.Match(item);
+                string wholeName = $"{groupStr} {sizeFl:0.##}k{(subTypes.Length > 0 ? " " : "")}{string.Join(",", subTypes)}";
 
-                if (match.Success) {
+                if (string.IsNullOrEmpty(subTypes[0]))
+                    subTypes = Array.Empty<string>();
 
-                    string groupStr = SanitizePlcEncodedString(match.Groups["group"].Value);
-                    string sizeStr = SanitizePlcEncodedString(match.Groups["size"].Value);
-                    float sizeFl = float.Parse(sizeStr.Replace("k", ""), NumberStyles.Float, CultureInfo.InvariantCulture);
-                    string additionalStr = match.Groups["additional"].Value;
-                    string[] subTypes = additionalStr.Split('_').Select(x => SanitizePlcEncodedString(x)).ToArray();
+                int typeCode = 999;
+                bool discontinued = false, exrt = false, tested = false;
+                
+                if(Enum.TryParse(wholeStr, out PlcType t)) {
 
-                    string wholeName = $"{groupStr} {sizeFl:0.##}k{(subTypes.Length > 0 ? " " : "")}{string.Join(",", subTypes)}";
-
-                    if (string.IsNullOrEmpty(subTypes[0]))
-                        subTypes = Array.Empty<string>();
-
-                    retList.Add(new ParsedPlcName {
-                        Group = groupStr,
-                        Size = sizeFl,
-                        SubTypes = subTypes,
-                        WholeName = wholeName,
-                    });
-
-                } else {
-
-                    throw new FormatException($"The plc enum was not formatted correctly: {item}");
+                    typeCode = (int)t;
+                    discontinued = t.IsDiscontinued();
+                    exrt = t.IsEXRTPLC();
+                    tested = t.WasTestedLive();
 
                 }
 
-            }
+                return new ParsedPlcName {
+                    Group = groupStr,
+                    Size = sizeFl,
+                    SubTypes = subTypes,
+                    WholeName = wholeName,
+                    EncodedName = wholeStr,
+                    TypeCode = typeCode,
+                    IsDiscontinuedModel = discontinued,
+                    UsesEXRT = exrt,
+                    WasTestedLive = tested, 
+                };
 
-            return retList.ToArray();
+            } else {
+
+                throw new FormatException($"The plc enum was not formatted correctly: {wholeStr}");
+
+            }
 
         }
 

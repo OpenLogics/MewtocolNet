@@ -3,7 +3,7 @@
     /// <summary>
     /// The register prefixed type
     /// </summary>
-    public enum RegisterType {
+    public enum RegisterPrefix {
 
         /// <summary>
         /// Physical input as a bool (Relay)
@@ -25,10 +25,6 @@
         /// Double word area (Register)
         /// </summary>
         DDT = 4,
-        /// <summary>
-        /// Area of a byte sequence longer than 2 words 
-        /// </summary>
-        DT_BYTE_RANGE = 5,
 
     }
 

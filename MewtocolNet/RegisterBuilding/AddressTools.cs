@@ -23,7 +23,6 @@ namespace MewtocolNet.RegisterBuilding {
 
             (x) => TryBuildBoolean(x),
             (x) => TryBuildNumericBased(x),
-            (x) => TryBuildByteRangeBased(x),
 
         };
 
@@ -44,7 +43,7 @@ namespace MewtocolNet.RegisterBuilding {
             string area = match.Groups["area"].Value;
             string special = match.Groups["special"].Value;
 
-            IOType regType;
+            SingleBitPrefix regType;
             uint areaAdd = 0;
             byte specialAdd = 0x0;
 
@@ -111,7 +110,7 @@ namespace MewtocolNet.RegisterBuilding {
             return new ParseResult {
                 state = ParseResultState.Success,
                 stepData = new StepData {
-                    regType = (RegisterType)(int)regType,
+                    regType = (RegisterPrefix)(int)regType,
                     memAddress = areaAdd,
                     specialAddress = specialAdd,
                 }
@@ -134,7 +133,7 @@ namespace MewtocolNet.RegisterBuilding {
             string prefix = match.Groups["prefix"].Value;
             string area = match.Groups["area"].Value;
 
-            RegisterType regType;
+            RegisterPrefix regType;
             uint areaAdd = 0;
 
             //try cast the prefix
@@ -161,73 +160,6 @@ namespace MewtocolNet.RegisterBuilding {
                 stepData = new StepData {
                     regType = regType,
                     memAddress = areaAdd,
-                }
-            };
-
-        }
-
-        // one to two word registers
-        private static ParseResult TryBuildByteRangeBased(string plcAddrName) {
-
-            var split = plcAddrName.Split('-');
-
-            if (split.Length > 2)
-                return new ParseResult {
-                    state = ParseResultState.FailedHard,
-                    hardFailReason = $"Cannot parse '{plcAddrName}', to many delimters '-'"
-                };
-
-            uint[] addresses = new uint[2];
-
-            for (int i = 0; i < split.Length; i++) {
-
-                string addr = split[i];
-                var patternByte = new Regex(@"(?<prefix>DT|DDT)(?<area>[0-9]{1,5})");
-
-                var match = patternByte.Match(addr);
-
-                if (!match.Success)
-                    return new ParseResult {
-                        state = ParseResultState.FailedSoft
-                    };
-
-                string prefix = match.Groups["prefix"].Value;
-                string area = match.Groups["area"].Value;
-
-                RegisterType regType;
-                uint areaAdd = 0;
-
-                //try cast the prefix
-                if (!Enum.TryParse(prefix, out regType)) {
-
-                    return new ParseResult {
-                        state = ParseResultState.FailedHard,
-                        hardFailReason = $"Cannot parse '{plcAddrName}', the prefix is not allowed for word range registers"
-                    };
-
-                }
-
-                if (!string.IsNullOrEmpty(area) && !uint.TryParse(area, out areaAdd)) {
-
-                    return new ParseResult {
-                        state = ParseResultState.FailedHard,
-                        hardFailReason = $"Cannot parse '{plcAddrName}', the area address: '{area}' is wrong"
-                    };
-
-                }
-
-                addresses[i] = areaAdd;
-
-            }
-
-            return new ParseResult {
-                state = ParseResultState.Success,
-                stepData = new StepData {
-                    regType = RegisterType.DT_BYTE_RANGE,
-                    wasAddressStringRangeBased = true,
-                    dotnetVarType = typeof(byte[]),
-                    memAddress = addresses[0],
-                    byteSizeHint = (addresses[1] - addresses[0] + 1) * 2
                 }
             };
 
