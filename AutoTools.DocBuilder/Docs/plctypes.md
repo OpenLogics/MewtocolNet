@@ -1,5 +1,5 @@
 # PLC Type Table
-Auto Generated @ **2023-07-21 15:07:27Z**
+Auto Generated @ **2023-07-21 16:30:21Z**
 
 All supported PLC types for auto recognition are listed in this table. Other ones might also be supported but are shown as unknown in the library. Some models are never uniquely identifiable by their typecode and need extra hints like Prog Capacity in EXRT or RT. 
 
@@ -45,7 +45,7 @@ A5 <= Is the actual typecode, can overlap with others
 <tr>
 <td> C10, C14, C16 </td>
 <td> 2.7k </td>
-<td><code>0x000040</code></td>
+<td><code>0x000340</code></td>
 <td><i>FP0_2c7k__C10_C14_C16</i></td>
 <td align=center>⚠️</td>
 <td align=center> ❌ </td>
@@ -138,7 +138,7 @@ A5 <= Is the actual typecode, can overlap with others
 <tr>
 <td> C24, C40 </td>
 <td> 2.7k </td>
-<td><code>0x000005</code></td>
+<td><code>0x000305</code></td>
 <td><i>FP1_2c7k__C24_C40</i></td>
 <td align=center>⚠️</td>
 <td align=center> ❌ </td>
@@ -386,7 +386,7 @@ A5 <= Is the actual typecode, can overlap with others
 <tr>
 <td> - </td>
 <td> 2.7k </td>
-<td><code>0x000045</code></td>
+<td><code>0x000345</code></td>
 <td><i>FPde_2c7k</i></td>
 <td align=center>⚠️</td>
 <td align=center> ✅ </td>
@@ -407,7 +407,7 @@ A5 <= Is the actual typecode, can overlap with others
 <tr>
 <td> C20R, C20T, C32T </td>
 <td> 2.7k </td>
-<td><code>0x000005</code></td>
+<td><code>0x000305</code></td>
 <td><i>FPdM_2c7k__C20R_C20T_C32T</i></td>
 <td align=center>⚠️</td>
 <td align=center> ❌ </td>
@@ -467,7 +467,7 @@ A5 <= Is the actual typecode, can overlap with others
 <tr>
 <td> C40RT0A </td>
 <td> 2.5k </td>
-<td><code>0x00007A</code></td>
+<td><code>0x00027A</code></td>
 <td><i>FPdX_2c5k__C40RT0A</i></td>
 <td align=center>⚠️</td>
 <td align=center> ✅ </td>
@@ -533,7 +533,7 @@ A5 <= Is the actual typecode, can overlap with others
 <tr>
 <td> L14, L30 </td>
 <td> 2.5k </td>
-<td><code>0x000072</code></td>
+<td><code>0x000272</code></td>
 <td><i>FPdX0_2c5k__L14_L30</i></td>
 <td align=center>⚠️</td>
 <td align=center> ✅ </td>
