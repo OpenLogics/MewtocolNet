@@ -293,6 +293,16 @@ namespace MewtocolNet {
         #region PLC Type Enum Parsing
 
         /// <summary>
+        /// Gets synonim names for a plc type enum
+        /// </summary>
+        /// <returns>All or just one of there are no synonims for the same <see cref="PlcType"/></returns>
+        public static string[] GetSynonims (this PlcType plcType) {
+
+            return Enum.GetNames(typeof(PlcType)).Where(n => Enum.Parse(typeof(PlcType), n).Equals(plcType)).ToArray();
+
+        }
+
+        /// <summary>
         /// Converts the enum to a plc name string
         /// </summary>
         public static string ToName(this PlcType plcT) {

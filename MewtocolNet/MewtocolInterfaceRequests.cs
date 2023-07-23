@@ -102,6 +102,18 @@ namespace MewtocolNet {
 
         }
 
+        /// <inheritdoc/>
+        public async Task FactoryResetAsync () {
+
+            //set to prog mode
+            await SetOperationModeAsync(false);
+
+            //reset plc
+            await SendCommandAsync($"%EE#0F");
+            await SendCommandAsync($"%EE#21");
+
+        }
+
         #endregion
 
         #region Byte range writing / reading to registers

@@ -133,9 +133,9 @@ $"Typecode explained:\n" +
 $"```\n" +
 $"From left to right\n" +
 $"0x\n" +
-$"07 <= extended code (00 non mewtocol 7 devices)\n" +
-$"20 <= Is hex for 32 (Prog capacity)\n" +
-$"A5 <= Is the actual typecode, can overlap with others\n" +
+$"07 <= extended code (00 for non Mewtocol 7 devices)\n" +
+$"0120 <= for 120k (Prog capacity), with RT/EXRT/MEW7 override order\n" +
+$"A5 <= Is the actual typecode, with RT/EXRT/MEW7 override order\n" +
 $"```"
 );
 

@@ -98,6 +98,13 @@ namespace MewtocolNet {
         Task<bool> RestartProgramAsync();
 
         /// <summary>
+        /// Factory resets the PLC, this includes the current program
+        /// and data in the EEPROM
+        /// </summary>
+        /// <returns></returns>
+        Task FactoryResetAsync();
+
+        /// <summary>
         /// Use this to await the first poll iteration after connecting,
         /// This also completes if the initial connection fails
         /// </summary>

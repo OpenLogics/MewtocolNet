@@ -145,6 +145,111 @@ FP-XH 16k C14R
 | 2819 | System register size
 | 20130000080070004 | ?
 
+## FP0 5k C32,SL1
+
+### %EE$RT
+
+|Reponse Byte|Description|
+|------------|-----------|
+| 06 | Model code |
+| 12 | Version |
+| 05 | Prog capacity |
+| 82 | Op mode |
+| 00 | Link unit |
+| 00 | Error flag |
+| 0000 | Self diag error |
+
+### %EE$EX00RT
+
+|Reponse Byte|Description|
+|------------|-----------|
+| 00 | Extended mode
+| 32 | Data item count
+| 41 | Machine type
+| 00 | Version (Fixed to 00)
+| 03 | Prog capacity in K
+| 82 | Operation mode / status
+| 00 | Link unit
+| 00 | Error flag
+| 0000 | Self diag error
+| 23 | Version
+| 01 | Hardware information
+| 0 | Number of programs
+| 4100 | Program size BCD
+| 0501 | Header size (no. of words) bcd
+| 2819 | System register size
+| 20130000080070004 | ?
+
+## FP0 10k
+
+### %EE$RT
+
+|Reponse Byte|Description|
+|------------|-----------|
+| 42 | Model code |
+| 12 | Version |
+| 10 | Prog capacity |
+| 82 | Op mode |
+| 00 | Link unit |
+| 00 | Error flag |
+| 0000 | Self diag error |
+
+### %EE$EX00RT
+
+|Reponse Byte|Description|
+|------------|-----------|
+| 00 | Extended mode
+| 32 | Data item count
+| 42 | Machine type
+| 00 | Version (Fixed to 00)
+| 10 | Prog capacity in K
+| 82 | Operation mode / status
+| 00 | Link unit
+| 00 | Error flag
+| 0000 | Self diag error
+| 23 | Version
+| 01 | Hardware information
+| 0 | Number of programs
+| 4100 | Program size BCD
+| 1001 | Header size (no. of words) bcd
+| 2819 | System register size
+| 20130000080070004 | ?
+
+## FP2SH 60k
+
+### %EE$RT
+
+|Reponse Byte|Description|
+|------------|-----------|
+| 60 | Model code |
+| 12 | Version |
+| 00 | Prog capacity |
+| 82 | Op mode |
+| 00 | Link unit |
+| 00 | Error flag |
+| 0000 | Self diag error |
+
+### %EE$EX00RT
+
+|Reponse Byte|Description|
+|------------|-----------|
+| 00 | Extended mode
+| 32 | Data item count
+| 60 | Machine type
+| 00 | Version (Fixed to 00)
+| 00 | Prog capacity in K
+| 82 | Operation mode / status
+| 00 | Link unit
+| 00 | Error flag
+| 0000 | Self diag error
+| 23 | Version
+| 01 | Hardware information
+| 0 | Number of programs
+| 4100 | Program size BCD
+| 6001 | Header size (no. of words) bcd
+| 2819 | System register size
+| 20130000000080004 | ?
+
 # Mewtocol-7 Com
 
 ## Getting the status of the plc

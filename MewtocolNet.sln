@@ -19,9 +19,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Examples.Polling", "Example
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AutoTools", "AutoTools", "{BAEF983A-EFF2-48DF-A74E-57084166BB4D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoTools.ChmDataExtract", "AutoTools.ChmDataExtract\AutoTools.ChmDataExtract.csproj", "{5A9DE453-AD64-4F8D-8215-3BB26674D164}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoTools.ChmDataExtract", "AutoTools.ChmDataExtract\AutoTools.ChmDataExtract.csproj", "{5A9DE453-AD64-4F8D-8215-3BB26674D164}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoTools.DocBuilder", "AutoTools.DocBuilder\AutoTools.DocBuilder.csproj", "{00ACA0AB-3988-4EF7-98A6-B39A36B136DA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoTools.DocBuilder", "AutoTools.DocBuilder\AutoTools.DocBuilder.csproj", "{00ACA0AB-3988-4EF7-98A6-B39A36B136DA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Examples.ProgramReadWrite", "Examples.ProgramReadWrite\Examples.ProgramReadWrite.csproj", "{51BDABAA-05B0-4802-AA37-243DAE22D5DC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -129,6 +131,18 @@ Global
 		{00ACA0AB-3988-4EF7-98A6-B39A36B136DA}.Release|x64.Build.0 = Release|Any CPU
 		{00ACA0AB-3988-4EF7-98A6-B39A36B136DA}.Release|x86.ActiveCfg = Release|Any CPU
 		{00ACA0AB-3988-4EF7-98A6-B39A36B136DA}.Release|x86.Build.0 = Release|Any CPU
+		{51BDABAA-05B0-4802-AA37-243DAE22D5DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{51BDABAA-05B0-4802-AA37-243DAE22D5DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{51BDABAA-05B0-4802-AA37-243DAE22D5DC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{51BDABAA-05B0-4802-AA37-243DAE22D5DC}.Debug|x64.Build.0 = Debug|Any CPU
+		{51BDABAA-05B0-4802-AA37-243DAE22D5DC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{51BDABAA-05B0-4802-AA37-243DAE22D5DC}.Debug|x86.Build.0 = Debug|Any CPU
+		{51BDABAA-05B0-4802-AA37-243DAE22D5DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{51BDABAA-05B0-4802-AA37-243DAE22D5DC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{51BDABAA-05B0-4802-AA37-243DAE22D5DC}.Release|x64.ActiveCfg = Release|Any CPU
+		{51BDABAA-05B0-4802-AA37-243DAE22D5DC}.Release|x64.Build.0 = Release|Any CPU
+		{51BDABAA-05B0-4802-AA37-243DAE22D5DC}.Release|x86.ActiveCfg = Release|Any CPU
+		{51BDABAA-05B0-4802-AA37-243DAE22D5DC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -139,6 +153,7 @@ Global
 		{9A36F2B1-FF9E-47BF-9931-3D3EB3C46B61} = {323729B0-5FB2-4592-9FA6-220C46BBF84C}
 		{5A9DE453-AD64-4F8D-8215-3BB26674D164} = {BAEF983A-EFF2-48DF-A74E-57084166BB4D}
 		{00ACA0AB-3988-4EF7-98A6-B39A36B136DA} = {BAEF983A-EFF2-48DF-A74E-57084166BB4D}
+		{51BDABAA-05B0-4802-AA37-243DAE22D5DC} = {323729B0-5FB2-4592-9FA6-220C46BBF84C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4ABB8137-CD8F-4691-9802-9ED371012F47}

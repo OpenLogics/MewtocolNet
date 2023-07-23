@@ -1,6 +1,8 @@
 ﻿using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using MewtocolNet;
@@ -10,8 +12,7 @@ namespace AutoTools.ChmDataExtract;
 internal class Program {
 
     const string sysVarsLoc = @"Panasonic-ID SUNX Control\Control FPWIN Pro 7\Mak\Res_Eng\SysVars.chm";
-
-    const string sysVarsTempPath = @"Decomp";
+    const string funcNamesLoc = @"Panasonic-ID SUNX Control\Control FPWIN Pro 7\Mak\Res_Eng\FPWINPro.chm";
 
     static Dictionary<string, List<PlcType>> plcGroups = new() { 
         { "FP7 CPS41/31 E/ES", new List<PlcType> {
@@ -112,21 +113,136 @@ internal class Program {
 
     }
 
+    internal class FPFunction {
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string RedundantName { get; set; } = null!;
+
+        public string Description { get; set; } = null!;
+
+    }
+
     static void Main(string[] args) => Task.Run(AsyncMain).Wait();
     
     static async Task AsyncMain () {
 
-        CheckGroupCoverage();
-
-        await GetSystemRegisters();
+        GetFunctionNames();
+        //await GetSystemRegisters();
 
     }
 
-    static void CheckGroupCoverage () {
+    static void GetFunctionNames () {
 
-        //foreach (var key in Enum.GetNames(PlcType)) {
+        var functions = new Dictionary<string, FPFunction>();
 
-        //}
+        var progLoc = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
+        var progFilesPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+        var sysVarsPath = Path.Combine(progFilesPath, funcNamesLoc);
+
+        Directory.SetCurrentDirectory(progLoc);
+        File.Copy(sysVarsPath, "./FPWINPro.chm", true);
+
+        var startInfo = new ProcessStartInfo {
+            WorkingDirectory = progLoc,
+            FileName = "hh.exe",
+            Arguments = $"-decompile ./DecompFuncs ./FPWINPro.chm",
+        };
+
+        //call the hh.exe decompiler for chm
+        if (!File.Exists("./DecompFuncs/topics/availability.html")) {
+            var proc = Process.Start(startInfo)!;
+            proc.WaitForExit();
+        }
+
+        var doc = new HtmlDocument();
+        doc.Load("./DecompFuncs/topics/availability.html");
+
+        //[contains(@class, 'table mainbody')]
+        foreach (HtmlNode table in doc.DocumentNode.SelectNodes("//table[1]")) {
+
+            var rows = table?.SelectSingleNode("tbody")?.SelectNodes("tr");
+            if (rows == null) continue;
+
+            foreach (var row in rows) {
+
+                var columns = row.SelectNodes("td");
+                if (columns == null) continue;
+
+                var itemRow = columns?.FirstOrDefault()?.SelectSingleNode("p/a[contains(@class,'xref')]");
+
+                string rowName = itemRow?.InnerText ?? "Unnamed";
+
+                if (!Regex.IsMatch(rowName, @"^F[0-9]{1,3}_.*$")) continue;
+
+                FPFunction functionIns = new FPFunction();
+                
+                //Console.Write($"Var: {rowName, -50}");
+                
+                var href = itemRow?.GetAttributeValue("href", null);
+
+                if (href != null) {
+                    
+                    //Console.Write($" {href}");
+
+                    var docSub = new HtmlDocument();
+                    docSub.Load($"./DecompFuncs{href}");
+
+                    var noteSection = docSub.DocumentNode.SelectSingleNode("//section/div[contains(@class,'note note')]");
+                    var xrefRedundant = noteSection?.SelectSingleNode("p/a[contains(@class,'xref')]");
+                    var xrefNodeContent = noteSection?.SelectSingleNode("p/span");
+
+                    HtmlNode? descrSection = null;
+
+                    if (xrefRedundant != null && xrefNodeContent != null && xrefNodeContent.InnerText.StartsWith("This is a redundant F instruction")) {
+
+                        descrSection = docSub.DocumentNode.SelectSingleNode("//section[2]");
+
+                        functionIns.RedundantName = xrefRedundant.InnerText;
+
+                        //Console.Write($"{xrefRedundant.InnerText}");
+
+                    } else {
+
+                        descrSection = docSub.DocumentNode.SelectSingleNode("//section[1]");
+
+                    }
+
+                    if (descrSection != null) {
+
+                        var descrText = descrSection?.InnerText;
+
+                        if(descrText != null) {
+
+                            descrText = descrText.Replace("\r", "").Replace("\n", "").Trim();
+
+                            functionIns.Description = descrText;
+
+                            //Console.Write($" {descrText}");
+
+                        }
+
+                    }
+
+                }
+
+                functions.Add(rowName, functionIns);   
+
+                //compatibility matrix
+                //for (int i = 1; i < columns?.Count - 1; i++) {
+
+                //    bool isChecked = columns?.ElementAtOrDefault(i)?.SelectSingleNode("p")?.InnerHtml != "";
+
+                //    Console.Write($"{(isChecked ? "1" : "0")}, ");
+
+                //}
+
+            }
+
+        }
+
+        var funcsJson = JsonSerializer.Serialize(functions, new JsonSerializerOptions { WriteIndented = true });
+
+        Console.WriteLine(funcsJson);
 
     }
 

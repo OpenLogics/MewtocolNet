@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Xml.Linq;
 using CommandLine;
 using MewtocolNet;
 using MewtocolNet.ComCassette;
@@ -21,8 +22,9 @@ internal class ListSupportCommand : CommandLineExcecuteable {
 
             var decomp = plcT.ToNameDecompose();
 
-            foreach (var name in decomp)
-                lst.Add(name);
+            if (decomp == null) continue;
+
+            lst.Add(decomp);
 
         }
 

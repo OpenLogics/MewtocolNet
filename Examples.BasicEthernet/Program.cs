@@ -26,6 +26,7 @@ internal class Program {
 
             //connect async to the plc
             await plc.ConnectAsync();
+            await plc.SendCommandAsync($"%EE#RP0000000004");
 
             //check if the connection was established
             if (!plc.IsConnected) {
@@ -61,6 +62,14 @@ internal class Program {
 
             plc.ConfigureConnection("192.168.115.214", 9094);
             await plc.ConnectAsync();
+
+            plc.Disconnect();
+
+            plc.ConfigureConnection("192.168.178.55", 9094);
+            await plc.ConnectAsync();
+            //await plc.SendCommandAsync($"%EE#RR0000100");
+            //await plc.SendCommandAsync($"%EE#RCCR09030903");
+            await plc.SendCommandAsync($"%EE#RP0000000067");
 
         }
 
