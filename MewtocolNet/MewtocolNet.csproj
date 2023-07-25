@@ -31,10 +31,13 @@
   	</AssemblyAttribute>
   </ItemGroup>
   
-	<ItemGroup>
-  	<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-  		<_Parameter1>AutoTools.DocBuilder</_Parameter1>
-  	</AssemblyAttribute>
+  <ItemGroup>
+	<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+		<_Parameter1>AutoTools.DocBuilder</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+  	    <_Parameter1>AutoTools.ChmDataExtract</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
   
   <ItemGroup>

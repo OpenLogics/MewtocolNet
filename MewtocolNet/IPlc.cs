@@ -1,4 +1,5 @@
-﻿using MewtocolNet.RegisterBuilding;
+﻿using MewtocolNet.ProgramParsing;
+using MewtocolNet.RegisterBuilding;
 using MewtocolNet.Registers;
 using System;
 using System.Collections.Generic;
@@ -96,6 +97,12 @@ namespace MewtocolNet {
         /// </summary>
         /// <returns>The success state of the write operation</returns>
         Task<bool> RestartProgramAsync();
+
+        /// <summary>
+        /// Reads the program from the connected plc
+        /// </summary>
+        /// <returns></returns>
+        Task<PlcBinaryProgram> ReadProgramAsync();
 
         /// <summary>
         /// Factory resets the PLC, this includes the current program

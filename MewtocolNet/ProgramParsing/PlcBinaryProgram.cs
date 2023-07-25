@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
+using System.Globalization;
 
 namespace MewtocolNet.ProgramParsing {
 
@@ -15,18 +16,35 @@ namespace MewtocolNet.ProgramParsing {
             { 0xFAF8, "ED" },
             { 0xFDF8, "RET" }, //return
             { 0xF6F8, "CALL" },
-            
+            { 0xEEF8, "SET" },
+
             { 0x21CC, "OT R501" },
-            { 0x21AC, "ST R501" },
-            { 0xF7FF, "ST R9010" }, 
+            //{ 0x21AC, "ST R501" },
+            //{ 0xF7FF, "ST R9010" }, 
 
         };
 
-        // ST R50_1 21 AC => WR system area start was set to 50
-        // ST R57_1 91 AC => WR system area start was set to 57
-        // ST R901_3 F7 FF 53 A9
-        // ST R901_C F7 FF 5C A9
-        // AN/ R900_B F7 FF 4B 49
+        static readonly Dictionary<string, string> sysRegisters = new Dictionary<string, string> {
+            { "R9009", "sys_bIsCarry" },
+            { "R900A", "sys_bIsGreaterThan" },
+            { "R900B", "sys_bIsEqual" },
+            { "R900C", "sys_bIsLessThan" },
+            { "R900D", "sys_bIsAuxiliaryTimerElapsed" },
+
+            { "R9010", "sys_bTrue" },
+            { "R9011", "sys_bFalse" },
+            { "R9012", "sys_bScanPulse" },
+            { "R9013", "sys_bIsFirstScan" },
+            { "R9014", "sys_bIsNotFirstScan" },
+            { "R9015", "sys_bIsFirstScanOfSfcStep" },
+            { "R9018", "sys_bPulse10ms" },
+            { "R9019", "sys_bPulse20ms" },
+            { "R901A", "sys_bPulse100ms" },
+            { "R901B", "sys_bPulse200ms" },
+            { "R901C", "sys_bPulse1s" },
+            { "R901D", "sys_bPulse2s" },
+            { "R901E", "sys_bPulse1min" },
+        };
 
         static readonly Dictionary<string, string> stepFunctions = new Dictionary<string, string> {
             { "F0", "MV" },
@@ -36,9 +54,14 @@ namespace MewtocolNet.ProgramParsing {
             { "F5", "BTM" },
             { "F8", "DMV2" },
             { "F11", "COPY" },
-            { "F61", "DCMP" },
-            { "F246", "CALL" },
+            { "F61", "DCMP" }
         };
+
+        // ST R50_1 21 AC => WR system area start was set to 50
+        // ST R57_1 91 AC => WR system area start was set to 57
+        // ST R901_3 F7 FF 53 A9
+        // ST R901_C F7 FF 5C A9
+        // AN/ R900_B F7 FF 4B 49
 
         const int STEP_BYTE_LEN = 2;
 
@@ -105,26 +128,56 @@ namespace MewtocolNet.ProgramParsing {
                 Console.Write($"{i,3} => {stepBytesString} ");
 
                 var stepKey = BitConverter.ToUInt16(step.Reverse().ToArray(), 0);
+                byte[] nextStep = null;
+
+                if(i + 1 < rawSteps.Count - 1)
+                    nextStep = rawSteps[i + 1];
 
                 if (stepCommands.ContainsKey(stepKey)) {
 
                     Console.Write($"{stepCommands[stepKey]}");
 
-                } else if (stepKey == 0xFFF8) {
+                } else if (nextStep != null && step[0] == 0xF7 && step[1] == 0xFF && nextStep[1] == 0xA9) {
 
-                    //custom function that goes over FF, the F instruction number is calced by
-                    //the next step first byte plus 190
+                    //ST step
+                    
+                    var area = nextStep[0].ToString("X2").Substring(0, 1);
+                    var specialArea = nextStep[0].ToString("X2").Substring(1, 1);
 
-                    var nextStep = rawSteps[i + 1];
-                    var stepID = nextStep[0] + 190;
+                    var stepID = 896 + int.Parse(area, NumberStyles.HexNumber);
+                    var stCondition = $"R{stepID}{specialArea}";
 
-                    string funcName = GetFunctionName($"F{stepID}");
-                    Console.Write(funcName);
+                    Console.Write($"ST {GetSysRegisterName(stCondition)}");
+
+                } else if (nextStep != null && step[0] == 0xF7 && step[1] == 0xFF && nextStep[1] == 0x49) {
+
+                    //AN/ step
+
+                    var area = nextStep[0].ToString("X2").Substring(0, 1);
+                    var specialArea = nextStep[0].ToString("X2").Substring(1, 1);
+
+                    var stepID = 896 + int.Parse(area, NumberStyles.HexNumber);
+                    var stCondition = $"R{stepID}{specialArea}";
+
+                    Console.Write($"AN/ {GetSysRegisterName(stCondition)}");
 
                 } else if (step[1] == 0xF8) {
 
-                    string funcName = GetFunctionName($"F{step[0]}");
+                    int functionID = 0;
+
+                    if (step[0] == 0xFF) {
+                        //custom function that goes over FF, the F instruction number is calced by
+                        //the next step first byte plus 190
+                        functionID = nextStep[0] + 190;
+                    } else {
+                        functionID = step[0];
+                    }
+
+                    string funcName = GetFunctionName($"F{functionID}");
                     Console.Write(funcName);
+
+                    //get the params and outs of the function
+
 
                 }
 
@@ -146,6 +199,12 @@ namespace MewtocolNet.ProgramParsing {
             return stepFunctions.ContainsKey(funcName) ? $"{funcName} ({stepFunctions[funcName]})" : funcName; 
 
         } 
+
+        private string GetSysRegisterName (string fpAddress) {
+
+            return sysRegisters.ContainsKey(fpAddress) ? $"{fpAddress} ({sysRegisters[fpAddress]})" : fpAddress;
+
+        }
 
     }
 

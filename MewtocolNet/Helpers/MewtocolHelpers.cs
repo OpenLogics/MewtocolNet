@@ -125,7 +125,7 @@ namespace MewtocolNet {
 
             _onString = _onString.Replace("\r", "");
 
-            var res = new Regex(@"\%([0-9a-fA-F]{2})\$RD(?<data>.*)(?<csum>..)").Match(_onString);
+            var res = new Regex(@"\%([0-9a-fA-F]{2})\$(?:RD|RP)(?<data>.*)(?<csum>..)").Match(_onString);
             if (res.Success) {
 
                 string val = res.Groups["data"].Value;
@@ -159,13 +159,27 @@ namespace MewtocolNet {
 
         }
 
-        public static string Ellipsis(this string str, int maxLength) {
+        internal static string Ellipsis(this string str, int maxLength) {
 
             if (string.IsNullOrEmpty(str) || str.Length <= maxLength)
                 return str;
 
             return  $"{str.Substring(0, maxLength - 3)}...";
         
+        }
+
+        internal static string SanitizeLinebreakFormatting (this string str) {
+
+            str = str.Replace("\r", "").Replace("\n", "").Trim();
+
+            return Regex.Replace(str, @"\s+", " ");
+
+        }
+
+        internal static string SanitizeBracketFormatting(this string str) {
+
+            return str.Replace("(", "").Replace(")", "").Trim();
+
         }
 
         /// <summary>

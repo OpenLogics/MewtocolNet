@@ -1,11 +1,13 @@
 ﻿using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using MewtocolNet;
+using MewtocolNet.Helpers;
 
 namespace AutoTools.ChmDataExtract;
 
@@ -120,6 +122,12 @@ internal class Program {
 
         public string Description { get; set; } = null!;
 
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public Dictionary<string, string[]>? ParametersIn { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public Dictionary<string, string[]>? ParametersOut { get; set; }
+
     }
 
     static void Main(string[] args) => Task.Run(AsyncMain).Wait();
@@ -176,7 +184,7 @@ internal class Program {
 
                 FPFunction functionIns = new FPFunction();
                 
-                //Console.Write($"Var: {rowName, -50}");
+                Console.Write($"Var: {rowName, -20}");
                 
                 var href = itemRow?.GetAttributeValue("href", null);
 
@@ -190,6 +198,75 @@ internal class Program {
                     var noteSection = docSub.DocumentNode.SelectSingleNode("//section/div[contains(@class,'note note')]");
                     var xrefRedundant = noteSection?.SelectSingleNode("p/a[contains(@class,'xref')]");
                     var xrefNodeContent = noteSection?.SelectSingleNode("p/span");
+                    
+                    //get params in / out
+                    var inOutDefinitionNodes = docSub.DocumentNode.SelectNodes("//p[contains(@class,'p inoutput')]");
+
+                    if (inOutDefinitionNodes != null) {
+
+                        foreach (var ioTypeNode in inOutDefinitionNodes) {
+
+                            var nodeInOutType = ioTypeNode.InnerText.SanitizeLinebreakFormatting();
+
+                            Console.Write($"{nodeInOutType}: ");
+
+                            var currentSibling = ioTypeNode;
+
+                            while (true) {
+
+                                if (currentSibling.NextSibling == null) break;
+                                currentSibling = currentSibling.NextSibling;
+
+                                if (currentSibling.HasClass("inoutput")) {
+                                    break;
+                                }
+
+                                var paramNodes = currentSibling.SelectNodes("dt");
+
+                                if (paramNodes == null) continue;
+
+                                foreach (var paramNode in paramNodes) {
+
+                                    var paramName = paramNode.SelectSingleNode("span[1]")?.InnerText?.SanitizeBracketFormatting();
+                                    var paramTypes = paramNode.SelectSingleNode("span[2]")?.InnerText?.SanitizeBracketFormatting();
+
+                                    if (paramName != null && paramTypes != null) {
+
+                                        if (functionIns.ParametersIn == null)
+                                            functionIns.ParametersIn = new Dictionary<string, string[]>();
+
+                                        if (functionIns.ParametersOut == null)
+                                            functionIns.ParametersOut = new Dictionary<string, string[]>();
+
+                                        Console.Write($"{paramName} {paramTypes}");
+
+                                        var splitParamNames = paramName.Split(", ");
+
+                                        foreach (var splitName in splitParamNames) {
+
+                                            if (nodeInOutType == "Input") {
+
+                                                if (functionIns.ParametersIn.ContainsKey(splitName)) break;
+                                                functionIns.ParametersIn.Add(splitName, paramTypes.SanitizeBracketFormatting().Split(", "));
+
+                                            } else {
+
+                                                if (functionIns.ParametersOut.ContainsKey(splitName)) break;
+                                                functionIns.ParametersOut.Add(splitName, paramTypes.SanitizeBracketFormatting().Split(", "));
+
+                                            }
+
+                                        }
+
+                                    }
+
+                                }
+
+                            }
+
+                        }
+
+                    }
 
                     HtmlNode? descrSection = null;
 
@@ -213,7 +290,7 @@ internal class Program {
 
                         if(descrText != null) {
 
-                            descrText = descrText.Replace("\r", "").Replace("\n", "").Trim();
+                            descrText = descrText.SanitizeLinebreakFormatting();
 
                             functionIns.Description = descrText;
 
@@ -225,7 +302,8 @@ internal class Program {
 
                 }
 
-                functions.Add(rowName, functionIns);   
+                functions.Add(rowName, functionIns);
+                Console.WriteLine();
 
                 //compatibility matrix
                 //for (int i = 1; i < columns?.Count - 1; i++) {
@@ -242,7 +320,8 @@ internal class Program {
 
         var funcsJson = JsonSerializer.Serialize(functions, new JsonSerializerOptions { WriteIndented = true });
 
-        Console.WriteLine(funcsJson);
+        File.WriteAllText("./function_names.json", funcsJson);
+
 
     }
 
@@ -343,12 +422,6 @@ internal class Program {
                 Console.WriteLine();
 
             }
-
-        }
-
-        foreach (var item in addressExceptions.DistinctBy(x => x.ExceptionTitle)) {
-
-            Console.WriteLine($"{item.ForSysRegister} - {item.ExceptionTitle}");
 
         }
 

@@ -1,8 +1,10 @@
 using MewtocolNet.Logging;
+using MewtocolNet.ProgramParsing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace MewtocolNet {
@@ -109,8 +111,54 @@ namespace MewtocolNet {
             await SetOperationModeAsync(false);
 
             //reset plc
-            await SendCommandAsync($"%EE#0F");
-            await SendCommandAsync($"%EE#21");
+            await SendCommandAsync($"%{GetStationNumber()}#0F");
+            await SendCommandAsync($"%{GetStationNumber()}#21");
+
+        }
+
+        public async Task<PlcBinaryProgram> ReadProgramAsync () {
+
+            var steps = new List<byte[]>();
+
+            int i = 0;
+            int stepsPerReq = 50;
+            while(i < int.MaxValue) {
+
+                var sb = new StringBuilder($"%{GetStationNumber()}#RP");
+                var stp1 = (i * stepsPerReq);
+                var stp2 = ((i + 1) * stepsPerReq) - 1;
+
+                sb.Append(stp1.ToString().PadLeft(5, '0'));
+                sb.Append(stp2.ToString().PadLeft(5, '0'));
+
+                var res = await SendCommandAsync(sb.ToString());
+
+                if (res.Success) {
+
+                    var bytes = res.Response.ParseDTRawStringAsBytes();
+                    var foundEndPattern = bytes.SearchBytePattern(new byte[] { 0xFA, 0xF8, 0xFF, 0xFF });
+
+                    for (int j = 0; j < bytes.Length; j += 2) {
+                        var split = bytes.Skip(j).Take(2).ToArray();
+                        if (split[0] == 0xFF && split[1] == 0xFF) break;
+                        steps.Add(split);
+                    }
+                
+                    if (foundEndPattern != -1) {    
+
+                        break;
+
+                    }
+
+                }
+
+                i++;
+
+            }
+
+            return new PlcBinaryProgram { 
+                rawSteps = steps,   
+            };
 
         }
 
