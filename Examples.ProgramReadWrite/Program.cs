@@ -13,7 +13,7 @@ internal class Program {
 
         Logger.LogLevel = LogLevel.Error;
 
-        using (var plc = Mewtocol.Ethernet("192.168.115.210").Build()) {
+        using (var plc = Mewtocol.Ethernet("192.168.178.55").Build()) {
 
             await plc.ConnectAsync();
             var prog = await plc.ReadProgramAsync();

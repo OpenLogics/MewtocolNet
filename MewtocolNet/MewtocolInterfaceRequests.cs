@@ -116,6 +116,10 @@ namespace MewtocolNet {
 
         }
 
+        #endregion
+
+        #region Program Read / Write
+
         public async Task<PlcBinaryProgram> ReadProgramAsync () {
 
             var steps = new List<byte[]>();
@@ -136,7 +140,7 @@ namespace MewtocolNet {
                 if (res.Success) {
 
                     var bytes = res.Response.ParseDTRawStringAsBytes();
-                    var foundEndPattern = bytes.SearchBytePattern(new byte[] { 0xFA, 0xF8, 0xFF, 0xFF });
+                    var foundEndPattern = bytes.SearchBytePattern(new byte[] { 0xF8, 0xFF, 0xFF });
 
                     for (int j = 0; j < bytes.Length; j += 2) {
                         var split = bytes.Skip(j).Take(2).ToArray();
