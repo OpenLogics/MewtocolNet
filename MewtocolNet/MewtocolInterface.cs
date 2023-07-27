@@ -69,6 +69,8 @@ namespace MewtocolNet {
         internal volatile bool pollerFirstCycle;
         internal bool usePoller = false;
         internal MemoryAreaManager memoryManager;
+        private volatile bool isReceiving;
+        private volatile bool isSending;
 
         #endregion
 
@@ -102,10 +104,28 @@ namespace MewtocolNet {
         public int StationNumber => stationNumber;
 
         /// <inheritdoc/>
+        public bool IsSending {
+            get => isSending;
+            private set {
+                isSending = value;
+                OnPropChange();
+            }
+        }
+
+        /// <inheritdoc/>
         public int BytesPerSecondUpstream {
             get { return bytesPerSecondUpstream; }
             private protected set {
                 bytesPerSecondUpstream = value;
+                OnPropChange();
+            }
+        }
+
+        /// <inheritdoc/>
+        public bool IsReceiving { 
+            get => isReceiving; 
+            private set {
+                isReceiving = value;
                 OnPropChange();
             }
         }
@@ -148,13 +168,12 @@ namespace MewtocolNet {
 
             memoryManager = new MemoryAreaManager(this);
 
+            WatchPollerDemand();
+
             Connected += MewtocolInterface_Connected;
             RegisterChanged += OnRegisterChanged;
 
             void MewtocolInterface_Connected(object sender, PlcConnectionArgs args) {
-
-                if (usePoller)
-                    AttachPoller();
 
                 IsConnected = true;
 
@@ -290,9 +309,13 @@ namespace MewtocolNet {
 
                 SetUpstreamStopWatchStart();
 
+                IsSending = true;
+
                 //write inital command
                 byte[] writeBuffer = Encoding.UTF8.GetBytes(frame);
                 stream.Write(writeBuffer, 0, writeBuffer.Length);
+
+                IsSending = false;
 
                 //calculate the expected number of frames from the message request
                 int? wordsCountRequested = null;
@@ -391,7 +414,9 @@ namespace MewtocolNet {
                     SetDownstreamStopWatchStart();
 
                     byte[] buffer = new byte[RecBufferSize];
+                    IsReceiving = true;
                     int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                    IsReceiving = false;
 
                     CalcDownstreamSpeed(bytesRead);
 
@@ -411,7 +436,9 @@ namespace MewtocolNet {
 
                         //request next frame
                         var writeBuffer = Encoding.UTF8.GetBytes($"%{GetStationNumber()}**&\r");
+                        IsSending = true;
                         await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length);
+                        IsSending = false;
                         Logger.Log($">> Requested next frame", LogLevel.Critical, this);
                         wasMultiFramedResponse = true;
 
@@ -527,6 +554,8 @@ namespace MewtocolNet {
 
         private protected virtual void OnDisconnect() {
 
+            IsReceiving = false;
+            IsSending = false;
             BytesPerSecondDownstream = 0;
             BytesPerSecondUpstream = 0;
             PollerCycleDurationMs = 0;

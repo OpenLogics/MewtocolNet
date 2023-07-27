@@ -11,6 +11,8 @@ namespace MewtocolNet.UnderlyingRegisters {
 
     internal class MemoryAreaManager {
 
+        internal event Action MemoryLayoutChanged;
+
         internal int maxOptimizationDistance = 8;
         internal int maxRegistersPerGroup = -1;
         internal PollLevelOverwriteMode pollLevelOrMode = PollLevelOverwriteMode.Highest;
@@ -20,7 +22,27 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         internal MewtocolInterface mewInterface;
         internal List<PollLevel> pollLevels;
-        internal Dictionary<int, PollLevelConfig> pollLevelConfigs = new Dictionary<int, PollLevelConfig>();
+
+        internal Dictionary<int, PollLevelConfig> pollLevelConfigs = new Dictionary<int, PollLevelConfig>() {
+            { 
+                MewtocolNet.PollLevel.Always, 
+                new PollLevelConfig {
+                    skipNth = 1,
+                }
+            },
+            {
+                MewtocolNet.PollLevel.FirstIteration, 
+                new PollLevelConfig {
+                    skipAllButFirst = true
+                }
+            },
+            {
+                MewtocolNet.PollLevel.Never, 
+                new PollLevelConfig {
+                    skipsAll = true,
+                }
+            }
+        };
 
         private uint pollIteration = 0;
 
@@ -36,11 +58,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
             wrAreaSize = wrSize;
             dtAreaSize = dtSize;
-            pollLevels = new List<PollLevel> {
-                new PollLevel(wrSize, dtSize) {
-                    level = 1,
-                }
-            };
+            pollLevels = new List<PollLevel>();
 
         }
 
@@ -89,7 +107,20 @@ namespace MewtocolNet.UnderlyingRegisters {
             }
 
             //order 
-            foreach (var lvl in pollLevels) {
+            for (int i = 0; i < pollLevels.Count; i++) {
+
+                PollLevel lvl = pollLevels[i];
+
+                //poll level has no areas
+                if(lvl.dataAreas.Count == 0 &&
+                   lvl.externalRelayInAreas.Count == 0 &&
+                   lvl.externalRelayOutAreas.Count == 0 &&
+                   lvl.internalRelayAreas.Count == 0) {
+
+                    pollLevels.Remove(lvl);
+                    continue;
+
+                }
 
                 foreach (var area in lvl.dataAreas) {
 
@@ -101,27 +132,11 @@ namespace MewtocolNet.UnderlyingRegisters {
 
             }
 
+            MemoryLayoutChanged?.Invoke();
+
         }
 
         private void TestPollLevelExistence(Register reg) {
-
-            if (!pollLevelConfigs.ContainsKey(MewtocolNet.PollLevel.Always)) {
-                pollLevelConfigs.Add(MewtocolNet.PollLevel.Always, new PollLevelConfig {
-                    skipNth = 1,
-                });
-            }
-
-            if (!pollLevelConfigs.ContainsKey(MewtocolNet.PollLevel.FirstIteration)) {
-                pollLevelConfigs.Add(MewtocolNet.PollLevel.FirstIteration, new PollLevelConfig {
-                    skipAllButFirst = true
-                });
-            }
-
-            if (!pollLevelConfigs.ContainsKey(MewtocolNet.PollLevel.Never)) {
-                pollLevelConfigs.Add(MewtocolNet.PollLevel.Never, new PollLevelConfig {
-                    skipsAll = true,
-                });
-            }
 
             if (!pollLevels.Any(x => x.level == reg.pollLevel)) {
 
@@ -354,13 +369,6 @@ namespace MewtocolNet.UnderlyingRegisters {
 
             }
 
-            //get the plc status each n iterations
-            if (pollIteration % 5 == 0) {
-
-                await mewInterface.GetPLCInfoAsync();
-
-            }
-
             if (pollIteration == uint.MaxValue) {
                 pollIteration = uint.MinValue;
             } else {
@@ -491,6 +499,23 @@ namespace MewtocolNet.UnderlyingRegisters {
             }
 
             return registers;
+
+        }
+
+        internal bool HasSingleCyclePollableRegisters() {
+
+            bool hasCyclicPollableLevels = pollLevels.Any(x => x.level != MewtocolNet.PollLevel.FirstIteration);
+
+            return hasCyclicPollableLevels;
+
+        }
+
+        internal bool HasCyclicPollableRegisters () {
+
+            bool hasCyclicPollableLevels = pollLevels
+            .Any(x => x.level != MewtocolNet.PollLevel.Never && x.level != MewtocolNet.PollLevel.FirstIteration &&  x.level != 0);
+
+            return hasCyclicPollableLevels;
 
         }
 

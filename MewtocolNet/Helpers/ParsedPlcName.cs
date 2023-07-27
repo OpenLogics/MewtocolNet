@@ -14,12 +14,12 @@ namespace MewtocolNet {
         /// <summary>
         /// Whole name of the PLC
         /// </summary>
-        public string WholeName { get; internal set; }
+        public string WholeName { get; internal set; } = "Unknown PLC";
 
         /// <summary>
         /// The family group of the PLC
         /// </summary>
-        public string Group { get; internal set; }
+        public string Group { get; internal set; } = "Unknown Group";
 
         /// <summary>
         /// The Memory size of the PLC
@@ -29,17 +29,17 @@ namespace MewtocolNet {
         /// <summary>
         /// The subtype strings of the plc
         /// </summary>
-        public string[] SubTypes { get; internal set; }
+        public string[] SubTypes { get; internal set; } = new string[] { "N/A" };
 
         /// <summary>
         /// Typecode of the parsed string
         /// </summary>
-        public int TypeCode { get; internal set; }  
+        public int TypeCode { get; internal set; }
 
         /// <summary>
         /// The encoded name, same as enum name
         /// </summary>
-        public string EncodedName { get; internal set; }    
+        public string EncodedName { get; internal set; } = "Unknown";
 
         /// <summary>
         /// True if the model is discontinued
@@ -54,6 +54,10 @@ namespace MewtocolNet {
         public override string ToString() => WholeName;
 
         internal static ParsedPlcName PlcDeconstruct(string wholeStr) {
+
+            if(wholeStr == "Unknown") {
+                return new ParsedPlcName();
+            }
 
             var reg = new Regex(@"(?<group>[A-Za-z0-9]*)_(?<size>[A-Za-z0-9]*)(?:__)?(?<additional>.*)");
             var match = reg.Match(wholeStr);

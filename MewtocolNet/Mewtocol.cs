@@ -19,7 +19,72 @@ namespace MewtocolNet
     /// </summary>
     public static class Mewtocol {
 
-        #region Build Order 1
+        #region Data Access
+
+        /// <summary>
+        /// Lists all usable COM port names
+        /// </summary>
+        /// <returns></returns>
+        public static IEnumerable<string> GetSerialPortNames () => SerialPort.GetPortNames();
+
+        /// <summary>
+        /// Lists all usable serial baud rates
+        /// </summary>
+        /// <returns></returns>
+        public static IEnumerable<int> GetUseableBaudRates() => Enum.GetValues(typeof(BaudRate)).Cast<BaudRate>().Select(x => (int)x);
+
+        /// <summary>
+        /// Lists all useable source endpoints of the device this is running on for usage with PLCs
+        /// </summary>
+        public static IEnumerable<IPEndPoint> GetSourceEndpoints() {
+
+            foreach (var netIf in GetUseableNetInterfaces()) {
+
+                var addressInfo = netIf.GetIPProperties().UnicastAddresses
+                .FirstOrDefault(x => x.Address.AddressFamily == AddressFamily.InterNetwork);
+
+                yield return new IPEndPoint(addressInfo.Address, 9094);
+
+            }
+
+        }
+
+        /// <summary>
+        /// Lists all useable network interfaces of the device this is running on for usage with PLCs
+        /// </summary>
+        public static IEnumerable<NetworkInterface> GetUseableNetInterfaces() {
+
+            foreach (NetworkInterface netInterface in NetworkInterface.GetAllNetworkInterfaces()) {
+
+                bool isEthernet =
+                netInterface.NetworkInterfaceType == NetworkInterfaceType.Ethernet ||
+                netInterface.NetworkInterfaceType == NetworkInterfaceType.Ethernet3Megabit ||
+                netInterface.NetworkInterfaceType == NetworkInterfaceType.FastEthernetFx ||
+                netInterface.NetworkInterfaceType == NetworkInterfaceType.FastEthernetT ||
+                netInterface.NetworkInterfaceType == NetworkInterfaceType.GigabitEthernet;
+
+                bool isWlan = netInterface.NetworkInterfaceType == NetworkInterfaceType.Wireless80211;
+
+                bool isUsable = netInterface.OperationalStatus == OperationalStatus.Up;
+
+                if (!isUsable) continue;
+                if (!(isWlan || isEthernet)) continue;
+
+                IPInterfaceProperties ipProps = netInterface.GetIPProperties();
+                var hasUnicastInfo = ipProps.UnicastAddresses
+                .Any(x => x.Address.AddressFamily == AddressFamily.InterNetwork);
+
+                if (!hasUnicastInfo) continue;
+
+                yield return netInterface;
+
+            }
+
+        }
+
+        #endregion
+
+        #region Interface building step 1
 
         /// <summary>
         /// Builds a ethernet based Mewtocol Interface
@@ -92,58 +157,9 @@ namespace MewtocolNet
 
         }
 
-        /// <summary>
-        /// Lists all useable source endpoints of the device this is running on for usage with PLCs
-        /// </summary>
-        public static IEnumerable<IPEndPoint> GetSourceEndpoints () {
-
-            foreach (var netIf in GetUseableNetInterfaces()) {
-
-                var addressInfo = netIf.GetIPProperties().UnicastAddresses
-                .FirstOrDefault(x => x.Address.AddressFamily == AddressFamily.InterNetwork);
-
-                yield return new IPEndPoint(addressInfo.Address, 9094);
-
-            }
-
-        }
-
-        /// <summary>
-        /// Lists all useable network interfaces of the device this is running on for usage with PLCs
-        /// </summary>
-        public static IEnumerable<NetworkInterface> GetUseableNetInterfaces () {
-
-            foreach (NetworkInterface netInterface in NetworkInterface.GetAllNetworkInterfaces()) {
-
-                bool isEthernet =
-                netInterface.NetworkInterfaceType == NetworkInterfaceType.Ethernet ||
-                netInterface.NetworkInterfaceType == NetworkInterfaceType.Ethernet3Megabit ||
-                netInterface.NetworkInterfaceType == NetworkInterfaceType.FastEthernetFx ||
-                netInterface.NetworkInterfaceType == NetworkInterfaceType.FastEthernetT ||
-                netInterface.NetworkInterfaceType == NetworkInterfaceType.GigabitEthernet;
-
-                bool isWlan = netInterface.NetworkInterfaceType == NetworkInterfaceType.Wireless80211;
-
-                bool isUsable = netInterface.OperationalStatus == OperationalStatus.Up;
-
-                if (!isUsable) continue;
-                if (!(isWlan || isEthernet)) continue;
-
-                IPInterfaceProperties ipProps = netInterface.GetIPProperties();
-                var hasUnicastInfo = ipProps.UnicastAddresses
-                .Any(x => x.Address.AddressFamily == AddressFamily.InterNetwork);
-
-                if (!hasUnicastInfo) continue;
-
-                yield return netInterface;
-
-            }
-
-        }
-
         #endregion
 
-        #region Build Order 2
+        #region Interface building step 2
 
         public class PollLevelConfigurator {
 
@@ -389,7 +405,7 @@ namespace MewtocolNet
 
         #endregion
 
-        #region BuildLevel 3
+        #region Interface building step 3
 
         public class EndInit<T> {
 

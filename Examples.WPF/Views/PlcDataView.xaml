@@ -1,0 +1,76 @@
+﻿<UserControl x:Class="Examples.WPF.Views.PlcDataView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:vm="clr-namespace:Examples.WPF.ViewModels"
+             xmlns:local="clr-namespace:Examples.WPF.Views"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance vm:PlcDataViewViewModel, IsDesignTimeCreatable=True}"
+             d:DesignHeight="450" 
+             d:DesignWidth="800">
+    <Grid Margin="10">
+        
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
+            <RowDefinition/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+
+        <StackPanel>
+
+            <TextBlock>
+                
+                <Run Text="{Binding Plc.PlcInfo.TypeName, Mode=OneWay}"
+                     FontSize="24"
+                     FontWeight="SemiBold"/>
+
+                <Run Text="{Binding Plc.PlcInfo.CpuVersion, StringFormat='v{0}', Mode=OneWay}"
+                     FontSize="24"
+                     FontWeight="Light"/>
+
+            </TextBlock>
+
+            <TextBlock Text="{Binding Plc.PlcInfo.TypeCode, StringFormat='#{0:X}', Mode=OneWay}"
+                       FontSize="18"/>
+
+            <ItemsControl ItemsSource="{Binding Plc.PlcInfo.OperationModeTags, Mode=OneWay}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="LightGray"
+                                CornerRadius="5"
+                                Margin="2"
+                                Padding="5">
+                            <TextBlock Text="{Binding}"/>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <ItemsControl ItemsSource="{Binding Plc.PlcInfo.HardwareInformationTags, Mode=OneWay}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="LightGray"
+                                CornerRadius="5"
+                                Margin="2"
+                                Padding="5">
+                            <TextBlock Text="{Binding}"/>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+        </StackPanel>
+        
+    </Grid>
+</UserControl>

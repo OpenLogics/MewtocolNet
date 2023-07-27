@@ -67,9 +67,6 @@ internal class Program {
 
             plc.ConfigureConnection("192.168.178.55", 9094);
             await plc.ConnectAsync();
-            //await plc.SendCommandAsync($"%EE#RR0000100");
-            //await plc.SendCommandAsync($"%EE#RCCR09030903");
-            await plc.SendCommandAsync($"%EE#RP0000000067");
 
         }
 

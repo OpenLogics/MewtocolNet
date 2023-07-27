@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
@@ -56,7 +57,15 @@ namespace MewtocolNet {
                 operationMode = value;
                 OnPropChange();
                 OnPropChange(nameof(IsRunMode));
+                OnPropChange(nameof(OperationModeTags));
             }
+        }
+
+        /// <summary>
+        /// A list of operation mode tags, derived from the OPMode flags
+        /// </summary>
+        public IEnumerable<string> OperationModeTags {
+            get => OperationMode.ToString().Split(',').Select(x => x.JoinSplitByUpperCase().Trim());
         }
 
         /// <summary>
@@ -67,8 +76,15 @@ namespace MewtocolNet {
             internal set {
                 hardwareInformation = value;
                 OnPropChange();
-
+                OnPropChange(nameof(HardwareInformationTags));
             }
+        }
+
+        /// <summary>
+        /// A list of hardware info tags, derived from the HardwareInformation flags
+        /// </summary>
+        public IEnumerable<string> HardwareInformationTags {
+            get => HardwareInformation.ToString().Split(',').Select(x => x.JoinSplitByUpperCase().Trim());
         }
 
         /// <summary>
@@ -91,15 +107,34 @@ namespace MewtocolNet {
 
         internal bool TryExtendFromEXRT(string msg) {
 
-            var regexEXRT = new Regex(@"\%EE\$EX00RT00(?<icnt>..)(?<mc>..)..(?<cap>..)(?<op>..)..(?<flg>..)(?<sdiag>....)(?<ver>..)(?<hwif>..)(?<nprog>.)(?<progsz>....)(?<hdsz>....)(?<sysregsz>....).*", RegexOptions.IgnoreCase);
+            var regexEXRT = new Regex(@"\%EE\$EX00RT00(?<icnt>..)(?<mc>..)..(?<cap>..)(?<op>..)..(?<flg>..)(?<sdiag>....)(?<ver>..)(?<hwif>..)(?<nprog>.)(?<csumpz>...)(?<psize>...).*", RegexOptions.IgnoreCase);
             var match = regexEXRT.Match(msg);
             if (match.Success) {
 
+                //overwrite the typecode
                 byte typeCodeByte = byte.Parse(match.Groups["mc"].Value, NumberStyles.HexNumber);
                 var overWriteBytes = BitConverter.GetBytes((int)this.TypeCode);
                 overWriteBytes[0] = typeCodeByte;
 
-                this.TypeCode = (PlcType)BitConverter.ToInt32(overWriteBytes, 0);
+                //get the long (4 bytes) prog size 
+                if (match.Groups["psize"]?.Value != null) {
+
+                    var padded = match.Groups["psize"].Value.PadLeft(4, '0');
+
+                    overWriteBytes[1] = byte.Parse(padded.Substring(2, 2), NumberStyles.HexNumber);
+                    overWriteBytes[2] = byte.Parse(padded.Substring(0, 2), NumberStyles.HexNumber);
+
+                }
+
+                var tempTypeCode = BitConverter.ToUInt32(overWriteBytes, 0);
+
+                if (Enum.IsDefined(typeof(PlcType), tempTypeCode)) {
+
+                    this.TypeCode = (PlcType)tempTypeCode;
+                
+                }
+                
+                //overwrite the other vals that are also contained in EXRT
                 this.CpuVersion = match.Groups["ver"].Value.Insert(1, ".");
                 this.HardwareInformation = (HWInformation)byte.Parse(match.Groups["hwif"].Value, NumberStyles.HexNumber);
 
@@ -119,20 +154,29 @@ namespace MewtocolNet {
 
                 byte typeCodeByte = byte.Parse(match.Groups["cputype"].Value, NumberStyles.HexNumber);
                 byte capacity = byte.Parse(match.Groups["cap"].Value, NumberStyles.Number);
-                var typeCodeFull = (PlcType)BitConverter.ToInt32(new byte[] { typeCodeByte, capacity, 0, 0}, 0);
+                var tempTypeCode = (PlcType)BitConverter.ToUInt32(new byte[] { typeCodeByte, capacity, 0, 0}, 0);
 
                 float definedProgCapacity = 0;
-                var composedNow = typeCodeFull.ToNameDecompose();
+                PlcType typeCodeFull;
 
-                if (composedNow != null) {
+                if (Enum.IsDefined(typeof(PlcType), tempTypeCode)) {
 
-                    //already recognized the type code, use the capacity value encoded in the enum
-                    definedProgCapacity = composedNow.Size;
+                    typeCodeFull = (PlcType)tempTypeCode;
+
+                    var composedNow = typeCodeFull.ToNameDecompose();
+
+                    if (composedNow != null) {
+
+                        //already recognized the type code, use the capacity value encoded in the enum
+                        definedProgCapacity = composedNow.Size;
+
+                    }
 
                 } else {
 
+                    typeCodeFull = PlcType.Unknown;
                     definedProgCapacity = int.Parse(match.Groups["cap"].Value);
-                
+
                 }
 
                 inf = new PLCInfo {
@@ -147,7 +191,7 @@ namespace MewtocolNet {
 
             }
 
-            inf = default(PLCInfo);
+            inf = default;
             return false;
 
         }
@@ -192,7 +236,7 @@ namespace MewtocolNet {
 
         }
 
-        public override int GetHashCode() => GetHashCode();
+        public override int GetHashCode() => base.GetHashCode();
 
         private protected void OnPropChange([CallerMemberName] string propertyName = null) {
 

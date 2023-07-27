@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MewtocolNet.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -15,6 +16,8 @@ namespace MewtocolNet.ComCassette {
     public class CassetteFinder {
 
         public static async Task<IEnumerable<CassetteInformation>> FindClientsAsync(string ipSource = null, int timeoutMs = 100) {
+
+            Logger.Log("Scanning for cassettes over UDP");
 
             var from = new IPEndPoint(IPAddress.Any, 0);
 
@@ -67,7 +70,9 @@ namespace MewtocolNet.ComCassette {
 
             }
 
-            return decomposed;
+            Logger.Log($"Found {decomposed.Count} cassettes");
+
+            return decomposed.OrderBy(x => x.IPAddress.ToString());
 
         }
 

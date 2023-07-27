@@ -51,6 +51,11 @@ namespace MewtocolNet.ComCassette {
         public byte[] MacAddress { get; private set; }
 
         /// <summary>
+        /// Mac address of the cassette formatted as a MAC string (XX:XX:XX:XX:XX) 
+        /// </summary>
+        public string MacAddressStr => MacAddress.ToHexString(":");
+
+        /// <summary>
         /// The source endpoint the cassette is reachable from
         /// </summary>
         public IPEndPoint Endpoint { get; private set; }
@@ -173,6 +178,38 @@ namespace MewtocolNet.ComCassette {
                 //broadcast packet to all devices (plc specific package)
                 await udpClient.SendAsync(sendBytesArr, sendBytesArr.Length, "255.255.255.255", 9090);
 
+            }
+
+        }
+
+        public static bool operator ==(CassetteInformation a, CassetteInformation b) => EqualProps(a, b);
+
+        public static bool operator !=(CassetteInformation a, CassetteInformation b) => !EqualProps(a, b);
+
+        private static bool EqualProps (CassetteInformation a, CassetteInformation b) {
+
+            if (a is null && b is null) return true;
+            if (!(a is null) && b is null) return false;
+            if (!(b is null) && a is null) return false;
+
+            return a.Name == b.Name &&
+                   a.UsesDHCP == b.UsesDHCP &&
+                   a.IPAddress.ToString() == b.IPAddress.ToString() &&
+                   a.SubnetMask.ToString() == b.SubnetMask.ToString() &&
+                   a.GatewayAddress.ToString() == b.GatewayAddress.ToString() &&
+                   a.MacAddressStr == b.MacAddressStr &&
+                   a.FirmwareVersion == b.FirmwareVersion &&
+                   a.Port == b.Port &&
+                   a.Status == b.Status;
+
+        }
+
+        public override bool Equals(object obj) {
+
+            if ((obj == null) || !this.GetType().Equals(obj.GetType())) {
+                return false;
+            } else {
+                return (CassetteInformation)obj == this;
             }
 
         }

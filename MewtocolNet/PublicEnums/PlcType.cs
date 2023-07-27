@@ -21,6 +21,11 @@ namespace MewtocolNet {
     /// </summary>
     public enum PlcType : uint {
 
+        /// <summary>
+        /// Fallback plc type
+        /// </summary>
+        Unknown = 0,
+
         //NON SIMULATION TEST POSSIBLE
         #region FP5 Family (Legacy)
 

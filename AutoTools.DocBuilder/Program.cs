@@ -32,7 +32,7 @@ Console.WriteLine($"{filePath}");
 
 StringBuilder markdownBuilder = new StringBuilder();
 
-var plcNames = Enum.GetNames<PlcType>().OrderBy(x => x).ToArray();
+var plcNames = Enum.GetNames<PlcType>().Where(x => x != PlcType.Unknown.ToString()).OrderBy(x => x).ToArray();
 
 void WritePlcTypeTable(string[] names) {
 

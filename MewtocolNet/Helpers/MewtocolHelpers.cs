@@ -159,6 +159,40 @@ namespace MewtocolNet {
 
         }
 
+        /// <summary>
+        /// Splits a string by uppercase words
+        /// </summary>
+        internal static IEnumerable<string> SplitByAlternatingCase(this string str) {
+
+            var words = new List<string>();
+            var result = new StringBuilder();
+
+            for (int i = 0; i < str.Length; i++) {
+
+                char lastCh = str[Math.Max(0, i - 1)];
+                char ch = str[i];
+
+                if (char.IsUpper(ch) && char.IsLower(lastCh) && result.Length > 0) {
+                    words.Add(result.ToString().Trim());
+                    result.Clear();
+                }
+
+                result.Append(ch);
+
+            }
+
+            if (!string.IsNullOrEmpty(result.ToString()))
+                words.Add(result.ToString().Trim());
+
+            return words;
+
+        }
+
+        /// <summary>
+        /// Splits a string by uppercase words and joins them with the given seperator
+        /// </summary>
+        internal static string JoinSplitByUpperCase(this string str, string seperator = " ") => string.Join(seperator, str.SplitByAlternatingCase());
+
         internal static string Ellipsis(this string str, int maxLength) {
 
             if (string.IsNullOrEmpty(str) || str.Length <= maxLength)
@@ -366,7 +400,7 @@ namespace MewtocolNet {
 
         }
 
-#if DEBUG
+        #if DEBUG
 
         internal static bool WasTestedLive(this PlcType plcT) {
 
@@ -396,7 +430,7 @@ namespace MewtocolNet {
 
         }
 
-#endif
+        #endif
 
         #endregion
 
@@ -443,6 +477,7 @@ namespace MewtocolNet {
         }
 
         #endregion
+
 
     }
 

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace MewtocolNet.Helpers {
+namespace MewtocolNet.DataLists {
 
     internal class CodeDescriptions {
 

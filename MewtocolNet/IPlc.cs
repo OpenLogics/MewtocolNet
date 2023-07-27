@@ -19,9 +19,19 @@ namespace MewtocolNet {
         bool IsConnected { get; }
 
         /// <summary>
+        /// This device is sending a message to the plc
+        /// </summary>
+        bool IsSending { get; } 
+
+        /// <summary>
         /// The current transmission speed in bytes per second
         /// </summary>
         int BytesPerSecondUpstream { get; }
+
+        /// <summary>
+        /// This device is receiving a message from the plc
+        /// </summary>
+        bool IsReceiving { get; }
 
         /// <summary>
         /// The current transmission speed in bytes per second

@@ -22,9 +22,11 @@ namespace MewtocolNet.Logging {
 
         static Logger () {
 
+            var isConsoleApplication = Console.LargestWindowWidth != 0;
+
             OnNewLogMessage((d, l, m) => {
 
-                if(DefaultTargets.HasFlag(LoggerTargets.Console)) {
+                if(isConsoleApplication && DefaultTargets.HasFlag(LoggerTargets.Console)) {
 
                     switch (l) {
                         case LogLevel.Error:
@@ -87,6 +89,16 @@ namespace MewtocolNet.Logging {
             }
 
         }
+
+        internal static void LogError (string message, MewtocolInterface sender = null) => Log(message, LogLevel.Error, sender);
+
+        internal static void Log (string message, MewtocolInterface sender = null) => Log(message, LogLevel.Info, sender);
+
+        internal static void LogChange (string message, MewtocolInterface sender = null) => Log(message, LogLevel.Change, sender);
+
+        internal static void LogVerbose (string message, MewtocolInterface sender = null) => Log(message, LogLevel.Verbose, sender);
+
+        internal static void LogCritical (string message, MewtocolInterface sender = null) => Log(message, LogLevel.Critical, sender);
 
     }
 }

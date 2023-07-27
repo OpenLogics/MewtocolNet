@@ -17,6 +17,8 @@ namespace MewtocolNet {
     /// </summary>
     public abstract partial class MewtocolInterface {
 
+        internal Task heartbeatTask = Task.CompletedTask;
+
         internal Task pollCycleTask;
 
         private List<RegisterCollection> registerCollections = new List<RegisterCollection>();
@@ -39,7 +41,41 @@ namespace MewtocolNet {
             }
         }
 
+        private System.Timers.Timer heartBeatTimer = new System.Timers.Timer();
+
         #region Register Polling
+
+        internal void WatchPollerDemand() {
+
+            memoryManager.MemoryLayoutChanged += () => TestPollerStartNeeded();
+
+            Connected += (s, e) => TestPollerStartNeeded();
+
+            Disconnected += (s, e) => {
+
+                heartBeatTimer.Elapsed -= PollTimerTick;
+                heartBeatTimer.Stop();
+            
+            };
+
+        }
+
+        private void TestPollerStartNeeded () {
+
+            if (!IsConnected) return;
+
+            heartBeatTimer.Interval = 3000;
+            heartBeatTimer.Elapsed += PollTimerTick;
+            heartBeatTimer.Start();
+
+            if (!usePoller) return;
+
+            bool hasCyclic = memoryManager.HasCyclicPollableRegisters();
+            bool hasFirstCycle = memoryManager.HasSingleCyclePollableRegisters();
+
+            if (hasCyclic || hasFirstCycle) AttachPoller();
+
+        }
 
         /// <summary>
         /// Kills the poller completely
@@ -47,7 +83,6 @@ namespace MewtocolNet {
         internal void KillPoller() {
 
             pollerTaskStopped = true;
-            ClearRegisterVals();
 
         }
 
@@ -56,13 +91,21 @@ namespace MewtocolNet {
         /// </summary>
         internal void AttachPoller() {
 
-            if (!pollerTaskStopped)
-                return;
+            if (!pollerTaskStopped) return;
 
             PollerCycleDurationMs = 0;
             pollerFirstCycle = true;
 
             Task.Run(Poll);
+
+        }
+
+        private void PollTimerTick(object sender, System.Timers.ElapsedEventArgs e) {
+
+            heartbeatTask = Task.Run(async () => {
+                Logger.LogVerbose("Sending heartbeat", this);
+                await GetPLCInfoAsync();
+            });
 
         }
 
@@ -86,10 +129,11 @@ namespace MewtocolNet {
 
         }
 
-        //polls all registers one by one (slow)
+        //performs one poll cycle, one cycle is defined as getting all regster values
+        //and (not every cycle) the status of the plc that is performed on a timer basis
         internal async Task Poll() {
 
-            Logger.Log("Poller is attaching", LogLevel.Info, this);
+            Logger.Log("Poller is attaching", this);
 
             pollerTaskStopped = false;
 
@@ -100,30 +144,32 @@ namespace MewtocolNet {
                 pollCycleTask = OnMultiFrameCycle();
                 await pollCycleTask;
 
+                InvokePolledCycleDone();
+
                 if (!IsConnected) {
                     pollerTaskStopped = true;
                     return;
                 }
 
                 pollerFirstCycle = false;
-                InvokePolledCycleDone();
-
+                
             }
 
         }
 
         private async Task OnMultiFrameCycle() {
 
+            //await the timed task before starting a new poller cycle
+            if (!heartbeatTask.IsCompleted) await heartbeatTask;
+
             var sw = Stopwatch.StartNew();
-
-            //await UpdateRCPRegisters();
-
-            //await UpdateDTRegisters();
 
             await memoryManager.PollAllAreasAsync();
 
             sw.Stop();
             PollerCycleDurationMs = (int)sw.ElapsedMilliseconds;
+
+            if (!memoryManager.HasCyclicPollableRegisters()) KillPoller();
 
         }
 
@@ -131,6 +177,7 @@ namespace MewtocolNet {
 
         #region Smart register polling methods
 
+        [Obsolete]
         private async Task UpdateRCPRegisters() {
 
             //build booleans

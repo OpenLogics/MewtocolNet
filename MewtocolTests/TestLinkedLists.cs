@@ -1,10 +1,10 @@
 using MewtocolNet;
 using Xunit;
 using Xunit.Abstractions;
+using MewtocolNet.DataLists;
 
-using MewtocolNet.Helpers;
-
-namespace MewtocolTests {
+namespace MewtocolTests
+{
 
     public class TestLinkedLists {
 
