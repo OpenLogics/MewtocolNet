@@ -14,7 +14,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="auto"/>
             <RowDefinition/>
-            <RowDefinition/>
         </Grid.RowDefinitions>
 
         <StackPanel>
@@ -71,6 +70,17 @@
             </ItemsControl>
 
         </StackPanel>
-        
+
+        <DataGrid Grid.Row="1"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  ItemsSource="{Binding Plc.Registers, Mode=OneWay}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Address" Binding="{Binding PLCAddressName}"/>
+                <DataGridTextColumn Header="Name" Binding="{Binding UnderlyingSystemType.Name}"/>
+                <DataGridTextColumn Header="Value" Binding="{Binding ValueStr}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
     </Grid>
 </UserControl>

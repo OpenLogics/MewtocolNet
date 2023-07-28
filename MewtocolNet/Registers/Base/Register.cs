@@ -39,13 +39,19 @@ namespace MewtocolNet.Registers {
         internal bool wasOverlapFitted = false;
 
         /// <inheritdoc/>
-        public RegisterCollection ContainedCollection => containedCollection;
+        internal RegisterCollection ContainedCollection => containedCollection;
 
         /// <inheritdoc/>
-        public MewtocolInterface AttachedInterface => attachedInterface;
+        internal MewtocolInterface AttachedInterface => attachedInterface;
+
+        /// <inheritdoc/>
+        public Type UnderlyingSystemType => underlyingSystemType;
 
         /// <inheritdoc/>
         public object ValueObj => lastValue;
+
+        /// <inheritdoc/>
+        public string ValueStr => GetValueString();
 
         /// <inheritdoc/>
         public RegisterPrefix RegisterType { get; internal set; }
@@ -63,7 +69,12 @@ namespace MewtocolNet.Registers {
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public void TriggerNotifyChange() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ValueObj)));
+        public void TriggerNotifyChange() {
+
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ValueObj)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ValueStr)));
+
+        }
 
         #endregion
 

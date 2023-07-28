@@ -68,6 +68,8 @@ namespace MewtocolNet {
         /// </summary>
         int ConnectTimeout { get; set; }
 
+        IEnumerable<IRegister> Registers { get; }   
+
         /// <summary>
         /// Tries to establish a connection with the device asynchronously
         /// </summary>

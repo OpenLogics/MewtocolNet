@@ -64,19 +64,17 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         internal async Task<bool> RequestByteReadAsync(ulong addStart, ulong addEnd) {
 
-            var station = mewInterface.GetStationNumber();
+            var byteCount = (addEnd - addStart + 1) * 2;
+            var result = await mewInterface.ReadByteRangeNonBlocking((int)addStart, (int)byteCount);
 
-            string requeststring = $"%{station}#RD{GetMewtocolIdent(addStart, addEnd)}";
-            var result = await mewInterface.SendCommandAsync(requeststring);
+            if (result != null) {
 
-            if (result.Success) {
-
-                var resBytes = result.Response.ParseDTRawStringAsBytes();
-                SetUnderlyingBytes(resBytes, addStart);
+                SetUnderlyingBytes(result, addStart);
+                return true;
 
             }
 
-            return result.Success;
+            return false;
 
         }
 

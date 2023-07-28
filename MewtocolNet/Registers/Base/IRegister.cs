@@ -35,6 +35,16 @@ namespace MewtocolNet.Registers {
         object ValueObj { get; }
 
         /// <summary>
+        /// The current value of the register as a string
+        /// </summary>
+        string ValueStr { get; }
+
+        /// <summary>
+        /// The system (.NET) type of the underlying value thats held inside the register
+        /// </summary>
+        Type UnderlyingSystemType { get; }  
+
+        /// <summary>
         /// The plc memory address of the register
         /// </summary>
         uint MemoryAddress { get; }
