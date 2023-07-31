@@ -3,6 +3,7 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MewtocolNet {
@@ -68,7 +69,45 @@ namespace MewtocolNet {
         }
 
         /// <inheritdoc/>
-        public override async Task ConnectAsync(Func<Task> callBack = null) {
+        public override async Task ConnectAsync(Func<Task> callBack = null) => await ConnectAsyncPriv(callBack);
+
+        private void BuildTcpClient () {
+
+            if (HostEndpoint != null) {
+
+                var hasEndpoint = Mewtocol
+                .GetSourceEndpoints()
+                .Any(x => x.Address.ToString() == HostEndpoint.Address.ToString());
+
+                if (!hasEndpoint)
+                    throw new NotSupportedException($"The specified source endpoint: " +
+                                                    $"{HostEndpoint}, doesn't exist on the device, " +
+                                                    $"use 'Mewtocol.GetSourceEndpoints()' to find applicable ones");
+
+                client = new TcpClient(HostEndpoint) {
+                    ReceiveBufferSize = RecBufferSize,
+                    NoDelay = false,
+                    ReceiveTimeout = sendReceiveTimeoutMs,
+                    SendTimeout = sendReceiveTimeoutMs,
+                };
+
+                var ep = (IPEndPoint)client.Client.LocalEndPoint;
+                Logger.Log($"Connecting [MAN] endpoint: {ep.Address}:{ep.Port}", LogLevel.Info, this);
+
+            } else {
+
+                client = new TcpClient() {
+                    ReceiveBufferSize = RecBufferSize,
+                    NoDelay = false,
+                    ReceiveTimeout = sendReceiveTimeoutMs,
+                    SendTimeout = sendReceiveTimeoutMs,
+                };
+
+            }
+
+        }
+
+        private async Task ConnectAsyncPriv(Func<Task> callBack = null) {
 
             try {
 
@@ -77,33 +116,7 @@ namespace MewtocolNet {
                 Logger.Log($">> Intial connection start <<", LogLevel.Verbose, this);
                 isConnectingStage = true;
 
-                if (HostEndpoint != null) {
-
-                    var hasEndpoint = Mewtocol
-                    .GetSourceEndpoints()
-                    .Any(x => x.Address.ToString() == HostEndpoint.Address.ToString());
-
-                    if (!hasEndpoint)
-                        throw new NotSupportedException($"The specified source endpoint: " +
-                                                        $"{HostEndpoint}, doesn't exist on the device, " +
-                                                        $"use 'Mewtocol.GetSourceEndpoints()' to find applicable ones");
-
-                    client = new TcpClient(HostEndpoint) {
-                        ReceiveBufferSize = RecBufferSize,
-                        NoDelay = false,
-                    };
-                    var ep = (IPEndPoint)client.Client.LocalEndPoint;
-                    Logger.Log($"Connecting [MAN] endpoint: {ep.Address}:{ep.Port}", LogLevel.Info, this);
-
-                } else {
-
-                    client = new TcpClient() {
-                        ReceiveBufferSize = RecBufferSize,
-                        NoDelay = false,
-                        //ExclusiveAddressUse = true,
-                    };
-
-                }
+                BuildTcpClient();
 
                 var result = client.BeginConnect(ipAddr, Port, null, null);
                 var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(ConnectTimeout));
@@ -125,7 +138,7 @@ namespace MewtocolNet {
                 stream.ReadTimeout = 1000;
 
                 //get plc info
-                var plcinf = await GetPLCInfoAsync();
+                var plcinf = await GetPLCInfoAsync(ConnectTimeout);
 
                 if (plcinf != null) {
 
@@ -147,7 +160,71 @@ namespace MewtocolNet {
                 OnMajorSocketExceptionWhileConnecting();
                 isConnectingStage = false;
 
-            } 
+            }
+
+        }
+
+        protected override async Task ReconnectAsync (int conTimeout) {
+
+            try {
+
+                firstPollTask = new Task(() => { });
+
+                Logger.Log($">> Reconnect start <<", LogLevel.Verbose, this);
+
+                isConnectingStage = true;
+
+                BuildTcpClient();
+
+                var result = client.BeginConnect(ipAddr, Port, null, null);
+                var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(conTimeout));
+
+                if (client.Connected)
+                    Logger.LogVerbose("TCP/IP Client connected", this);
+
+                if (!success || !client.Connected) {
+
+                    Logger.Log("The PLC connection timed out", LogLevel.Error, this);
+                    OnMajorSocketExceptionWhileConnecting();
+                    return;
+                }
+
+                if (HostEndpoint == null) {
+                    var ep = (IPEndPoint)client.Client.LocalEndPoint;
+                    Logger.Log($"Connecting [AUTO] endpoint: {ep.Address.MapToIPv4()}:{ep.Port}", LogLevel.Info, this);
+                }
+
+                //get the stream
+                stream = client.GetStream();
+                stream.ReadTimeout = 1000;
+
+                Logger.LogVerbose("Attached stream, getting PLC info", this);
+
+                //get plc info
+                var plcinf = await GetPLCInfoAsync(ConnectTimeout);
+
+                if (plcinf != null) {
+
+                    IsConnected = true;
+                    await base.ConnectAsync();
+
+                    Logger.LogVerbose("Connection re-established", this);
+                    OnConnected(plcinf);
+
+                } else {
+
+                    Logger.Log("Initial connection failed", LogLevel.Error, this);
+                    OnDisconnect();
+
+                }
+
+                await Task.CompletedTask;
+
+            } catch (Exception ex) {
+
+                Logger.LogError($"Reconnect exception: {ex.Message}");
+
+            }
 
         }
 
@@ -162,9 +239,9 @@ namespace MewtocolNet {
 
         private protected override void OnDisconnect() {
 
-            if (IsConnected) {
+            base.OnDisconnect();
 
-                base.OnDisconnect();
+            if (client != null && client.Connected) {
 
                 client.Close();
 

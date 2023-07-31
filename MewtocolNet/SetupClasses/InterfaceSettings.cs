@@ -1,4 +1,6 @@
-﻿namespace MewtocolNet.SetupClasses {
+﻿using System;
+
+namespace MewtocolNet.SetupClasses {
 
     public class InterfaceSettings {
 
@@ -33,6 +35,21 @@
         /// Higher numbers will result in a longer send and receive thread blocking time
         /// </summary>
         public int MaxDataBlocksPerWrite { get; set; } = 8;
+
+        /// <summary>
+        /// The send and receive timout for messages in milliseconds
+        /// </summary>
+        public int SendReceiveTimeoutMs { get; set; } = 1000;
+
+        /// <summary>
+        /// Number of attempts to try and reconnect to the plc, 0 for none
+        /// </summary>
+        public int TryReconnectAttempts { get; set; } = 5;
+
+        /// <summary>
+        /// The delay between reconnect trys
+        /// </summary>
+        public int TryReconnectDelayMs { get; set; } = 2000;
 
     }
 

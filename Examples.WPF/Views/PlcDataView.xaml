@@ -79,6 +79,7 @@
                 <DataGridTextColumn Header="Address" Binding="{Binding PLCAddressName}"/>
                 <DataGridTextColumn Header="Name" Binding="{Binding UnderlyingSystemType.Name}"/>
                 <DataGridTextColumn Header="Value" Binding="{Binding ValueStr}"/>
+                <!--<DataGridTextColumn Header="Value" Binding="{Binding PollLevel, Mode=OneWay}"/>-->
             </DataGrid.Columns>
         </DataGrid>
 

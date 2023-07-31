@@ -320,7 +320,10 @@ namespace MewtocolNet
                     imew.memoryManager.maxOptimizationDistance = res.MaxOptimizationDistance;
                     imew.memoryManager.pollLevelOrMode = res.PollLevelOverwriteMode;
 
-                    imew.maxDataBlocksPerWrite = res.MaxDataBlocksPerWrite; 
+                    imew.maxDataBlocksPerWrite = res.MaxDataBlocksPerWrite;
+                    imew.sendReceiveTimeoutMs = res.SendReceiveTimeoutMs;
+                    imew.tryReconnectAttempts = res.TryReconnectAttempts;
+                    imew.tryReconnectDelayMs = res.TryReconnectDelayMs;
 
                 }
 

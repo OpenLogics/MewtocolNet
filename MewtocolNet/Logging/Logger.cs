@@ -9,7 +9,7 @@ namespace MewtocolNet.Logging {
     public static class Logger {
 
         /// <summary>
-        /// Sets the loglevel for the logger module
+        /// Sets the loglevel for the global logging module
         /// </summary>
         public static LogLevel LogLevel { get; set; }
 
@@ -54,13 +54,17 @@ namespace MewtocolNet.Logging {
 
                 }
 
+            });
+
+            LogInvoked += (d, l, m) => {
+
                 if (DefaultTargets.HasFlag(LoggerTargets.Trace)) {
 
                     Trace.WriteLine($"{d:hh:mm:ss:ff} {m}");
 
                 }
 
-            });
+            };
 
         }
 
@@ -70,22 +74,26 @@ namespace MewtocolNet.Logging {
         /// <summary>
         /// Gets invoked whenever a new log message is ready
         /// </summary>
-        public static void OnNewLogMessage(Action<DateTime, LogLevel, string> onMsg) {
+        public static void OnNewLogMessage(Action<DateTime, LogLevel, string> onMsg, LogLevel? maxLevel = null) {
+
+            if (maxLevel == null) maxLevel = LogLevel;
 
             LogInvoked += (t, l, m) => {
-                onMsg(t, l, m);
+
+                if ((int)l <= (int)maxLevel) {
+                    onMsg(t, l, m);
+                }
+
             };
 
         }
 
         internal static void Log(string message, LogLevel loglevel, MewtocolInterface sender = null) {
 
-            if ((int)loglevel <= (int)LogLevel) {
-                if (sender == null) {
-                    LogInvoked?.Invoke(DateTime.Now, loglevel, message);
-                } else {
-                    LogInvoked?.Invoke(DateTime.Now, loglevel, $"[{sender.GetConnectionInfo()}] {message}");
-                }
+            if (sender == null) {
+                LogInvoked?.Invoke(DateTime.Now, loglevel, message);
+            } else {
+                LogInvoked?.Invoke(DateTime.Now, loglevel, $"[{sender.GetConnectionInfo()}] {message}");
             }
 
         }

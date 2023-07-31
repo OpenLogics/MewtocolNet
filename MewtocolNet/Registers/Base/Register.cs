@@ -65,6 +65,9 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public uint MemoryAddress => memoryAddress;
 
+        /// <inheritdoc/>
+        int IRegister.PollLevel => pollLevel;
+
         #region Trigger update notify
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -82,7 +85,11 @@ namespace MewtocolNet.Registers {
 
         internal virtual void UpdateHoldingValue(object val) {
 
-            if (lastValue?.ToString() != val?.ToString()) {
+            bool nullDiff = false;
+            if (val == null && lastValue != null) nullDiff = true;
+            if (val != null && lastValue == null) nullDiff = true;
+
+            if (lastValue?.ToString() != val?.ToString() || nullDiff) {
 
                 var beforeVal = lastValue;
                 var beforeValStr = GetValueString();

@@ -95,7 +95,7 @@ namespace MewtocolNet {
         /// <param name="withTerminator">Append the checksum and bcc automatically</param>
         /// <param name="timeoutMs">Timout to wait for a response</param>
         /// <returns>Returns the result</returns>
-        Task<MewtocolFrameResponse> SendCommandAsync(string _msg, bool withTerminator = true, int timeoutMs = -1, Action<double> onReceiveProgress = null);
+        Task<MewtocolFrameResponse> SendCommandAsync(string _msg, Action<double> onReceiveProgress = null);
 
         /// <summary>
         /// Changes the PLCs operation mode to the given one

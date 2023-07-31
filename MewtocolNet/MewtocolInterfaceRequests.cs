@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MewtocolNet {
@@ -15,6 +16,8 @@ namespace MewtocolNet {
 
         internal int maxDataBlocksPerWrite = 8;
 
+        private CancellationTokenSource tTaskCancelSource = new CancellationTokenSource();
+
         #region PLC info getters
 
         /// <summary>
@@ -23,22 +26,15 @@ namespace MewtocolNet {
         /// <returns>A PLCInfo class</returns>
         public async Task<PLCInfo> GetPLCInfoAsync(int timeout = -1) {
 
-            MewtocolFrameResponse resRT = await SendCommandAsync("%EE#RT", timeoutMs: timeout);
+            MewtocolFrameResponse resRT = await SendCommandAsync("%EE#RT");
 
-            if (!resRT.Success) {
-
-                //timeouts are ok and don't throw
-                if (resRT == MewtocolFrameResponse.Timeout) return null;
-
-                throw new Exception(resRT.Error);
-
-            }
+            if (!resRT.Success) return null;
 
             MewtocolFrameResponse? resEXRT = null;
 
             if(isConnectingStage) {
 
-                resEXRT = await SendCommandAsync("%EE#EX00RT00", timeoutMs: timeout);
+                resEXRT = await SendCommandAsync("%EE#EX00RT00");
 
             }
 

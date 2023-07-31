@@ -55,9 +55,14 @@ public partial class ConnectView : UserControl {
 
             App.ViewModel.Plc = Mewtocol.Ethernet(viewModel.SelectedIP, parsedInt)
             .WithPoller()
+            .WithInterfaceSettings(s => {
+                s.TryReconnectAttempts = 30;
+                s.TryReconnectDelayMs = 2000;
+            })
             .WithRegisters(b => {
                 b.Struct<short>("DT0").Build();
                 b.Struct<short>("DT0").AsArray(30).Build();
+                b.Struct<Word>("DT1002").Build();
             })
             .Build();
 
@@ -66,6 +71,12 @@ public partial class ConnectView : UserControl {
             if (App.ViewModel.Plc.IsConnected) {
 
                 App.MainWindow.mainContent.Content = new PlcDataView();
+
+                //for (int i = 0; i < 300000; i++) {
+
+                //    _ = Task.Run(async () => await App.ViewModel.Plc.SendCommandAsync("%EE#RT"));
+
+                //}
 
             }
 

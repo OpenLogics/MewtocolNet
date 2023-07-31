@@ -17,6 +17,8 @@ namespace MewtocolNet
 
         public static MewtocolFrameResponse NotIntialized => new MewtocolFrameResponse(405, "PLC was not initialized");
 
+        public static MewtocolFrameResponse Canceled => new MewtocolFrameResponse(500, "Op was canceled by the library");
+
         public MewtocolFrameResponse(string response) {
 
             Success = true;

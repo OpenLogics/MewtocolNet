@@ -25,6 +25,11 @@ namespace MewtocolNet.Registers {
         string Name { get; }
 
         /// <summary>
+        /// The poll level this register is attached to
+        /// </summary>
+        int PollLevel { get; }  
+
+        /// <summary>
         /// Gets the register address name as in the plc
         /// </summary>
         string PLCAddressName { get; }

@@ -210,33 +210,11 @@ namespace MewtocolNet {
 
         };
 
-        /// <inheritdoc/>
-        public static bool operator ==(PLCInfo c1, PLCInfo c2) {
-            return c1.Equals(c2);
-        }
-
-        /// <inheritdoc/>
-        public static bool operator !=(PLCInfo c1, PLCInfo c2) {
-            return !c1.Equals(c2);
-        }
-
         public override string ToString() {
 
             return $"{TypeName}, OP: {OperationMode}";
 
         }
-
-        public override bool Equals(object obj) {
-
-            if ((obj == null) || !this.GetType().Equals(obj.GetType())) {
-                return false;
-            } else {
-                return (PLCInfo)obj == this;
-            }
-
-        }
-
-        public override int GetHashCode() => base.GetHashCode();
 
         private protected void OnPropChange([CallerMemberName] string propertyName = null) {
 

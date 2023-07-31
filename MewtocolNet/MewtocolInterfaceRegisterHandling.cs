@@ -41,7 +41,7 @@ namespace MewtocolNet {
             }
         }
 
-        private System.Timers.Timer heartBeatTimer = new System.Timers.Timer();
+        private System.Timers.Timer heartBeatTimer;
 
         #region Register Polling
 
@@ -53,10 +53,16 @@ namespace MewtocolNet {
 
             Disconnected += (s, e) => {
 
-                heartBeatTimer.Elapsed -= PollTimerTick;
-                heartBeatTimer.Stop();
+                StopHeartBeat();
             
             };
+
+        }
+
+        private void StopHeartBeat () {
+
+            heartBeatTimer.Elapsed -= PollTimerTick;
+            heartBeatTimer.Dispose();
 
         }
 
@@ -64,6 +70,7 @@ namespace MewtocolNet {
 
             if (!IsConnected) return;
 
+            heartBeatTimer = new System.Timers.Timer();
             heartBeatTimer.Interval = 3000;
             heartBeatTimer.Elapsed += PollTimerTick;
             heartBeatTimer.Start();
@@ -102,10 +109,28 @@ namespace MewtocolNet {
 
         private void PollTimerTick(object sender, System.Timers.ElapsedEventArgs e) {
 
-            heartbeatTask = Task.Run(async () => {
-                Logger.LogVerbose("Sending heartbeat", this);
-                await GetPLCInfoAsync();
-            });
+            if(!IsConnected || isConnectingStage) return;
+
+            heartbeatNeedsRun = true;
+
+        }
+
+        private bool heartbeatNeedsRun = false;
+
+        private async Task HeartbeatTickTask () {
+
+            if (regularSendTask != null && !regularSendTask.IsCompleted) await regularSendTask;
+
+            Logger.LogVerbose("Sending heartbeat", this);
+
+            if (await GetPLCInfoAsync(2000) == null) {
+
+                Logger.LogError("Heartbeat timed out", this);
+
+                OnSocketExceptionWhileConnected();
+                StartReconnectTask();
+
+            }
 
         }
 
@@ -124,6 +149,8 @@ namespace MewtocolNet {
 
             pollCycleTask = OnMultiFrameCycle();
             await pollCycleTask;
+
+            if (!memoryManager.HasCyclicPollableRegisters()) KillPoller();
 
             return tcpMessagesSentThisCycle;
 
@@ -144,6 +171,8 @@ namespace MewtocolNet {
                 pollCycleTask = OnMultiFrameCycle();
                 await pollCycleTask;
 
+                if (!memoryManager.HasCyclicPollableRegisters()) KillPoller();
+
                 InvokePolledCycleDone();
 
                 if (!IsConnected) {
@@ -160,7 +189,12 @@ namespace MewtocolNet {
         private async Task OnMultiFrameCycle() {
 
             //await the timed task before starting a new poller cycle
-            if (!heartbeatTask.IsCompleted) await heartbeatTask;
+            if (heartbeatNeedsRun) {
+
+                await HeartbeatTickTask();
+                heartbeatNeedsRun = false;
+            
+            }
 
             var sw = Stopwatch.StartNew();
 
@@ -168,8 +202,6 @@ namespace MewtocolNet {
 
             sw.Stop();
             PollerCycleDurationMs = (int)sw.ElapsedMilliseconds;
-
-            if (!memoryManager.HasCyclicPollableRegisters()) KillPoller();
 
         }
 
@@ -417,8 +449,9 @@ namespace MewtocolNet {
 
             for (int i = 0; i < internals.Count; i++) {
 
-                var reg = (Register)internals[i];
+                var reg = internals[i];
                 reg.ClearValue();
+                //reg.TriggerNotifyChange();
 
             }
 

@@ -66,9 +66,9 @@ namespace MewtocolNet.Registers {
             lastValue = null;
         }
 
-        public IEnumerator<T> GetEnumerator() => ((Array)ValueObj).OfType<T>().GetEnumerator();
+        public IEnumerator<T> GetEnumerator() => ((Array)ValueObj)?.OfType<T>()?.GetEnumerator() ?? Enumerable.Empty<T>().GetEnumerator();
 
-        IEnumerator IEnumerable.GetEnumerator() => ((Array)ValueObj).OfType<T>().GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => ((Array)ValueObj)?.OfType<T>()?.GetEnumerator() ?? Enumerable.Empty<T>().GetEnumerator();    
 
         async Task<T[]> IArrayRegister<T>.ReadAsync() => (T[])(object)await ReadAsync();
 

@@ -9,9 +9,11 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MewtocolNet {
@@ -53,12 +55,17 @@ namespace MewtocolNet {
         private protected int bytesPerSecondDownstream = 0;
 
         private protected AsyncQueue queue = new AsyncQueue();
+
         private protected Stopwatch speedStopwatchUpstr;
         private protected Stopwatch speedStopwatchDownstr;
         private protected Task firstPollTask;
+        private Task reconnectTask;
 
         private protected bool wasInitialStatusReceived;
         private protected MewtocolVersion mewtocolVersion;
+
+        //private protected string[] lastMsgs = new string[10];
+        private protected List<string> lastMsgs = new List<string>();
 
         #endregion
 
@@ -71,6 +78,10 @@ namespace MewtocolNet {
         internal MemoryAreaManager memoryManager;
         private volatile bool isReceiving;
         private volatile bool isSending;
+
+        internal int sendReceiveTimeoutMs = 1000;
+        internal int tryReconnectAttempts = 0;
+        internal int tryReconnectDelayMs = 1000;
 
         #endregion
 
@@ -171,13 +182,20 @@ namespace MewtocolNet {
             WatchPollerDemand();
 
             Connected += MewtocolInterface_Connected;
+            Disconnected += MewtocolInterface_Disconnected;
             RegisterChanged += OnRegisterChanged;
 
-            void MewtocolInterface_Connected(object sender, PlcConnectionArgs args) {
+        }
 
-                IsConnected = true;
+        private void MewtocolInterface_Connected(object sender, PlcConnectionArgs args) {
 
-            }
+            IsConnected = true;
+
+        }
+
+        private void MewtocolInterface_Disconnected(object sender, PlcConnectionArgs e) {
+
+            Logger.LogVerbose("Disconnected", this);
 
         }
 
@@ -213,13 +231,13 @@ namespace MewtocolNet {
 
             await memoryManager.OnPlcConnected();
 
-            Logger.Log($"PLC:       {PlcInfo.TypeName}", LogLevel.Verbose, this);
+            Logger.Log($"PLC: {PlcInfo.TypeName}", LogLevel.Verbose, this);
             Logger.Log($"TYPE CODE: {PlcInfo.TypeCode.ToString("X")}", LogLevel.Verbose, this);
-            Logger.Log($"OP MODE:   {PlcInfo.OperationMode}", LogLevel.Verbose, this);
-            Logger.Log($"PROG CAP:  {PlcInfo.ProgramCapacity}k", LogLevel.Verbose, this);
-            Logger.Log($"HW INFO:   {PlcInfo.HardwareInformation}", LogLevel.Verbose, this);
-            Logger.Log($"DIAG ERR:  {PlcInfo.SelfDiagnosticError}", LogLevel.Verbose, this);
-            Logger.Log($"CPU VER:   {PlcInfo.CpuVersion}", LogLevel.Verbose, this);
+            Logger.Log($"OP MODE: {PlcInfo.OperationMode}", LogLevel.Verbose, this);
+            Logger.Log($"PROG CAP: {PlcInfo.ProgramCapacity}k", LogLevel.Verbose, this);
+            Logger.Log($"HW INFO: {PlcInfo.HardwareInformation}", LogLevel.Verbose, this);
+            Logger.Log($"DIAG ERR: {PlcInfo.SelfDiagnosticError}", LogLevel.Verbose, this);
+            Logger.Log($"CPU VER: {PlcInfo.CpuVersion}", LogLevel.Verbose, this);
 
             Logger.Log($">> Intial connection end <<", LogLevel.Verbose, this);
 
@@ -232,6 +250,9 @@ namespace MewtocolNet {
             } 
 
         }
+
+        /// <inheritdoc/>
+        protected virtual Task ReconnectAsync(int conTimeout) => throw new NotImplementedException();
 
         /// <inheritdoc/>
         public async Task AwaitFirstDataCycleAsync() => await firstPollTask;
@@ -271,8 +292,71 @@ namespace MewtocolNet {
         /// <inheritdoc/>
         public virtual string GetConnectionInfo() => throw new NotImplementedException();
 
+        internal void StartReconnectTask() {
+
+            if (reconnectTask == null) {
+
+                reconnectTask = Task.Run(async () => {
+
+                    int retryCount = 1;
+
+                    if (!IsConnected) {
+
+                        if(this is MewtocolInterfaceTcp tcpI) {
+
+                            tcpI.client.Close();
+                            tcpI.client = null;
+
+                        }
+
+                        while (!IsConnected && tryReconnectAttempts > 0 && retryCount < tryReconnectAttempts + 1) {
+
+                            Logger.Log($"Reconnecting {retryCount}/{tryReconnectAttempts} ...", this);
+
+                            //kill the poller
+                            KillPoller();
+
+                            //stop the heartbeat timer for the time of retries
+                            StopHeartBeat();
+
+                            await ReconnectAsync(tryReconnectDelayMs);
+                            await Task.Delay(2000);
+
+                            retryCount++;
+
+
+                        }
+
+                        //still not connected
+                        if (!IsConnected) {
+
+                            //invoke the dc evnt
+                            OnMajorSocketExceptionAfterRetries();
+
+                        }
+
+                    }
+
+                });
+
+            }
+
+        }
+
+        internal async Task AwaitReconnectTaskAsync () {
+
+            if (reconnectTask != null && !reconnectTask.IsCompleted) await reconnectTask;
+
+            await Task.CompletedTask;
+
+        }
+
+        private Task<MewtocolFrameResponse> regularSendTask;
+
         /// <inheritdoc/>
-        public async Task<MewtocolFrameResponse> SendCommandAsync (string _msg, bool withTerminator = true, int timeoutMs = -1, Action<double> onReceiveProgress = null) {
+        public async Task<MewtocolFrameResponse> SendCommandAsync(string _msg, Action<double> onReceiveProgress = null) {
+
+            await AwaitReconnectTaskAsync();
 
             if (!IsConnected && !isConnectingStage)
                 throw new NotSupportedException("The device must be connected to send a message");
@@ -280,32 +364,51 @@ namespace MewtocolNet {
             //send request
             queuedMessages++;
 
-            var tempResponse = queue.Enqueue(async () => await SendFrameAsync(_msg, withTerminator, withTerminator, onReceiveProgress));
+            //wait for the last send task to complete
+            if (regularSendTask != null && !regularSendTask.IsCompleted) await regularSendTask;
 
-            if (await Task.WhenAny(tempResponse, Task.Delay(timeoutMs)) != tempResponse) {
+            regularSendTask = SendFrameAsync(_msg, onReceiveProgress);
+
+            if (await Task.WhenAny(regularSendTask, Task.Delay(2000)) != regularSendTask) {
+
                 // timeout logic
                 return MewtocolFrameResponse.Timeout;
+
             }
+
+            //canceled
+            if (regularSendTask.IsCanceled) return MewtocolFrameResponse.Canceled;
 
             tcpMessagesSentThisCycle++;
             queuedMessages--;
 
-            return tempResponse.Result;
+            //success
+            if (regularSendTask.Result.Success) return regularSendTask.Result;
+
+            //no success
+            if(reconnectTask == null) StartReconnectTask();
+
+            //await the single reconnect task
+            await AwaitReconnectTaskAsync();
+
+            //re-send the command
+            if (IsConnected) {
+
+                return await SendCommandAsync(_msg, onReceiveProgress);
+
+            }
+
+            return MewtocolFrameResponse.Timeout;
 
         }
 
-        private protected async Task<MewtocolFrameResponse> SendFrameAsync(string frame, bool useBcc = true, bool useCr = true, Action<double> onReceiveProgress = null) {
+        private protected async Task<MewtocolFrameResponse> SendFrameAsync(string frame, Action<double> onReceiveProgress = null) {
 
             try {
 
                 if (stream == null) return MewtocolFrameResponse.NotIntialized;
 
-                if (useBcc)
-                    frame = $"{frame.BCC_Mew()}";
-
-                if (useCr)
-                    frame = $"{frame}\r";
-
+                frame = $"{frame.BCC_Mew()}\r";
 
                 SetUpstreamStopWatchStart();
 
@@ -334,8 +437,7 @@ namespace MewtocolNet {
                 //calc upstream speed
                 CalcUpstreamSpeed(writeBuffer.Length);
 
-                Logger.Log($"[---------CMD START--------]", LogLevel.Critical, this);
-                Logger.Log($"--> OUT MSG: {frame.Replace("\r", "(CR)")}", LogLevel.Critical, this);
+                OnOutMsg(frame);
 
                 var readResult = await ReadCommandAsync(wordsCountRequested, onReceiveProgress);
 
@@ -381,9 +483,7 @@ namespace MewtocolNet {
 
                 }
 
-                Logger.Log($"<-- IN MSG: {resString.Replace("\r", "(CR)")}", LogLevel.Critical, this);
-                Logger.Log($"Total bytes parsed: {resString.Length}", LogLevel.Critical, this);
-                Logger.Log($"[---------CMD END----------]", LogLevel.Critical, this);
+                OnInMsg(resString);
 
                 return new MewtocolFrameResponse(resString);
 
@@ -415,7 +515,7 @@ namespace MewtocolNet {
 
                     byte[] buffer = new byte[RecBufferSize];
                     IsReceiving = true;
-                    int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                    int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, queue.tSource.Token);
                     IsReceiving = false;
 
                     CalcDownstreamSpeed(bytesRead);
@@ -426,8 +526,7 @@ namespace MewtocolNet {
                     var commandRes = ParseBufferFrame(received);
                     needsRead = commandRes == CommandState.LineFeed || commandRes == CommandState.RequestedNextFrame;
 
-                    var tempMsg = Encoding.UTF8.GetString(received).Replace("\r", "(CR)");
-                    Logger.Log($">> IN PART: {tempMsg}, Command state: {commandRes}", LogLevel.Critical, this);
+                    OnInMsgPart(Encoding.UTF8.GetString(received));
 
                     //add complete response to collector without empty bytes
                     totalResponse.AddRange(received.Where(x => x != (byte)0x0));
@@ -437,7 +536,7 @@ namespace MewtocolNet {
                         //request next frame
                         var writeBuffer = Encoding.UTF8.GetBytes($"%{GetStationNumber()}**&\r");
                         IsSending = true;
-                        await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length);
+                        await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length, queue.tSource.Token);
                         IsSending = false;
                         Logger.Log($">> Requested next frame", LogLevel.Critical, this);
                         wasMultiFramedResponse = true;
@@ -463,7 +562,16 @@ namespace MewtocolNet {
 
                 } while (needsRead);
 
-            } catch (OperationCanceledException) { }
+            } 
+            catch (OperationCanceledException) { }
+            catch (IOException ex) {
+
+                Logger.LogError($"Socket exception encountered: {ex.Message.ToString()}", this);
+
+                //socket io exception
+                OnSocketExceptionWhileConnected();
+
+            }
 
             return (totalResponse.ToArray(), wasMultiFramedResponse);
 
@@ -508,9 +616,46 @@ namespace MewtocolNet {
 
         }
 
+        private protected void OnOutMsg(string outMsg) {
+            
+            Logger.Log($"[---------CMD START--------]", LogLevel.Critical, this);
+            var formatted = $"S -> : {outMsg.Replace("\r", "(CR)")}";
+            AddToLastMsgs(formatted);
+            Logger.Log(formatted, LogLevel.Critical, this);
+
+        }
+
+        private protected void OnInMsgPart(string inPart) {
+
+            var formatted = $"<< IN PART: {inPart.Replace("\r", "(CR)")}";
+            AddToLastMsgs(formatted);
+            Logger.Log(formatted, LogLevel.Critical, this);
+
+        }
+
+        private protected void OnInMsg(string inMsg) {
+
+            var formatted = $"R <- : {inMsg.Replace("\r", "(CR)")}";
+            AddToLastMsgs(formatted);
+            Logger.Log(formatted, LogLevel.Critical, this);
+            Logger.Log($"[---------CMD END----------]", LogLevel.Critical, this);
+
+        }
+
+        private protected void AddToLastMsgs (string msgTxt) {
+
+            lastMsgs.Add(msgTxt);
+            if(lastMsgs.Count >= 51) {
+                lastMsgs.RemoveAt(0);
+            }
+
+        }
+
         private protected void OnMajorSocketExceptionWhileConnecting() {
 
             if (IsConnected) {
+
+                queue.CancelAll();
 
                 Logger.Log("The PLC connection timed out", LogLevel.Error, this);
                 OnDisconnect();
@@ -523,10 +668,28 @@ namespace MewtocolNet {
 
             if (IsConnected) {
 
+                queue.CancelAll();
+
                 Logger.Log("The PLC connection was closed", LogLevel.Error, this);
                 OnDisconnect();
 
             }
+
+        }
+
+        private protected void OnMajorSocketExceptionAfterRetries() {
+
+            Logger.LogError($"Failed to re-connect, closing PLC", this);
+
+            OnDisconnect();
+
+        }
+
+        private protected void OnSocketExceptionWhileConnected () {
+
+            queue.CancelAll();
+
+            IsConnected = false;
 
         }
 
