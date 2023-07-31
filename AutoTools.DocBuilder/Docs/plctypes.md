@@ -1,5 +1,5 @@
 # PLC Type Table
-Auto Generated @ **2023-07-27 17:05:59Z**
+Auto Generated @ **2023-07-28 13:53:50Z**
 
 All supported PLC types for auto recognition are listed in this table. Other ones might also be supported but are shown as unknown in the library. Some models are never uniquely identifiable by their typecode and need extra hints like Prog Capacity in EXRT or RT. 
 
