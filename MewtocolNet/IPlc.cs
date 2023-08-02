@@ -89,13 +89,21 @@ namespace MewtocolNet {
         void Disconnect();
 
         /// <summary>
-        /// Calculates the checksum automatically and sends a command to the PLC then awaits results
+        /// Sends a command to the PLC then awaits results<br/>
+        /// The checksum and BCC are appended automatically
         /// </summary>
         /// <param name="_msg">MEWTOCOL Formatted request string ex: %01#RT</param>
-        /// <param name="withTerminator">Append the checksum and bcc automatically</param>
-        /// <param name="timeoutMs">Timout to wait for a response</param>
         /// <returns>Returns the result</returns>
         Task<MewtocolFrameResponse> SendCommandAsync(string _msg, Action<double> onReceiveProgress = null);
+
+        /// <summary>
+        /// Sends a command to the PLC and awaits its arrival<br/>
+        /// The checksum and BCC are appended automatically.<br/>
+        /// <b>Warning!</b> this command is only sent one directional, no error checking or other features included
+        /// </summary>
+        /// <param name="_msg">MEWTOCOL Formatted request string ex: %01#RT</param>
+        /// <returns>Returns true if the message was received</returns>
+        Task<bool> SendNoResponseCommandAsync(string _msg);
 
         /// <summary>
         /// Changes the PLCs operation mode to the given one

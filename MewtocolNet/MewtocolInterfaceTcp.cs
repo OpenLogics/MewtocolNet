@@ -126,16 +126,22 @@ namespace MewtocolNet {
                     Logger.Log("The PLC connection timed out", LogLevel.Error, this);
                     OnMajorSocketExceptionWhileConnecting();
                     return;
+
                 }
+
+                Logger.LogVerbose("TCP/IP Client connected", this);
 
                 if (HostEndpoint == null) {
                     var ep = (IPEndPoint)client.Client.LocalEndPoint;
-                    Logger.Log($"Connecting [AUTO] endpoint: {ep.Address.MapToIPv4()}:{ep.Port}", LogLevel.Info, this);
+                    Logger.Log($"Connecting [AUTO] from: {ep.Address.MapToIPv4()}:{ep.Port} to {GetConnectionInfo()}", LogLevel.Info, this);
                 }
 
                 //get the stream
                 stream = client.GetStream();
                 stream.ReadTimeout = 1000;
+
+                //try to abort any non read message
+                //await SendNoResponseCommandAsync($"%{GetStationNumber()}#AB");
 
                 //get plc info
                 var plcinf = await GetPLCInfoAsync(ConnectTimeout);
@@ -179,15 +185,14 @@ namespace MewtocolNet {
                 var result = client.BeginConnect(ipAddr, Port, null, null);
                 var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(conTimeout));
 
-                if (client.Connected)
-                    Logger.LogVerbose("TCP/IP Client connected", this);
-
                 if (!success || !client.Connected) {
 
                     Logger.Log("The PLC connection timed out", LogLevel.Error, this);
                     OnMajorSocketExceptionWhileConnecting();
                     return;
                 }
+
+                Logger.LogVerbose("TCP/IP Client connected", this);
 
                 if (HostEndpoint == null) {
                     var ep = (IPEndPoint)client.Client.LocalEndPoint;
@@ -243,7 +248,7 @@ namespace MewtocolNet {
 
             if (client != null && client.Connected) {
 
-                client.Close();
+                client.Dispose();
 
             }
 

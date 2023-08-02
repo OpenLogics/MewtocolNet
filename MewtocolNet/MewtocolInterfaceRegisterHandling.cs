@@ -61,9 +61,13 @@ namespace MewtocolNet {
 
         private void StopHeartBeat () {
 
-            heartBeatTimer.Elapsed -= PollTimerTick;
-            heartBeatTimer.Dispose();
+            if(heartBeatTimer != null) {
 
+                heartBeatTimer.Elapsed -= PollTimerTick;
+                heartBeatTimer.Dispose();
+
+            }
+            
         }
 
         private void TestPollerStartNeeded () {

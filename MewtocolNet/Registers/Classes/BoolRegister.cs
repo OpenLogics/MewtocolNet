@@ -18,7 +18,7 @@ namespace MewtocolNet.Registers {
         public BoolRegister() =>
         throw new NotSupportedException("Direct register instancing is not supported, use the builder pattern");
 
-        internal BoolRegister(SingleBitPrefix _io, byte _spAddress = 0x0, uint _areaAdress = 0, string _name = null) {
+        internal BoolRegister(SingleBitPrefix _io, byte _spAddress = 0x0, uint _areaAdress = 0, string _name = null) : base() {
 
             lastValue = null;
 

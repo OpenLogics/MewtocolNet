@@ -36,7 +36,7 @@ namespace MewtocolNet.Registers {
         throw new NotSupportedException("Direct register instancing is not supported, use the builder pattern");
 
         //struct for 16-32bit registers
-        internal StructRegister(uint _address, uint _reservedByteSize, string _name = null) {
+        internal StructRegister(uint _address, uint _reservedByteSize, string _name = null) : base() {
 
             memoryAddress = _address;
             specialAddress = 0x0;
@@ -56,7 +56,7 @@ namespace MewtocolNet.Registers {
         }
 
         //struct for one bit registers
-        internal StructRegister(SingleBitPrefix _io, byte _spAddress = 0x0, uint _areaAdress = 0, string _name = null) {
+        internal StructRegister(SingleBitPrefix _io, byte _spAddress = 0x0, uint _areaAdress = 0, string _name = null) : base() {
 
             lastValue = null;
 
@@ -170,22 +170,6 @@ namespace MewtocolNet.Registers {
 
             UpdateHoldingValue(parsed);
             return parsed;
-
-        }
-
-        internal override void UpdateHoldingValue(object val) {
-
-            if (lastValue?.ToString() != val?.ToString()) {
-
-                var beforeVal = lastValue;
-                var beforeValStr = GetValueString();
-
-                lastValue = val;
-
-                TriggerNotifyChange();
-                attachedInterface.InvokeRegisterChanged(this, beforeVal, beforeValStr);
-
-            }
 
         }
 

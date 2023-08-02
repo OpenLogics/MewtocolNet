@@ -29,4 +29,16 @@ public partial class PlcDataView : UserControl {
 
     }
 
+    private void ClickedDisconnect(object sender, RoutedEventArgs e) {
+
+        viewModel.Plc.Disconnect();
+
+    }
+
+    private async void ClickedConnect(object sender, RoutedEventArgs e) {
+
+        await viewModel.Plc.ConnectAsync();
+
+    }
+
 }

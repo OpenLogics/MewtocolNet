@@ -43,7 +43,7 @@ namespace MewtocolNet.Registers {
         public ArrayRegister() =>
         throw new NotSupportedException("Direct register instancing is not supported, use the builder pattern");
 
-        internal ArrayRegister(uint _address, uint _reservedByteSize, int[] _indices, string _name = null) {
+        internal ArrayRegister(uint _address, uint _reservedByteSize, int[] _indices, string _name = null) : base() {
 
             if (_reservedByteSize % 2 != 0)
                 throw new ArgumentException(nameof(_reservedByteSize), "Reserved byte size must be even");
@@ -174,6 +174,8 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         internal override void UpdateHoldingValue(object val) {
 
+            TriggerUpdateReceived();
+
             if (val == null && lastValue == null) return;
 
             bool sequenceDifference = false;
@@ -196,7 +198,7 @@ namespace MewtocolNet.Registers {
 
                 lastValue = val;
 
-                TriggerNotifyChange();
+                TriggerValueChange();
                 attachedInterface.InvokeRegisterChanged(this, beforeVal, beforeValStr);
 
             }

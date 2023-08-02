@@ -31,7 +31,7 @@ namespace MewtocolNet.Registers {
         public StringRegister() =>
         throw new NotSupportedException("Direct register instancing is not supported, use the builder pattern");
 
-        internal StringRegister(uint _address, uint _reservedByteSize, string _name = null) {
+        internal StringRegister(uint _address, uint _reservedByteSize, string _name = null) : base() {
 
             memoryAddress = _address;
             name = _name;
@@ -122,10 +122,11 @@ namespace MewtocolNet.Registers {
 
             //if string correct the sizing of the byte hint was wrong
             var reservedSize = BitConverter.ToInt16(bytes, 0);
-            if (reservedSize != byteLength - 4)
+
+            if (reservedStringLength != reservedSize)
                 throw new NotSupportedException(
                     $"The STRING register at {GetMewName()} is not correctly sized, " +
-                    $"the size should be STRING[{reservedSize}] instead of STRING[{byteLength - 4}]"
+                    $"the size should be STRING[{reservedSize}] instead of STRING[{reservedStringLength}]"
                 );
 
             AddSuccessRead();
@@ -139,6 +140,8 @@ namespace MewtocolNet.Registers {
 
         internal override void UpdateHoldingValue(object val) {
 
+            TriggerUpdateReceived();
+
             if (lastValue?.ToString() != val?.ToString()) {
 
                 var beforeVal = lastValue;
@@ -146,7 +149,7 @@ namespace MewtocolNet.Registers {
 
                 lastValue = val;
 
-                TriggerNotifyChange();
+                TriggerValueChange();
                 attachedInterface.InvokeRegisterChanged(this, beforeVal, beforeValStr);
 
             }

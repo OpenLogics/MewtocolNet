@@ -231,7 +231,9 @@ namespace MewtocolNet {
                 if (result.Success && !string.IsNullOrEmpty(result.Response)) {
 
                     var bytes = result.Response.ParseDTRawStringAsBytes();
-                    readBytes.AddRange(bytes);
+
+                    if(bytes != null)
+                        readBytes.AddRange(bytes);
 
                 }
 

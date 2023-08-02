@@ -19,6 +19,8 @@ namespace MewtocolNet
 
         public static MewtocolFrameResponse Canceled => new MewtocolFrameResponse(500, "Op was canceled by the library");
 
+        public static MewtocolFrameResponse EmptySuccess => new MewtocolFrameResponse() { Success = true };
+
         public MewtocolFrameResponse(string response) {
 
             Success = true;

@@ -113,6 +113,8 @@ namespace MewtocolNet.ComCassette {
 
                     while (!tSource.Token.IsCancellationRequested) {
 
+                        if (tSource.Token.IsCancellationRequested) break;
+
                         var res = await udpClient.ReceiveAsync().WithCancellation(tSource.Token);
 
                         if (res.Buffer == null) break;
@@ -131,7 +133,9 @@ namespace MewtocolNet.ComCassette {
 
                     }
 
-                } catch (OperationCanceledException) { } catch (SocketException) { }
+                } 
+                catch (OperationCanceledException) { } 
+                catch (SocketException) { }
 
             }
 

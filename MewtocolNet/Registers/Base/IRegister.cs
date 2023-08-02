@@ -30,6 +30,11 @@ namespace MewtocolNet.Registers {
         int PollLevel { get; }  
 
         /// <summary>
+        /// The update frequency of the register in Hz
+        /// </summary>
+        float UpdateFreqHz { get; } 
+
+        /// <summary>
         /// Gets the register address name as in the plc
         /// </summary>
         string PLCAddressName { get; }

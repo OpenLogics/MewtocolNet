@@ -498,7 +498,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
             }
 
-            return registers;
+            return registers.OrderBy(x => x.MemoryAddress).ThenByDescending(x => x.GetRegisterString());
 
         }
 

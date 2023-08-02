@@ -59,10 +59,30 @@ public partial class ConnectView : UserControl {
                 s.TryReconnectAttempts = 30;
                 s.TryReconnectDelayMs = 2000;
             })
+            .WithCustomPollLevels(l => {
+                l.SetLevel(2, 3);
+                l.SetLevel(3, TimeSpan.FromSeconds(5));
+                l.SetLevel(4, TimeSpan.FromSeconds(10));
+            })
             .WithRegisters(b => {
-                b.Struct<short>("DT0").Build();
-                b.Struct<short>("DT0").AsArray(30).Build();
-                b.Struct<Word>("DT1002").Build();
+               
+                //b.Struct<short>("DT0").Build();
+                //b.Struct<short>("DT0").AsArray(30).Build();
+
+                b.Struct<short>("DT1000").Build();
+                //b.Struct<Word>("DT1000").Build();
+                b.Struct<ushort>("DT1001").PollLevel(2).Build();
+                b.Struct<Word>("DT1002").PollLevel(2).Build();
+
+                b.Struct<int>("DDT1010").PollLevel(2).Build();
+                b.Struct<uint>("DDT1012").PollLevel(2).Build();
+                b.Struct<DWord>("DDT1014").PollLevel(2).Build();
+                b.Struct<float>("DDT1016").PollLevel(2).Build();
+                b.Struct<TimeSpan>("DDT1018").PollLevel(2).Build();
+
+                b.String("DT1024", 32).PollLevel(3).Build();
+                b.String("DT1042", 5).PollLevel(4).Build();
+
             })
             .Build();
 

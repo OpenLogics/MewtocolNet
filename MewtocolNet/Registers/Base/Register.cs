@@ -4,6 +4,7 @@ using MewtocolNet.UnderlyingRegisters;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,6 +17,8 @@ namespace MewtocolNet.Registers {
         /// Gets called whenever the value was changed
         /// </summary>
         public event RegisterChangedEventHandler ValueChanged;
+
+        public event PropertyChangedEventHandler PropertyChanged;
 
         //links to 
         internal RegisterCollection containedCollection;
@@ -36,7 +39,15 @@ namespace MewtocolNet.Registers {
         internal uint successfulReads = 0;
         internal uint successfulWrites = 0;
 
+        internal int updateCountTimerCycle;
+        internal float updateFreqHz;
+
         internal bool wasOverlapFitted = false;
+
+        private Stopwatch timeSinceLastUpdate;
+
+        private float updateFreqFastCount;
+        private float[] updateFreqAvgList;
 
         /// <inheritdoc/>
         internal RegisterCollection ContainedCollection => containedCollection;
@@ -66,16 +77,99 @@ namespace MewtocolNet.Registers {
         public uint MemoryAddress => memoryAddress;
 
         /// <inheritdoc/>
-        int IRegister.PollLevel => pollLevel;
+        public int PollLevel {
+            get => pollLevel;
+            internal set { 
+                PollLevel = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PollLevel)));
+            }
+        }
+
+        /// <inheritdoc/>
+        public float UpdateFreqHz {
+            get => updateFreqHz;
+            private set {
+                updateFreqHz = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(UpdateFreqHz)));
+            }
+        }
+
+
+        internal Register() { }
+
+        internal virtual void OnPlcConnected () {
+
+           timeSinceLastUpdate = Stopwatch.StartNew();
+           updateFreqAvgListIteration = 0;
+            updateFreqAvgList = new float[10];
+
+
+        }
+
+        internal virtual void OnPlcDisconnected () {
+
+            timeSinceLastUpdate?.Stop();
+            UpdateFreqHz = default;
+            updateFreqAvgList = new float[10];
+            updateFreqFastCount = default;
+
+        }
+
+        internal virtual void OnInterfaceCyclicTimerUpdate (int cyclicTimerRateMs) {
+
+            UpdateCountTimerTick(cyclicTimerRateMs);
+
+        }
 
         #region Trigger update notify
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        public void TriggerNotifyChange() {
+        public void TriggerValueChange() {
 
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ValueObj)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ValueStr)));
+
+        }
+
+        private int updateFreqAvgListIteration = 0;
+
+        protected void TriggerUpdateReceived () {
+
+            updateCountTimerCycle++;
+            
+            if(updateCountTimerCycle >= 1) {
+
+                var updateRateMultiplicator = (float)timeSinceLastUpdate.ElapsedMilliseconds / 1000;
+                updateFreqFastCount = ((float)updateCountTimerCycle) / updateRateMultiplicator;
+
+                //populate with first value
+                if(updateFreqAvgListIteration == 0) {
+
+                    updateFreqAvgList = Enumerable.Repeat<float>(0, updateFreqAvgList.Length).ToArray();
+                    updateFreqAvgListIteration = 1;
+
+                } else if(updateFreqAvgListIteration == updateFreqAvgList.Length - 1) {
+
+                    updateFreqAvgList = Enumerable.Repeat<float>(updateFreqAvgList.Average(), updateFreqAvgList.Length).ToArray();
+                    updateFreqAvgListIteration = 1;
+
+                } else {
+
+                    updateFreqAvgList[updateFreqAvgListIteration] = updateFreqFastCount;
+                    updateFreqAvgListIteration++;
+
+                }
+
+                //Reset
+                updateCountTimerCycle = 0;
+                timeSinceLastUpdate.Restart();
+
+            }
+
+        }
+
+        private void UpdateCountTimerTick(int cyclicTimerRateMs) {
+
+            UpdateFreqHz = (float)Math.Round(updateFreqAvgList.Average(), 2);
 
         }
 
@@ -84,6 +178,8 @@ namespace MewtocolNet.Registers {
         public virtual void ClearValue() => UpdateHoldingValue(null);
 
         internal virtual void UpdateHoldingValue(object val) {
+
+            TriggerUpdateReceived();
 
             bool nullDiff = false;
             if (val == null && lastValue != null) nullDiff = true;
@@ -96,7 +192,7 @@ namespace MewtocolNet.Registers {
 
                 lastValue = val;
 
-                TriggerNotifyChange();
+                TriggerValueChange();
                 attachedInterface.InvokeRegisterChanged(this, beforeVal, beforeValStr);
 
             }

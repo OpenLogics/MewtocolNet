@@ -38,6 +38,9 @@ namespace MewtocolNet {
 
         #region Private fields
 
+        //cancellation token for the messages
+        internal CancellationTokenSource tSource = new CancellationTokenSource();
+
         private protected Stream stream;
 
         private int tcpMessagesSentThisCycle = 0;
@@ -64,18 +67,20 @@ namespace MewtocolNet {
         private protected bool wasInitialStatusReceived;
         private protected MewtocolVersion mewtocolVersion;
 
-        //private protected string[] lastMsgs = new string[10];
         private protected List<string> lastMsgs = new List<string>();
 
         #endregion
 
         #region Internal fields 
 
+        internal protected System.Timers.Timer cyclicGenericUpdateCounter;
         internal event Action PolledCycle;
         internal volatile bool pollerTaskStopped = true;
         internal volatile bool pollerFirstCycle;
         internal bool usePoller = false;
         internal MemoryAreaManager memoryManager;
+
+        private volatile bool isMessageLocked;
         private volatile bool isReceiving;
         private volatile bool isSending;
 
@@ -356,6 +361,11 @@ namespace MewtocolNet {
         /// <inheritdoc/>
         public async Task<MewtocolFrameResponse> SendCommandAsync(string _msg, Action<double> onReceiveProgress = null) {
 
+            if (isMessageLocked)
+                throw new NotSupportedException("Can't send multiple messages in parallel");
+
+            isMessageLocked = true;
+
             await AwaitReconnectTaskAsync();
 
             if (!IsConnected && !isConnectingStage)
@@ -367,9 +377,11 @@ namespace MewtocolNet {
             //wait for the last send task to complete
             if (regularSendTask != null && !regularSendTask.IsCompleted) await regularSendTask;
 
-            regularSendTask = SendFrameAsync(_msg, onReceiveProgress);
+            regularSendTask = SendFrameAsync(_msg, onReceiveProgress, false);
 
             if (await Task.WhenAny(regularSendTask, Task.Delay(2000)) != regularSendTask) {
+
+                isMessageLocked = false;
 
                 // timeout logic
                 return MewtocolFrameResponse.Timeout;
@@ -377,13 +389,23 @@ namespace MewtocolNet {
             }
 
             //canceled
-            if (regularSendTask.IsCanceled) return MewtocolFrameResponse.Canceled;
+            if (regularSendTask.IsCanceled) {
+
+                isMessageLocked = false;
+                return MewtocolFrameResponse.Canceled;
+
+            } 
 
             tcpMessagesSentThisCycle++;
             queuedMessages--;
 
             //success
-            if (regularSendTask.Result.Success) return regularSendTask.Result;
+            if (regularSendTask.Result.Success) {
+
+                isMessageLocked = false;
+                return regularSendTask.Result;
+
+            }
 
             //no success
             if(reconnectTask == null) StartReconnectTask();
@@ -394,15 +416,63 @@ namespace MewtocolNet {
             //re-send the command
             if (IsConnected) {
 
+                isMessageLocked = false;
                 return await SendCommandAsync(_msg, onReceiveProgress);
 
             }
 
-            return MewtocolFrameResponse.Timeout;
+            isMessageLocked = false;
+            return regularSendTask.Result;
 
         }
 
-        private protected async Task<MewtocolFrameResponse> SendFrameAsync(string frame, Action<double> onReceiveProgress = null) {
+        /// <inheritdoc/>
+        public async Task<bool> SendNoResponseCommandAsync(string _msg) {
+
+            if (isMessageLocked)
+                throw new NotSupportedException("Can't send multiple messages in parallel");
+
+            isMessageLocked = true;
+
+            await AwaitReconnectTaskAsync();
+
+            if (!IsConnected && !isConnectingStage)
+                throw new NotSupportedException("The device must be connected to send a message");
+
+            //send request
+            queuedMessages++;
+
+            //wait for the last send task to complete
+            if (regularSendTask != null && !regularSendTask.IsCompleted) await regularSendTask;
+
+            regularSendTask = SendFrameAsync(_msg, null, true);
+
+            if (await Task.WhenAny(regularSendTask, Task.Delay(2000)) != regularSendTask) {
+
+                isMessageLocked = false;
+
+                // timeout logic
+                return false;
+
+            }
+
+            //canceled
+            if (regularSendTask.IsCanceled) {
+
+                isMessageLocked = false;
+                return false;
+
+            }
+
+            tcpMessagesSentThisCycle++;
+            queuedMessages--;
+
+            isMessageLocked = false;
+            return true;
+
+        }
+
+        private protected async Task<MewtocolFrameResponse> SendFrameAsync(string frame, Action<double> onReceiveProgress, bool noResponse) {
 
             try {
 
@@ -414,9 +484,11 @@ namespace MewtocolNet {
 
                 IsSending = true;
 
+                if (tSource.Token.IsCancellationRequested) return MewtocolFrameResponse.Canceled;
+
                 //write inital command
                 byte[] writeBuffer = Encoding.UTF8.GetBytes(frame);
-                stream.Write(writeBuffer, 0, writeBuffer.Length);
+                await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length, tSource.Token);
 
                 IsSending = false;
 
@@ -438,6 +510,13 @@ namespace MewtocolNet {
                 CalcUpstreamSpeed(writeBuffer.Length);
 
                 OnOutMsg(frame);
+
+                if(noResponse) {
+
+                    Logger.Log($"[---------CMD END----------]", LogLevel.Critical, this);
+                    return MewtocolFrameResponse.EmptySuccess;
+
+                }
 
                 var readResult = await ReadCommandAsync(wordsCountRequested, onReceiveProgress);
 
@@ -487,6 +566,10 @@ namespace MewtocolNet {
 
                 return new MewtocolFrameResponse(resString);
 
+            } catch (OperationCanceledException) {
+
+                return MewtocolFrameResponse.Canceled;
+            
             } catch (Exception ex) {
 
                 return new MewtocolFrameResponse(400, ex.Message.ToString(System.Globalization.CultureInfo.InvariantCulture));
@@ -515,7 +598,10 @@ namespace MewtocolNet {
 
                     byte[] buffer = new byte[RecBufferSize];
                     IsReceiving = true;
-                    int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, queue.tSource.Token);
+
+                    if (tSource.Token.IsCancellationRequested) break;
+
+                    int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, tSource.Token);
                     IsReceiving = false;
 
                     CalcDownstreamSpeed(bytesRead);
@@ -536,7 +622,7 @@ namespace MewtocolNet {
                         //request next frame
                         var writeBuffer = Encoding.UTF8.GetBytes($"%{GetStationNumber()}**&\r");
                         IsSending = true;
-                        await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length, queue.tSource.Token);
+                        await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length, tSource.Token);
                         IsSending = false;
                         Logger.Log($">> Requested next frame", LogLevel.Critical, this);
                         wasMultiFramedResponse = true;
@@ -655,7 +741,7 @@ namespace MewtocolNet {
 
             if (IsConnected) {
 
-                queue.CancelAll();
+                tSource.Cancel();
 
                 Logger.Log("The PLC connection timed out", LogLevel.Error, this);
                 OnDisconnect();
@@ -668,7 +754,7 @@ namespace MewtocolNet {
 
             if (IsConnected) {
 
-                queue.CancelAll();
+                tSource.Cancel();
 
                 Logger.Log("The PLC connection was closed", LogLevel.Error, this);
                 OnDisconnect();
@@ -687,7 +773,7 @@ namespace MewtocolNet {
 
         private protected void OnSocketExceptionWhileConnected () {
 
-            queue.CancelAll();
+            tSource.Cancel();
 
             IsConnected = false;
 
@@ -696,6 +782,14 @@ namespace MewtocolNet {
         private protected virtual void OnConnected(PLCInfo plcinf) {
 
             Logger.Log("Connected to PLC", LogLevel.Info, this);
+
+            //start timer for register update data
+            cyclicGenericUpdateCounter = new System.Timers.Timer(1000);
+            cyclicGenericUpdateCounter.Elapsed += OnGenericUpdateTimerTick;
+            cyclicGenericUpdateCounter.Start();
+
+            //notify the registers
+            GetAllRegisters().Cast<Register>().ToList().ForEach(x => x.OnPlcConnected());
 
             IsConnected = true;
 
@@ -715,6 +809,13 @@ namespace MewtocolNet {
 
         }
 
+        private void OnGenericUpdateTimerTick(object sender, System.Timers.ElapsedEventArgs e) {
+
+            GetAllRegisters().Cast<Register>()
+            .ToList().ForEach(x => x.OnInterfaceCyclicTimerUpdate((int)cyclicGenericUpdateCounter.Interval));
+
+        }
+
         private protected virtual void OnDisconnect() {
 
             IsReceiving = false;
@@ -729,6 +830,18 @@ namespace MewtocolNet {
 
             Disconnected?.Invoke(this, new PlcConnectionArgs());
             KillPoller();
+
+            if(cyclicGenericUpdateCounter != null) {
+
+                cyclicGenericUpdateCounter.Elapsed -= OnGenericUpdateTimerTick;
+                cyclicGenericUpdateCounter.Dispose();
+
+            }
+            
+            GetAllRegisters().Cast<Register>().ToList().ForEach(x => x.OnPlcDisconnected());
+
+            //generate a new cancellation token source
+            tSource = new CancellationTokenSource();
 
         }
 
