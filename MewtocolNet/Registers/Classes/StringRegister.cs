@@ -123,7 +123,9 @@ namespace MewtocolNet.Registers {
             //if string correct the sizing of the byte hint was wrong
             var reservedSize = BitConverter.ToInt16(bytes, 0);
 
-            if (reservedStringLength != reservedSize)
+            if (reservedStringLength != reservedSize && 
+                attachedInterface.PlcInfo.IsRunMode && 
+                (attachedInterface.pollerTaskStopped || attachedInterface.pollerFirstCycleCompleted))
                 throw new NotSupportedException(
                     $"The STRING register at {GetMewName()} is not correctly sized, " +
                     $"the size should be STRING[{reservedSize}] instead of STRING[{reservedStringLength}]"

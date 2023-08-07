@@ -140,13 +140,12 @@ namespace MewtocolNet {
                 stream = client.GetStream();
                 stream.ReadTimeout = 1000;
 
-                //try to abort any non read message
-                //await SendNoResponseCommandAsync($"%{GetStationNumber()}#AB");
-
                 //get plc info
-                var plcinf = await GetPLCInfoAsync(ConnectTimeout);
+                var plcinf = await GetInfoAsync();
 
                 if (plcinf != null) {
+
+                    if(alwaysGetMetadata) await GetMetadataAsync();
 
                     IsConnected = true;
                     await base.ConnectAsync(callBack);
@@ -177,57 +176,73 @@ namespace MewtocolNet {
                 firstPollTask = new Task(() => { });
 
                 Logger.Log($">> Reconnect start <<", LogLevel.Verbose, this);
-
+                
+                isReconnectingStage = true; 
                 isConnectingStage = true;
+                IsConnected = false;
 
                 BuildTcpClient();
 
                 var result = client.BeginConnect(ipAddr, Port, null, null);
-                var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(conTimeout));
+                var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(ConnectTimeout));
 
                 if (!success || !client.Connected) {
 
                     Logger.Log("The PLC connection timed out", LogLevel.Error, this);
                     OnMajorSocketExceptionWhileConnecting();
                     return;
+
                 }
 
                 Logger.LogVerbose("TCP/IP Client connected", this);
 
                 if (HostEndpoint == null) {
                     var ep = (IPEndPoint)client.Client.LocalEndPoint;
-                    Logger.Log($"Connecting [AUTO] endpoint: {ep.Address.MapToIPv4()}:{ep.Port}", LogLevel.Info, this);
+                    Logger.Log($"Connecting [AUTO] from: {ep.Address.MapToIPv4()}:{ep.Port} to {GetConnectionInfo()}", LogLevel.Info, this);
                 }
 
                 //get the stream
                 stream = client.GetStream();
                 stream.ReadTimeout = 1000;
 
-                Logger.LogVerbose("Attached stream, getting PLC info", this);
+                isMessageLocked = false;
 
-                //get plc info
-                var plcinf = await GetPLCInfoAsync(ConnectTimeout);
+                //null ongoing tasks
+                regularSendTask = null;
+                reconnectTask = Task.CompletedTask;
 
-                if (plcinf != null) {
+                //try to abort any non read message
+                //await SendNoResponseCommandAsync($"%{GetStationNumber()}#AB");
 
-                    IsConnected = true;
-                    await base.ConnectAsync();
+                //get plc info 2 times to clear old stuff from the buffer
 
-                    Logger.LogVerbose("Connection re-established", this);
-                    OnConnected(plcinf);
+                OnReconnected();
 
-                } else {
+                //var plcinf = await SendCommandAsync($"%{GetStationNumber()}#RT");
 
-                    Logger.Log("Initial connection failed", LogLevel.Error, this);
-                    OnDisconnect();
+                //if (plcinf != null) {
 
-                }
+                //    Logger.Log("Reconnect successfull");
+
+                //    OnReconnected();
+
+                //    //await base.ConnectAsync();
+                //    //OnConnected(plcinf);
+
+                //} else {
+
+                //    Logger.Log("Initial connection failed", LogLevel.Error, this);
+                //    OnDisconnect();
+
+                //}
 
                 await Task.CompletedTask;
 
-            } catch (Exception ex) {
+            } catch (SocketException) {
 
-                Logger.LogError($"Reconnect exception: {ex.Message}");
+                OnMajorSocketExceptionWhileConnecting();
+                isConnectingStage = false;
+                isReconnectingStage = false;
 
             }
 

@@ -321,9 +321,11 @@ namespace MewtocolNet
                     imew.memoryManager.pollLevelOrMode = res.PollLevelOverwriteMode;
 
                     imew.maxDataBlocksPerWrite = res.MaxDataBlocksPerWrite;
-                    imew.sendReceiveTimeoutMs = res.SendReceiveTimeoutMs;
+                    imew.heartbeatIntervalMs = res.HeartbeatIntervalMs;
                     imew.tryReconnectAttempts = res.TryReconnectAttempts;
                     imew.tryReconnectDelayMs = res.TryReconnectDelayMs;
+
+                    imew.alwaysGetMetadata = res.AlwaysGetMetadata;
 
                 }
 
@@ -352,7 +354,7 @@ namespace MewtocolNet
             /// <summary>
             /// A builder for attaching register collections
             /// </summary>
-            public EndInit<T> WithRegisterCollections(Action<RegCollector> collector) {
+            public PostRegisterSetup<T> WithRegisterCollections(Action<RegCollector> collector) {
 
                 try {
 
@@ -363,7 +365,7 @@ namespace MewtocolNet
                         imew.WithRegisterCollections(res.collections);
                     }
 
-                    return new EndInit<T> {
+                    return new PostRegisterSetup<T> {
                         postInit = this
                     };
 
@@ -378,7 +380,7 @@ namespace MewtocolNet
             /// <summary>
             /// A builder for attaching register collections
             /// </summary>
-            public PostInit<T> WithRegisters(Action<RBuild> builder) {
+            public PostRegisterSetup<T> WithRegisters(Action<RBuild> builder) {
 
                 try {
 
@@ -389,7 +391,9 @@ namespace MewtocolNet
 
                     plc.AddRegisters(regBuilder.assembler.assembled.ToArray());
 
-                    return this;
+                    return new PostRegisterSetup<T> {
+                        postInit = this,
+                    };
 
                 } catch {
 
@@ -408,11 +412,52 @@ namespace MewtocolNet
 
         #endregion
 
-        #region Interface building step 3
-
-        public class EndInit<T> {
+        public class PostRegisterSetup<T> {
 
             internal PostInit<T> postInit;
+
+            /// <summary>
+            /// Repeats the passed method each time the hearbeat is triggered,
+            /// use 
+            /// </summary>
+            /// <param name="heartBeatAsync"></param>
+            /// <returns></returns>
+            public EndInitSetup<T> WithHeartbeatTask(Func<Task> heartBeatAsync, bool executeInProg = false) {
+
+                try {
+
+                    var plc = (MewtocolInterface)(object)postInit.intf;
+
+                    plc.heartbeatCallbackTask = heartBeatAsync;
+                    plc.execHeartBeatCallbackTaskInProg = executeInProg;
+
+                    return new EndInitSetup<T> {
+                        postInit = this.postInit,
+                        postRegSetupInit = this
+                    };
+
+                } catch {
+
+                    throw;
+
+                }
+
+            }
+
+            /// <summary>
+            /// Builds and returns the final plc interface
+            /// </summary>
+            public T Build() => postInit.intf;
+
+        }
+
+        #region Interface building step 4
+
+        public class EndInitSetup<T> {
+
+            internal PostInit<T> postInit;
+
+            internal PostRegisterSetup<T> postRegSetupInit;
 
             /// <summary>
             /// Builds and returns the final plc interface

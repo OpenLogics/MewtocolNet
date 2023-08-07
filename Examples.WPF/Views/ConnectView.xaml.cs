@@ -1,6 +1,7 @@
 ﻿using Examples.WPF.ViewModels;
 using MewtocolNet;
 using MewtocolNet.ComCassette;
+using MewtocolNet.Registers;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -53,24 +54,28 @@ public partial class ConnectView : UserControl {
 
             var parsedInt = int.Parse(viewModel.SelectedPort);
 
+            IRegister<short> heartbeatSetter = null!;
+
             App.ViewModel.Plc = Mewtocol.Ethernet(viewModel.SelectedIP, parsedInt)
             .WithPoller()
-            .WithInterfaceSettings(s => {
-                s.TryReconnectAttempts = 30;
-                s.TryReconnectDelayMs = 2000;
+            .WithInterfaceSettings(setting => {
+                setting.TryReconnectAttempts = 30;
+                setting.TryReconnectDelayMs = 2000;
+                setting.HeartbeatIntervalMs = 3000;
             })
-            .WithCustomPollLevels(l => {
-                l.SetLevel(2, 3);
-                l.SetLevel(3, TimeSpan.FromSeconds(5));
-                l.SetLevel(4, TimeSpan.FromSeconds(10));
+            .WithCustomPollLevels(lvl => {
+                lvl.SetLevel(2, 3);
+                lvl.SetLevel(3, TimeSpan.FromSeconds(5));
+                lvl.SetLevel(4, TimeSpan.FromSeconds(10));
             })
             .WithRegisters(b => {
-               
+
                 //b.Struct<short>("DT0").Build();
                 //b.Struct<short>("DT0").AsArray(30).Build();
 
-                b.Struct<short>("DT1000").Build();
-                //b.Struct<Word>("DT1000").Build();
+                b.Struct<short>("DT1000").Build(out heartbeatSetter);
+                b.Struct<Word>("DT1000").Build();
+
                 b.Struct<ushort>("DT1001").PollLevel(2).Build();
                 b.Struct<Word>("DT1002").PollLevel(2).Build();
 
@@ -84,6 +89,11 @@ public partial class ConnectView : UserControl {
                 b.String("DT1042", 5).PollLevel(4).Build();
 
             })
+            .WithHeartbeatTask(async () => {
+
+                await heartbeatSetter.WriteAsync((short)new Random().Next(short.MinValue, short.MaxValue));
+
+            })
             .Build();
 
             await App.ViewModel.Plc.ConnectAsync();
@@ -91,12 +101,6 @@ public partial class ConnectView : UserControl {
             if (App.ViewModel.Plc.IsConnected) {
 
                 App.MainWindow.mainContent.Content = new PlcDataView();
-
-                //for (int i = 0; i < 300000; i++) {
-
-                //    _ = Task.Run(async () => await App.ViewModel.Plc.SendCommandAsync("%EE#RT"));
-
-                //}
 
             }
 

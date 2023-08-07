@@ -314,7 +314,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        internal async Task PollAllAreasAsync() {
+        internal async Task PollAllAreasAsync(Func<Task> inbetweenCallback) {
 
             foreach (var pollLevel in pollLevels) {
 
@@ -362,6 +362,8 @@ namespace MewtocolNet.UnderlyingRegisters {
 
                     //set the whole memory area at once
                     await dtArea.RequestByteReadAsync(dtArea.AddressStart, dtArea.AddressEnd);
+
+                    await inbetweenCallback();
 
                 }
 

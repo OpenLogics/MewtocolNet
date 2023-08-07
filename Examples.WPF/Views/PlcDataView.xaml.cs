@@ -1,4 +1,5 @@
 ﻿using Examples.WPF.ViewModels;
+using MewtocolNet.Registers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,6 +39,24 @@ public partial class PlcDataView : UserControl {
     private async void ClickedConnect(object sender, RoutedEventArgs e) {
 
         await viewModel.Plc.ConnectAsync();
+
+    }
+
+    private async void ClickedSetRandom(object sender, RoutedEventArgs e) {
+
+        var reg = (IRegister<ushort>?)viewModel.Plc.GetAllRegisters()?.FirstOrDefault(x => x.PLCAddressName == "DT1001");
+
+        if(reg != null) {
+
+            await reg.WriteAsync((ushort)new Random().Next(ushort.MinValue, ushort.MaxValue));
+
+        }
+
+    }
+
+    private async void ClickedToggleRunMode(object sender, RoutedEventArgs e) {
+
+        await viewModel.Plc.ToggleOperationModeAsync();
 
     }
 

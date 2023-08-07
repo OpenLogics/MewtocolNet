@@ -23,6 +23,10 @@
                           Click="ClickedDisconnect"/>
                 <MenuItem Header="Connect" IsEnabled="{Binding Plc.IsConnected, Converter={StaticResource bInv}}"
                           Click="ClickedConnect"/>
+                <MenuItem Header="Set Random DT1000" IsEnabled="{Binding Plc.IsConnected}"
+                          Click="ClickedSetRandom"/>
+                <MenuItem Header="Toggle OP mode" IsEnabled="{Binding Plc.IsConnected}"
+                          Click="ClickedToggleRunMode"/>
             </MenuItem>
         </Menu>
         

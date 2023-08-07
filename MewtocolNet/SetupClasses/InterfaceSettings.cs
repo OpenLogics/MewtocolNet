@@ -42,6 +42,11 @@ namespace MewtocolNet.SetupClasses {
         public int SendReceiveTimeoutMs { get; set; } = 1000;
 
         /// <summary>
+        /// The heartbeat interval in milliseconds, it is recommended to use 3000ms
+        /// </summary>
+        public int HeartbeatIntervalMs { get; set; } = 3000;
+
+        /// <summary>
         /// Number of attempts to try and reconnect to the plc, 0 for none
         /// </summary>
         public int TryReconnectAttempts { get; set; } = 5;
@@ -50,6 +55,11 @@ namespace MewtocolNet.SetupClasses {
         /// The delay between reconnect trys
         /// </summary>
         public int TryReconnectDelayMs { get; set; } = 2000;
+
+        /// <summary>
+        /// Sets wether or not the interface should always retrieve metadata on connection start
+        /// </summary>
+        public bool AlwaysGetMetadata { get; set; } = true; 
 
     }
 

@@ -252,9 +252,11 @@ namespace MewtocolNet {
 
                 Logger.Log($"Opened [SERIAL]: {GetConnectionInfo()}", LogLevel.Critical, this);
 
-                var plcinf = await GetPLCInfoAsync(100);
+                var plcinf = await GetInfoAsync();
 
                 if (plcinf == null) CloseClient();
+
+                if (alwaysGetMetadata) await GetMetadataAsync();
 
                 return plcinf;
 

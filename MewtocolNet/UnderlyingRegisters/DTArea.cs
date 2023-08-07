@@ -106,9 +106,13 @@ namespace MewtocolNet.UnderlyingRegisters {
         private void SetUnderlyingBytes(byte[] bytes, ulong addStart) {
 
             int copyOffset = (int)((addStart - addressStart) * 2);
-            bytes.CopyTo(underlyingBytes, copyOffset);
 
-            UpdateAreaRegisterValues();
+            if(bytes.Length + copyOffset <= underlyingBytes.Length) {
+
+                bytes.CopyTo(underlyingBytes, copyOffset);
+                UpdateAreaRegisterValues();
+
+            }
 
         }
 

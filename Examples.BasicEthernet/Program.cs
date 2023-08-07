@@ -26,7 +26,6 @@ internal class Program {
 
             //connect async to the plc
             await plc.ConnectAsync();
-            await plc.SendCommandAsync($"%EE#RP0000000004");
 
             //check if the connection was established
             if (!plc.IsConnected) {

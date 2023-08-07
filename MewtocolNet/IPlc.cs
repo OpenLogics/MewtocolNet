@@ -94,23 +94,20 @@ namespace MewtocolNet {
         /// </summary>
         /// <param name="_msg">MEWTOCOL Formatted request string ex: %01#RT</param>
         /// <returns>Returns the result</returns>
-        Task<MewtocolFrameResponse> SendCommandAsync(string _msg, Action<double> onReceiveProgress = null);
-
-        /// <summary>
-        /// Sends a command to the PLC and awaits its arrival<br/>
-        /// The checksum and BCC are appended automatically.<br/>
-        /// <b>Warning!</b> this command is only sent one directional, no error checking or other features included
-        /// </summary>
-        /// <param name="_msg">MEWTOCOL Formatted request string ex: %01#RT</param>
-        /// <returns>Returns true if the message was received</returns>
-        Task<bool> SendNoResponseCommandAsync(string _msg);
+        //Task<MewtocolFrameResponse> SendCommandAsync(string _msg, Action<double> onReceiveProgress = null);
 
         /// <summary>
         /// Changes the PLCs operation mode to the given one
         /// </summary>
-        /// <param name="setRun">True for run mode, false for prog mode</param>
+        /// <param name="setRun">True for RUN mode, false for PROG mode</param>
         /// <returns>The success state of the write operation</returns>
         Task<bool> SetOperationModeAsync(bool setRun);
+
+        /// <summary>
+        /// Toggles between RUN and PROG mode
+        /// </summary>
+        /// <returns>The success state of the write operation</returns>
+        Task<bool> ToggleOperationModeAsync();
 
         /// <summary>
         /// Restarts the plc program

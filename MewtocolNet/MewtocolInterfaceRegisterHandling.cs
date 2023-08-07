@@ -19,6 +19,9 @@ namespace MewtocolNet {
 
         internal Task heartbeatTask = Task.CompletedTask;
 
+        internal Func<Task> heartbeatCallbackTask;
+        internal bool execHeartBeatCallbackTaskInProg = false;
+
         internal Task pollCycleTask;
 
         private List<RegisterCollection> registerCollections = new List<RegisterCollection>();
@@ -43,6 +46,8 @@ namespace MewtocolNet {
 
         private System.Timers.Timer heartBeatTimer;
 
+        internal volatile bool pollerFirstCycleCompleted;
+
         #region Register Polling
 
         internal void WatchPollerDemand() {
@@ -50,6 +55,7 @@ namespace MewtocolNet {
             memoryManager.MemoryLayoutChanged += () => TestPollerStartNeeded();
 
             Connected += (s, e) => TestPollerStartNeeded();
+            Reconnected += (s, e) => TestPollerStartNeeded();
 
             Disconnected += (s, e) => {
 
@@ -93,6 +99,7 @@ namespace MewtocolNet {
         /// </summary>
         internal void KillPoller() {
 
+            pollerFirstCycleCompleted = false;
             pollerTaskStopped = true;
 
         }
@@ -104,6 +111,7 @@ namespace MewtocolNet {
 
             if (!pollerTaskStopped) return;
 
+            pollerFirstCycleCompleted = false;
             PollerCycleDurationMs = 0;
             pollerFirstCycle = true;
 
@@ -113,7 +121,9 @@ namespace MewtocolNet {
 
         private void PollTimerTick(object sender, System.Timers.ElapsedEventArgs e) {
 
-            if(!IsConnected || isConnectingStage) return;
+            if(!IsConnected || isConnectingStage || isReconnectingStage) return;
+
+            heartBeatTimer.Stop();
 
             heartbeatNeedsRun = true;
 
@@ -127,14 +137,23 @@ namespace MewtocolNet {
 
             Logger.LogVerbose("Sending heartbeat", this);
 
-            if (await GetPLCInfoAsync(2000) == null) {
+            if (await GetInfoAsync() == null) {
 
                 Logger.LogError("Heartbeat timed out", this);
 
-                OnSocketExceptionWhileConnected();
-                StartReconnectTask();
+                //OnSocketExceptionWhileConnected();
+                //StartReconnectTask();
+
+                return;
 
             }
+
+            if(heartbeatCallbackTask != null && (plcInfo.IsRunMode || execHeartBeatCallbackTaskInProg)) 
+                await heartbeatCallbackTask();
+
+            Logger.LogVerbose("End heartbeat", this);
+
+            heartBeatTimer.Start();
 
         }
 
@@ -196,15 +215,30 @@ namespace MewtocolNet {
             if (heartbeatNeedsRun) {
 
                 await HeartbeatTickTask();
+                
                 heartbeatNeedsRun = false;
             
             }
 
             var sw = Stopwatch.StartNew();
 
-            await memoryManager.PollAllAreasAsync();
+            await memoryManager.PollAllAreasAsync(async () => {
+
+                if (userInputSendTasks != null && userInputSendTasks.Count > 0) {
+
+                    var t = userInputSendTasks.Dequeue();
+
+                    t.Start();
+
+                    await t;
+
+                }
+
+            });
 
             sw.Stop();
+
+            pollerFirstCycleCompleted = true;
             PollerCycleDurationMs = (int)sw.ElapsedMilliseconds;
 
         }

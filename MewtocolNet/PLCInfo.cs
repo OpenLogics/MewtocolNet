@@ -18,6 +18,7 @@ namespace MewtocolNet {
         private OPMode operationMode;
         private HWInformation hardwareInformation;
         private string selfDiagnosticError;
+        private PlcMetadata metadata;
        
         /// <summary>
         /// The type of the PLC named by Panasonic
@@ -102,6 +103,17 @@ namespace MewtocolNet {
         /// Quickcheck for the runmode flag
         /// </summary>
         public bool IsRunMode => OperationMode.HasFlag(OPMode.RunMode);
+
+        /// <summary>
+        /// Contains useful information about the PLC program and metadata
+        /// </summary>
+        public PlcMetadata Metadata {
+            get => metadata;
+            internal set {
+                metadata = value;   
+                OnPropChange(); 
+            }
+        }
 
         public event PropertyChangedEventHandler PropertyChanged;
 

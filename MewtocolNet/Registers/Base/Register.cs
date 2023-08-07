@@ -134,6 +134,8 @@ namespace MewtocolNet.Registers {
 
         protected void TriggerUpdateReceived () {
 
+            if (timeSinceLastUpdate == null) return;
+
             updateCountTimerCycle++;
             
             if(updateCountTimerCycle >= 1) {

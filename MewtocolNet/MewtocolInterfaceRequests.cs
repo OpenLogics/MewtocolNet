@@ -7,12 +7,16 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using MewtocolNet.Helpers;
+using System.Reflection;
 
 namespace MewtocolNet {
 
     public abstract partial class MewtocolInterface {
 
         internal bool isConnectingStage = false;
+
+        internal protected bool isReconnectingStage = false;
 
         internal int maxDataBlocksPerWrite = 8;
 
@@ -24,17 +28,17 @@ namespace MewtocolNet {
         /// Gets generic information about the PLC
         /// </summary>
         /// <returns>A PLCInfo class</returns>
-        public async Task<PLCInfo> GetPLCInfoAsync(int timeout = -1) {
+        public async Task<PLCInfo> GetInfoAsync(bool detailed = true) {
 
-            MewtocolFrameResponse resRT = await SendCommandAsync("%EE#RT");
+            MewtocolFrameResponse resRT = await SendCommandInternalAsync("%EE#RT");
 
-            if (!resRT.Success) return null;
+            if (!resRT.Success || tSource.Token.IsCancellationRequested) return null;
 
             MewtocolFrameResponse? resEXRT = null;
 
-            if(isConnectingStage) {
+            if (isConnectingStage && detailed) {
 
-                resEXRT = await SendCommandAsync("%EE#EX00RT00");
+                resEXRT = await SendCommandInternalAsync("%EE#EX00RT00");
 
             }
 
@@ -50,23 +54,74 @@ namespace MewtocolNet {
 
             }
 
+            if(!detailed) return plcInf;
+
             //overwrite first with EXRT only on connecting stage
             if (isConnectingStage && resEXRT != null && resEXRT.Value.Success && !plcInf.TryExtendFromEXRT(resEXRT.Value.Response)) {
 
                 throw new Exception("The EXRT message could not be parsed");
 
-            } 
+            }
 
-            if(isConnectingStage) {
+            if (isConnectingStage) {
                 //set the intial obj
                 PlcInfo = plcInf;
             } else {
                 //update the obj with RT dynamic values only
-                PlcInfo.SelfDiagnosticError = plcInf.SelfDiagnosticError;   
+                PlcInfo.SelfDiagnosticError = plcInf.SelfDiagnosticError;
                 PlcInfo.OperationMode = plcInf.OperationMode;
             }
 
             return PlcInfo;
+
+        }
+
+        /// <summary>
+        /// Gets the metadata information for the PLC program
+        /// </summary>
+        /// <returns>The metadata or null of it isn't used by the PLC program</returns>
+        /// <exception cref="NotSupportedException"></exception>
+        public async Task<PlcMetadata> GetMetadataAsync() {
+
+            //if the prog capacity and plc type are unknown retrieve them first
+            if (PlcInfo == null) await GetInfoAsync();
+
+            //still 0 
+            if (PlcInfo.ProgramCapacity == 0) throw new NotSupportedException("Unable to access the program capacity of the PLC");
+
+            //meta data is always at last dt addresses of the plc
+            //so we take the capacity in k and multiply by 1024 to get the last register index and sub 3
+            //to get the last readable registers
+
+            var endAddress = (int)PlcInfo.ProgramCapacity * 1024 - 3; //32765 for 32k
+            var readBytes = 42;
+
+            var metaMarker = new byte[] { 0x4D, 0x65, 0x74, 0x41 };
+
+            var data = await ReadByteRangeNonBlocking(endAddress - 2 - (readBytes / 2), readBytes);
+
+            if (data != null && data.SearchBytePattern(metaMarker) == readBytes - 4) {
+
+                var meta = new PlcMetadata {
+
+                    LastUserLibChangeDate = PlcBitConverter.ToDateTime(data, 0),
+                    LastPouChangeDate = PlcBitConverter.ToDateTime(data, 4),
+                    LastConfigChangeDate = PlcBitConverter.ToDateTime(data, 8),
+                    FPWinVersion = PlcBitConverter.ToVersionNumber(data, 12),
+                    ProjectVersion = PlcBitConverter.ToVersionNumber(data, 16),
+                    ProjectID = BitConverter.ToUInt32(data, 20),
+                    ApplicationID = BitConverter.ToUInt32(data, 24),
+                    CompanyID = BitConverter.ToUInt32(data, 28),
+                    MetaDataVersion = PlcBitConverter.ToVersionNumber(data, 32),
+                };
+
+                PlcInfo.Metadata = meta;
+
+                return meta;
+
+            }
+
+            return null;
 
         }
 
@@ -80,7 +135,7 @@ namespace MewtocolNet {
             string modeChar = setRun ? "R" : "P";
 
             string requeststring = $"%{GetStationNumber()}#RM{modeChar}";
-            var result = await SendCommandAsync(requeststring);
+            var result = await SendCommandInternalAsync(requeststring);
 
             if (result.Success) {
                 Logger.Log($"Operation mode was changed to {(setRun ? "Run" : "Prog")}", LogLevel.Info, this);
@@ -93,7 +148,7 @@ namespace MewtocolNet {
         }
 
         /// <inheritdoc/>
-        public async Task<bool> RestartProgramAsync () {
+        public async Task<bool> RestartProgramAsync() {
 
             return await SetOperationModeAsync(false) &&
                    await SetOperationModeAsync(true);
@@ -101,14 +156,23 @@ namespace MewtocolNet {
         }
 
         /// <inheritdoc/>
-        public async Task FactoryResetAsync () {
+        public async Task<bool> ToggleOperationModeAsync() {
+
+            var currMode = await GetInfoAsync(false);
+
+            return await SetOperationModeAsync(!currMode.IsRunMode);
+
+        }
+
+        /// <inheritdoc/>
+        public async Task FactoryResetAsync() {
 
             //set to prog mode
             await SetOperationModeAsync(false);
 
             //reset plc
-            await SendCommandAsync($"%{GetStationNumber()}#0F");
-            await SendCommandAsync($"%{GetStationNumber()}#21");
+            await SendCommandInternalAsync($"%{GetStationNumber()}#0F");
+            await SendCommandInternalAsync($"%{GetStationNumber()}#21");
 
         }
 
@@ -116,13 +180,13 @@ namespace MewtocolNet {
 
         #region Program Read / Write
 
-        public async Task<PlcBinaryProgram> ReadProgramAsync () {
+        public async Task<PlcBinaryProgram> ReadProgramAsync() {
 
             var steps = new List<byte[]>();
 
             int i = 0;
             int stepsPerReq = 50;
-            while(i < int.MaxValue) {
+            while (i < int.MaxValue) {
 
                 var sb = new StringBuilder($"%{GetStationNumber()}#RP");
                 var stp1 = (i * stepsPerReq);
@@ -131,7 +195,7 @@ namespace MewtocolNet {
                 sb.Append(stp1.ToString().PadLeft(5, '0'));
                 sb.Append(stp2.ToString().PadLeft(5, '0'));
 
-                var res = await SendCommandAsync(sb.ToString());
+                var res = await SendCommandInternalAsync(sb.ToString());
 
                 if (res.Success) {
 
@@ -143,8 +207,8 @@ namespace MewtocolNet {
                         if (split[0] == 0xFF && split[1] == 0xFF) break;
                         steps.Add(split);
                     }
-                
-                    if (foundEndPattern != -1) {    
+
+                    if (foundEndPattern != -1) {
 
                         break;
 
@@ -156,8 +220,8 @@ namespace MewtocolNet {
 
             }
 
-            return new PlcBinaryProgram { 
-                rawSteps = steps,   
+            return new PlcBinaryProgram {
+                rawSteps = steps,
             };
 
         }
@@ -188,7 +252,7 @@ namespace MewtocolNet {
             string endStr = (start + wordLength - 1).ToString().PadLeft(5, '0');
 
             string requeststring = $"%{GetStationNumber()}#WDD{startStr}{endStr}{byteString}";
-            var result = await SendCommandAsync(requeststring);
+            var result = await SendCommandInternalAsync(requeststring);
 
             return result.Success;
 
@@ -216,9 +280,9 @@ namespace MewtocolNet {
             int blocksOverflow = wordLength % maxReadBlockSize;
             int totalBlocksToRead = blocksOverflow != 0 ? blocksToReadNoOverflow + 1 : blocksToReadNoOverflow;
 
-            List<byte> readBytes = new List<byte>();    
+            List<byte> readBytes = new List<byte>();
 
-            async Task ReadBlock (int wordStart, int wordEnd, Action<double> readProg) {
+            async Task ReadBlock(int wordStart, int wordEnd, Action<double> readProg) {
 
                 int blockSize = wordEnd - wordStart + 1;
                 string startStr = wordStart.ToString().PadLeft(5, '0');
@@ -226,13 +290,13 @@ namespace MewtocolNet {
 
                 string requeststring = $"%{GetStationNumber()}#RDD{startStr}{endStr}";
 
-                var result = await SendCommandAsync(requeststring, onReceiveProgress: readProg);
+                var result = await SendCommandInternalAsync(requeststring, onReceiveProgress: readProg);
 
                 if (result.Success && !string.IsNullOrEmpty(result.Response)) {
 
                     var bytes = result.Response.ParseDTRawStringAsBytes();
 
-                    if(bytes != null)
+                    if (bytes != null)
                         readBytes.AddRange(bytes);
 
                 }
@@ -253,7 +317,7 @@ namespace MewtocolNet {
                         var toplevelProg = (double)(i + 1) / totalBlocksToRead;
                         onProgress(toplevelProg * p);
                     }
-                        
+
                 });
 
                 //read remaining block
@@ -265,7 +329,7 @@ namespace MewtocolNet {
                     curWordStart = start + ((i + 1) * maxReadBlockSize);
                     curWordEnd = curWordStart + blocksOverflow - 1;
 
-                    await ReadBlock(curWordStart, curWordEnd, (p) => {});
+                    await ReadBlock(curWordStart, curWordEnd, (p) => { });
 
                 }
 
