@@ -92,17 +92,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
                 TestPollLevelExistence(reg);
 
-                switch (reg.RegisterType) {
-                    case RegisterPrefix.X:
-                    case RegisterPrefix.Y:
-                    case RegisterPrefix.R:
-                    AddToWRArea(reg);
-                    break;
-                    case RegisterPrefix.DT:
-                    case RegisterPrefix.DDT:
-                    AddToDTArea(reg);
-                    break;
-                }
+                AddToArea(reg, reg.RegisterType);
 
             }
 
@@ -155,73 +145,33 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        private bool AddToWRArea(Register insertReg) {
-
-            var pollLevelFound = pollLevels.FirstOrDefault(x => x.level == insertReg.pollLevel);
-
-            List<WRArea> collection = null;
-
-            switch (insertReg.RegisterType) {
-                case RegisterPrefix.X:
-                collection = pollLevelFound.externalRelayInAreas;
-                break;
-                case RegisterPrefix.Y:
-                collection = pollLevelFound.externalRelayOutAreas;
-                break;
-                case RegisterPrefix.R:
-                collection = pollLevelFound.internalRelayAreas;
-                break;
-            }
-
-            WRArea area = collection.FirstOrDefault(x => x.AddressStart == insertReg.MemoryAddress);
-
-            if (area != null) {
-
-                var existingLinkedRegister = area.linkedRegisters
-                .FirstOrDefault(x => x.CompareIsDuplicate(insertReg));
-
-                if (existingLinkedRegister != null) {
-
-                    return false;
-
-                } else {
-
-                    insertReg.underlyingMemory = area;
-                    area.linkedRegisters.Add(insertReg);
-                    return true;
-
-                }
-
-            } else {
-
-                area = new WRArea(mewInterface) {
-                    registerType = insertReg.RegisterType,
-                    addressStart = insertReg.MemoryAddress,
-                };
-
-                insertReg.underlyingMemory = area;
-                area.linkedRegisters.Add(insertReg);
-
-                collection.Add(area);
-                collection = collection.OrderBy(x => x.AddressStart).ToList();
-
-                return true;
-
-            }
-
-        }
-
-        private void AddToDTArea(Register insertReg) {
+        private void AddToArea(Register insertReg, RegisterPrefix prefix) {
 
             uint regInsAddStart = insertReg.MemoryAddress;
             uint regInsAddEnd = insertReg.MemoryAddress + insertReg.GetRegisterAddressLen() - 1;
 
-            DTArea targetArea = null;
+            AreaBase targetArea = null;
 
             var pollLevelFound = pollLevels.FirstOrDefault(x => x.level == insertReg.pollLevel);
-            var dataAreas = pollLevelFound.dataAreas;
+            List<AreaBase> pollLevelAreas = null;
 
-            foreach (var dtArea in dataAreas) {
+            switch (prefix) {
+                case RegisterPrefix.X:
+                pollLevelAreas = pollLevelFound.externalRelayInAreas;
+                break;
+                case RegisterPrefix.Y:
+                pollLevelAreas = pollLevelFound.externalRelayOutAreas;
+                break;
+                case RegisterPrefix.R:
+                pollLevelAreas = pollLevelFound.internalRelayAreas;
+                break;
+                case RegisterPrefix.DT:
+                case RegisterPrefix.DDT:
+                pollLevelAreas = pollLevelFound.dataAreas;
+                break;
+            }
+
+            foreach (var dtArea in pollLevelAreas) {
 
                 bool addressInsideArea = regInsAddStart >= dtArea.AddressStart &&
                                          regInsAddEnd <= dtArea.AddressEnd;
@@ -278,7 +228,7 @@ namespace MewtocolNet.UnderlyingRegisters {
                 };
 
                 targetArea.BoundaryUdpdate();
-                dataAreas.Add(targetArea);
+                pollLevelAreas.Add(targetArea);
 
             }
 
@@ -358,7 +308,7 @@ namespace MewtocolNet.UnderlyingRegisters {
                 }
 
                 //update registers in poll level
-                foreach (var dtArea in pollLevel.dataAreas.ToArray()) {
+                foreach (var dtArea in pollLevel.GetAllAreas().ToArray()) {
 
                     //set the whole memory area at once
                     await dtArea.RequestByteReadAsync(dtArea.AddressStart, dtArea.AddressEnd);
@@ -493,10 +443,9 @@ namespace MewtocolNet.UnderlyingRegisters {
             foreach (var lvl in pollLevels) {
 
                 registers.AddRange(lvl.dataAreas.SelectMany(x => x.managedRegisters).SelectMany(x => x.Linked));
-
-                registers.AddRange(lvl.internalRelayAreas.SelectMany(x => x.linkedRegisters));
-                registers.AddRange(lvl.externalRelayInAreas.SelectMany(x => x.linkedRegisters));
-                registers.AddRange(lvl.externalRelayOutAreas.SelectMany(x => x.linkedRegisters));
+                registers.AddRange(lvl.internalRelayAreas.SelectMany(x => x.managedRegisters).SelectMany(x => x.Linked));
+                registers.AddRange(lvl.externalRelayInAreas.SelectMany(x => x.managedRegisters).SelectMany(x => x.Linked));
+                registers.AddRange(lvl.externalRelayOutAreas.SelectMany(x => x.managedRegisters).SelectMany(x => x.Linked));
 
             }
 

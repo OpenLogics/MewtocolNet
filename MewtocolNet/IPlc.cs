@@ -1,4 +1,5 @@
-﻿using MewtocolNet.ProgramParsing;
+﻿using MewtocolNet.Events;
+using MewtocolNet.ProgramParsing;
 using MewtocolNet.RegisterBuilding;
 using MewtocolNet.Registers;
 using System;
@@ -12,6 +13,31 @@ namespace MewtocolNet {
     /// Provides a interface for Panasonic PLCs
     /// </summary>
     public interface IPlc : IDisposable, INotifyPropertyChanged {
+        
+        /// <summary>
+        /// Fires when the interface is fully connected to a PLC
+        /// </summary>
+        event PlcConnectionEventHandler Connected;
+
+        /// <summary>
+        /// Fires when a reconnect attempt was successfull
+        /// </summary>
+        event PlcConnectionEventHandler Reconnected;
+
+        /// <summary>
+        /// Fires when the interfaces makes a reconnect try to the PLC
+        /// </summary>
+        event PlcReconnectEventHandler ReconnectTryStarted;
+
+        /// <summary>
+        /// Fires when the plc/interface connection was fully closed
+        /// </summary>
+        event PlcConnectionEventHandler Disconnected;
+
+        /// <summary>
+        /// Fires when the value of a register changes
+        /// </summary>
+        event RegisterChangedEventHandler RegisterChanged;
 
         /// <summary>
         /// The current connection state of the interface

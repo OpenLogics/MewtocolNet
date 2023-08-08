@@ -59,9 +59,12 @@ public partial class ConnectView : UserControl {
             App.ViewModel.Plc = Mewtocol.Ethernet(viewModel.SelectedIP, parsedInt)
             .WithPoller()
             .WithInterfaceSettings(setting => {
-                setting.TryReconnectAttempts = 30;
+                setting.TryReconnectAttempts = 0;
                 setting.TryReconnectDelayMs = 2000;
+                setting.SendReceiveTimeoutMs = 1000;
                 setting.HeartbeatIntervalMs = 3000;
+                setting.MaxDataBlocksPerWrite = 12;
+                setting.MaxOptimizationDistance = 10;
             })
             .WithCustomPollLevels(lvl => {
                 lvl.SetLevel(2, 3);
@@ -72,6 +75,8 @@ public partial class ConnectView : UserControl {
 
                 //b.Struct<short>("DT0").Build();
                 //b.Struct<short>("DT0").AsArray(30).Build();
+
+                b.Bool("R10A").Build();
 
                 b.Struct<short>("DT1000").Build(out heartbeatSetter);
                 b.Struct<Word>("DT1000").Build();

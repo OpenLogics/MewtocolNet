@@ -211,30 +211,12 @@ namespace MewtocolNet {
                 regularSendTask = null;
                 reconnectTask = Task.CompletedTask;
 
-                //try to abort any non read message
-                //await SendNoResponseCommandAsync($"%{GetStationNumber()}#AB");
+                if (await SendCommandInternalAsync($"%{GetStationNumber()}#RT") != null) {
 
-                //get plc info 2 times to clear old stuff from the buffer
+                    Logger.Log("Reconnect successfull");
+                    OnReconnected();
 
-                OnReconnected();
-
-                //var plcinf = await SendCommandAsync($"%{GetStationNumber()}#RT");
-
-                //if (plcinf != null) {
-
-                //    Logger.Log("Reconnect successfull");
-
-                //    OnReconnected();
-
-                //    //await base.ConnectAsync();
-                //    //OnConnected(plcinf);
-
-                //} else {
-
-                //    Logger.Log("Initial connection failed", LogLevel.Error, this);
-                //    OnDisconnect();
-
-                //}
+                }
 
                 await Task.CompletedTask;
 

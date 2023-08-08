@@ -17,6 +17,8 @@ namespace MewtocolNet {
     /// </summary>
     public abstract partial class MewtocolInterface {
 
+        private bool heartbeatNeedsRun = false;
+
         internal Task heartbeatTask = Task.CompletedTask;
 
         internal Func<Task> heartbeatCallbackTask;
@@ -127,9 +129,13 @@ namespace MewtocolNet {
 
             heartbeatNeedsRun = true;
 
-        }
+            if(!PollerActive) {
 
-        private bool heartbeatNeedsRun = false;
+                Task.Run(HeartbeatTickTask);
+
+            }
+
+        }
 
         private async Task HeartbeatTickTask () {
 
@@ -141,8 +147,7 @@ namespace MewtocolNet {
 
                 Logger.LogError("Heartbeat timed out", this);
 
-                //OnSocketExceptionWhileConnected();
-                //StartReconnectTask();
+                OnSocketExceptionWhileConnected();
 
                 return;
 
@@ -224,15 +229,7 @@ namespace MewtocolNet {
 
             await memoryManager.PollAllAreasAsync(async () => {
 
-                if (userInputSendTasks != null && userInputSendTasks.Count > 0) {
-
-                    var t = userInputSendTasks.Dequeue();
-
-                    t.Start();
-
-                    await t;
-
-                }
+                await RunOneOpenQueuedTask();
 
             });
 

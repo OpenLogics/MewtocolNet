@@ -33,16 +33,56 @@
         <StackPanel Margin="10"
                     Grid.Row="1">
 
-            <TextBlock>
+            <TextBlock IsEnabled="{Binding Plc.IsConnected}">
                 
                 <Run Text="{Binding Plc.PlcInfo.TypeName, Mode=OneWay}"
                      FontSize="24"
+                     BaselineAlignment="Center"
                      FontWeight="SemiBold"/>
 
                 <Run Text="{Binding Plc.PlcInfo.CpuVersion, StringFormat='v{0}', Mode=OneWay}"
                      FontSize="24"
                      FontWeight="Light"/>
+                
+                <Ellipse Width="10"
+                         Height="10"
+                         Fill="Lime"
+                         IsEnabled="{Binding Plc.IsConnected}"/>
 
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Style.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+                
+            </TextBlock>
+
+            <TextBlock IsEnabled="{Binding Plc.IsConnected, Converter={StaticResource bInv}}">
+                
+                <Run Text="Disconnected"
+                     FontSize="24"
+                     BaselineAlignment="Center"
+                     FontWeight="SemiBold"/>
+                
+                <Ellipse Width="10"
+                         Height="10"
+                         Fill="Red"
+                         IsEnabled="{Binding Plc.IsConnected}"/>
+
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Style.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+                
             </TextBlock>
 
             <TextBlock Text="{Binding Plc.PlcInfo.TypeCode, StringFormat='#{0:X}', Mode=OneWay}"
@@ -84,6 +124,25 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
+            <TextBlock>
+                
+                <Run Text="Reconnecting..."/>
+                <Run Text="{Binding PlcCurrentReconnectArgs.ReconnectTry, Mode=OneWay, StringFormat='{}{0}/'}"/>
+                <Run Text="{Binding PlcCurrentReconnectArgs.MaxAttempts, Mode=OneWay}"/> in
+                <Run Text="{Binding PlcCurrentReconnectArgs.RetryCountDownRemaining, Mode=OneWay}"/>
+                
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding PlcCurrentReconnectArgs, Mode=OneWay}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+                
+            </TextBlock>
+
         </StackPanel>
 
         <DataGrid Grid.Row="2"
@@ -96,6 +155,13 @@
                 <DataGridTextColumn Header="Value" Binding="{Binding ValueStr}"/>
                 <DataGridTextColumn Header="Poll Level" Binding="{Binding PollLevel, Mode=OneWay}"/>
                 <DataGridTextColumn Header="Update Frequency" Binding="{Binding UpdateFreqHz, StringFormat='{}{0} Hz',Mode=OneWay}"/>
+                <DataGridTemplateColumn>
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Border Background="{Binding MemoryAreaHash, Mode=OneWay, Converter={StaticResource hashColor}}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
 

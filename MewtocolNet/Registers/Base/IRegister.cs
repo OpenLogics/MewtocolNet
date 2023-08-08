@@ -30,6 +30,11 @@ namespace MewtocolNet.Registers {
         int PollLevel { get; }  
 
         /// <summary>
+        /// Info string about the memory area
+        /// </summary>
+        string MemoryAreaInfo { get; }
+
+        /// <summary>
         /// The update frequency of the register in Hz
         /// </summary>
         float UpdateFreqHz { get; } 
@@ -58,6 +63,8 @@ namespace MewtocolNet.Registers {
         /// The plc memory address of the register
         /// </summary>
         uint MemoryAddress { get; }
+
+        string MemoryAreaHash { get; }
 
         /// <summary>
         /// Gets the value of the register as the plc representation string

@@ -6,5 +6,6 @@
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <conv:NegationConverter x:Key="bInv"/>
+        <conv:ColorHashConverter x:Key="hashColor"/>
     </Application.Resources>
 </Application>

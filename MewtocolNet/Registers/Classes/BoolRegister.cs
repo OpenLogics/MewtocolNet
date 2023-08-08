@@ -74,6 +74,17 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public override uint GetRegisterAddressLen() => 1;
 
+        internal override object SetValueFromBytes(byte[] bytes) {
+
+            AddSuccessRead();
+
+            var parsed = PlcValueParser.Parse<bool>(this, bytes);
+
+            UpdateHoldingValue(parsed);
+            return parsed;
+
+        }
+
     }
 
 }

@@ -5,7 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace MewtocolNet.UnderlyingRegisters {
-    public class DTArea : IMemoryArea {
+
+    public abstract class AreaBase {
 
         private MewtocolInterface mewInterface;
 
@@ -23,7 +24,7 @@ namespace MewtocolNet.UnderlyingRegisters {
         public ulong AddressStart => addressStart;
         public ulong AddressEnd => addressEnd;
 
-        internal DTArea(MewtocolInterface mewIf) {
+        internal AreaBase(MewtocolInterface mewIf) {
 
             mewInterface = mewIf;
 
@@ -116,25 +117,11 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        private string GetMewtocolIdent() {
-
-            StringBuilder asciistring = new StringBuilder("D");
-            asciistring.Append(AddressStart.ToString().PadLeft(5, '0'));
-            asciistring.Append(AddressEnd.ToString().PadLeft(5, '0'));
-            return asciistring.ToString();
-
-        }
-
-        private string GetMewtocolIdent(ulong addStart, ulong addEnd) {
-
-            StringBuilder asciistring = new StringBuilder("D");
-            asciistring.Append(addStart.ToString().PadLeft(5, '0'));
-            asciistring.Append(addEnd.ToString().PadLeft(5, '0'));
-            return asciistring.ToString();
-
-        }
-
         public override string ToString() => $"DT{AddressStart}-{AddressEnd}";
+
+        public virtual string GetName() => $"{ToString()} ({managedRegisters.Count} Registers)";
+
+        public string GetHash() => GetHashCode().ToString();
 
     }
 

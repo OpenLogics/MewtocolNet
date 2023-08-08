@@ -30,6 +30,9 @@ namespace MewtocolNet {
         public event PlcConnectionEventHandler Reconnected;
 
         /// <inheritdoc/>
+        public event PlcReconnectEventHandler ReconnectTryStarted;
+
+        /// <inheritdoc/>
         public event PlcConnectionEventHandler Disconnected;
 
         /// <inheritdoc/>
@@ -139,13 +142,7 @@ namespace MewtocolNet {
         }
 
         /// <inheritdoc/>
-        public int BytesPerSecondUpstream {
-            get { return bytesPerSecondUpstream; }
-            private protected set {
-                bytesPerSecondUpstream = value;
-                OnPropChange();
-            }
-        }
+        public int BytesPerSecondUpstream => bytesPerSecondUpstream;
 
         /// <inheritdoc/>
         public bool IsReceiving { 
@@ -157,13 +154,7 @@ namespace MewtocolNet {
         }
 
         /// <inheritdoc/>
-        public int BytesPerSecondDownstream {
-            get { return bytesPerSecondDownstream; }
-            private protected set {
-                bytesPerSecondDownstream = value;
-                OnPropChange();
-            }
-        }
+        public int BytesPerSecondDownstream => bytesPerSecondDownstream;
 
         /// <inheritdoc/>
         public MewtocolVersion MewtocolVersion {
@@ -302,7 +293,15 @@ namespace MewtocolNet {
 
             if (pollCycleTask != null && !pollCycleTask.IsCompleted) pollCycleTask.Wait();
 
-            OnMajorSocketExceptionWhileConnected();
+            if (IsConnected) {
+
+                tSource.Cancel();
+                isMessageLocked = false;
+
+                Logger.Log("The PLC connection was closed manually", LogLevel.Error, this);
+                OnDisconnect();
+
+            }
 
         }
 
@@ -348,8 +347,16 @@ namespace MewtocolNet {
                             //stop the heartbeat timer for the time of retries
                             StopHeartBeat();
 
+                            var eArgs = new ReconnectArgs(retryCount, tryReconnectAttempts, TimeSpan.FromMilliseconds(tryReconnectDelayMs));
+                            ReconnectTryStarted?.Invoke(this, eArgs);
+
+                            Reconnected += (s, e) => eArgs.ConnectionSuccess();
+
                             await ReconnectAsync(tryReconnectDelayMs);
-                            await Task.Delay(2000);
+
+                            if (IsConnected) return;
+
+                            await Task.Delay(tryReconnectDelayMs);
 
                             retryCount++;
 
@@ -378,17 +385,7 @@ namespace MewtocolNet {
             if (regularSendTask != null && !regularSendTask.IsCompleted) {
 
                 //queue self
-
-                var t = new Task<MewtocolFrameResponse>(() => SendCommandInternalAsync(_msg, onReceiveProgress).Result);
-                userInputSendTasks.Enqueue(t);
-
-                OnPropChange(nameof(QueuedMessages));
-
-                await t;
-
-                OnPropChange(nameof(QueuedMessages));
-
-                return t.Result;
+                return await EnqueueMessage(_msg, onReceiveProgress);
 
             }
 
@@ -399,17 +396,12 @@ namespace MewtocolNet {
 
             isMessageLocked = true;
 
-            //wait for the last send task to complete
-            //if (regularSendTask != null && !regularSendTask.IsCompleted) await regularSendTask;
-
             //send request
             regularSendTask = SendTwoDirectionalFrameAsync(_msg, onReceiveProgress);
 
-            //if (regularSendTask == null) return MewtocolFrameResponse.Canceled;
-
             try {
 
-                var timeoutAwaiter = await Task.WhenAny(regularSendTask, Task.Delay(2000, tSource.Token));
+                var timeoutAwaiter = await Task.WhenAny(regularSendTask, Task.Delay(sendReceiveTimeoutMs, tSource.Token));
 
                 if (timeoutAwaiter != regularSendTask) {
 
@@ -444,7 +436,49 @@ namespace MewtocolNet {
             isMessageLocked = false;
             regularSendTask = null;
 
+            //run the remaining tasks if no poller is used
+            if(!PollerActive && !tSource.Token.IsCancellationRequested) {
+
+                while(userInputSendTasks.Count > 1) {
+
+                    if (PollerActive || tSource.Token.IsCancellationRequested) break;
+
+                    await RunOneOpenQueuedTask();
+
+                }
+
+            }
+
             return responseData;
+
+        }
+
+        protected async Task RunOneOpenQueuedTask() {
+
+            if (userInputSendTasks != null && userInputSendTasks.Count > 0) {
+
+                var t = userInputSendTasks.Dequeue();
+
+                t.Start();
+
+                await t;
+
+            }
+
+        }
+
+        protected async Task<MewtocolFrameResponse> EnqueueMessage(string _msg, Action<double> onReceiveProgress = null) {
+
+            var t = new Task<MewtocolFrameResponse>(() => SendCommandInternalAsync(_msg, onReceiveProgress).Result);
+            userInputSendTasks.Enqueue(t);
+
+            OnPropChange(nameof(QueuedMessages));
+
+            await t;
+
+            OnPropChange(nameof(QueuedMessages));
+
+            return t.Result;
 
         }
 
@@ -763,17 +797,17 @@ namespace MewtocolNet {
 
         }
 
-        private protected void OnMajorSocketExceptionWhileConnected() {
+        private protected void OnSocketExceptionWhileConnected() {
 
-            if (IsConnected) {
+            tSource.Cancel();
 
-                tSource.Cancel();
-                isMessageLocked = false;
+            bytesPerSecondDownstream = 0;
+            bytesPerSecondUpstream = 0;
 
-                Logger.Log("The PLC connection was closed", LogLevel.Error, this);
-                OnDisconnect();
+            isMessageLocked = false;
+            IsConnected = false;
 
-            }
+            if (reconnectTask == null) StartReconnectTask();
 
         }
 
@@ -782,16 +816,6 @@ namespace MewtocolNet {
             Logger.LogError($"Failed to re-connect, closing PLC", this);
 
             OnDisconnect();
-
-        }
-
-        private protected void OnSocketExceptionWhileConnected () {
-
-            tSource.Cancel();
-            isMessageLocked = false;
-            IsConnected = false;
-
-            if (reconnectTask == null) StartReconnectTask();
 
         }
 
@@ -807,18 +831,23 @@ namespace MewtocolNet {
             //notify the registers
             GetAllRegisters().Cast<Register>().ToList().ForEach(x => x.OnPlcConnected());
 
+            reconnectTask = null;
             IsConnected = true;
-
-            Connected?.Invoke(this, new PlcConnectionArgs());
+            isReconnectingStage = false;
+            isConnectingStage = false;
 
             if (!usePoller) {
                 firstPollTask.RunSynchronously();
             }
 
+            Connected?.Invoke(this, new PlcConnectionArgs());
+
             PolledCycle += OnPollCycleDone;
             void OnPollCycleDone() {
 
-                firstPollTask.RunSynchronously();
+                if(firstPollTask != null && !firstPollTask.IsCompleted)
+                    firstPollTask.RunSynchronously();
+                
                 PolledCycle -= OnPollCycleDone;
 
             }
@@ -829,8 +858,8 @@ namespace MewtocolNet {
 
             IsReceiving = false;
             IsSending = false;
-            BytesPerSecondDownstream = 0;
-            BytesPerSecondUpstream = 0;
+            bytesPerSecondDownstream = 0;
+            bytesPerSecondUpstream = 0;
             PollerCycleDurationMs = 0;
 
             isMessageLocked = false;
@@ -856,8 +885,8 @@ namespace MewtocolNet {
 
             IsReceiving = false;
             IsSending = false;
-            BytesPerSecondDownstream = 0;
-            BytesPerSecondUpstream = 0;
+            bytesPerSecondDownstream = 0;
+            bytesPerSecondUpstream = 0;
             PollerCycleDurationMs = 0;
             PlcInfo = null;
 
@@ -886,6 +915,9 @@ namespace MewtocolNet {
 
             GetAllRegisters().Cast<Register>()
             .ToList().ForEach(x => x.OnInterfaceCyclicTimerUpdate((int)cyclicGenericUpdateCounter.Interval));
+
+            OnPropChange(nameof(BytesPerSecondUpstream));
+            OnPropChange(nameof(BytesPerSecondDownstream));
 
         }
 
@@ -921,7 +953,7 @@ namespace MewtocolNet {
 
             var perSecUpstream = (double)((bytesTotalCountedUpstream / speedStopwatchUpstr.Elapsed.TotalMilliseconds) * 1000);
             if (perSecUpstream <= 10000)
-                BytesPerSecondUpstream = (int)Math.Round(perSecUpstream, MidpointRounding.AwayFromZero);
+                bytesPerSecondUpstream = (int)Math.Round(perSecUpstream, MidpointRounding.AwayFromZero);
 
         }
 
@@ -932,7 +964,7 @@ namespace MewtocolNet {
             var perSecDownstream = (double)((bytesTotalCountedDownstream / speedStopwatchDownstr.Elapsed.TotalMilliseconds) * 1000);
 
             if (perSecDownstream <= 10000)
-                BytesPerSecondDownstream = (int)Math.Round(perSecDownstream, MidpointRounding.AwayFromZero);
+                bytesPerSecondDownstream = (int)Math.Round(perSecDownstream, MidpointRounding.AwayFromZero);
 
         }
 

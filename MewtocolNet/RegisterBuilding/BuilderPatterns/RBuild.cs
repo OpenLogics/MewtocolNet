@@ -32,7 +32,21 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
 
         internal Register Assemble(StepBase stp) => assembler.Assemble(stp.Data);
 
-        //struct constructor
+        //bool constructor
+
+        public StructStp<bool> Bool(string fpAddr, string name = null) {
+
+            var data = AddressTools.ParseAddress(fpAddr, name);
+
+            data.dotnetVarType = typeof(bool);
+
+            return new StructStp<bool>(data) {
+                builder = this,
+            };
+
+        }
+
+        //struct constructor 
 
         public StructStp<T> Struct<T>(string fpAddr, string name = null) where T : struct {
 

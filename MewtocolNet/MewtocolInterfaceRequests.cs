@@ -138,7 +138,12 @@ namespace MewtocolNet {
             var result = await SendCommandInternalAsync(requeststring);
 
             if (result.Success) {
+            
                 Logger.Log($"Operation mode was changed to {(setRun ? "Run" : "Prog")}", LogLevel.Info, this);
+
+                //directily update the op mode
+                PlcInfo.OperationMode = PlcInfo.OperationMode.SetFlag(OPMode.RunMode, setRun);
+
             } else {
                 Logger.Log("Operation mode change failed", LogLevel.Error, this);
             }
