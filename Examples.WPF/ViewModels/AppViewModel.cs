@@ -1,4 +1,5 @@
-﻿using MewtocolNet;
+﻿using Examples.WPF.RegisterCollections;
+using MewtocolNet;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +11,7 @@ namespace Examples.WPF.ViewModels {
     public class AppViewModel : ViewModelBase {
 
         private IPlc? plc;
+        private TestRegisterCollection testRegCollection = null!;
 
         public bool PlcIsNull => plc == null;
 
@@ -22,6 +24,14 @@ namespace Examples.WPF.ViewModels {
                 OnPropChange();
                 OnPropChange(nameof(PlcIsNull));
                 OnPropChange(nameof(PlcIsNotNull));
+            }
+        }
+
+        public TestRegisterCollection TestRegCollection { 
+            get => testRegCollection; 
+            set {
+                testRegCollection = value;
+                OnPropChange();
             }
         }
 

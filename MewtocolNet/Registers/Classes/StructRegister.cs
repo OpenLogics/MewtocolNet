@@ -125,7 +125,7 @@ namespace MewtocolNet.Registers {
         public async Task WriteAsync(T value) {
 
             var encoded = PlcValueParser.Encode(this, (T)value);
-            var res = await attachedInterface.WriteByteRange((int)MemoryAddress, encoded);
+            var res = await attachedInterface.WriteAreaByteRange((int)MemoryAddress, encoded);
 
             if (res) {
 
@@ -146,7 +146,7 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public async Task<T> ReadAsync() {
 
-            var res = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, (int)GetRegisterAddressLen() * 2);
+            var res = await attachedInterface.ReadAreaByteRangeAsync((int)MemoryAddress, (int)GetRegisterAddressLen() * 2);
             if (res == null) throw new Exception($"Failed to read the register {this}");
 
             var matchingReg = attachedInterface.memoryManager.GetAllRegisters()

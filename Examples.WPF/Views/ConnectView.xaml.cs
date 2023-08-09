@@ -1,4 +1,5 @@
-﻿using Examples.WPF.ViewModels;
+﻿using Examples.WPF.RegisterCollections;
+using Examples.WPF.ViewModels;
 using MewtocolNet;
 using MewtocolNet.ComCassette;
 using MewtocolNet.Registers;
@@ -55,31 +56,46 @@ public partial class ConnectView : UserControl {
             var parsedInt = int.Parse(viewModel.SelectedPort);
 
             IRegister<short> heartbeatSetter = null!;
+            IRegister<bool> outputContactReference = null!;
+            IRegister<bool> testBoolReference = null!;
+            IRegister<Word> wordRefTest = null!;
 
+            //build a new interface
             App.ViewModel.Plc = Mewtocol.Ethernet(viewModel.SelectedIP, parsedInt)
             .WithPoller()
             .WithInterfaceSettings(setting => {
-                setting.TryReconnectAttempts = 0;
+
+                setting.TryReconnectAttempts = 10;
                 setting.TryReconnectDelayMs = 2000;
                 setting.SendReceiveTimeoutMs = 1000;
                 setting.HeartbeatIntervalMs = 3000;
-                setting.MaxDataBlocksPerWrite = 12;
+                setting.MaxDataBlocksPerWrite = 20;
                 setting.MaxOptimizationDistance = 10;
+
             })
             .WithCustomPollLevels(lvl => {
+
                 lvl.SetLevel(2, 3);
                 lvl.SetLevel(3, TimeSpan.FromSeconds(5));
                 lvl.SetLevel(4, TimeSpan.FromSeconds(10));
+
+            })
+            .WithRegisterCollections(collector => {
+
+                App.ViewModel.TestRegCollection = collector.AddCollection<TestRegisterCollection>();
+
             })
             .WithRegisters(b => {
 
-                //b.Struct<short>("DT0").Build();
-                //b.Struct<short>("DT0").AsArray(30).Build();
-
-                b.Bool("R10A").Build();
+                b.Bool("X4").Build();
+                b.Bool("Y4").Build(out outputContactReference);
+                b.Bool("R10A").PollLevel(PollLevel.FirstIteration).Build(out testBoolReference);
 
                 b.Struct<short>("DT1000").Build(out heartbeatSetter);
-                b.Struct<Word>("DT1000").Build();
+
+                //these will be merged into one
+                b.Struct<Word>("DT1000").Build(out wordRefTest);
+                b.Struct<Word>("DT1000").Build(out wordRefTest);
 
                 b.Struct<ushort>("DT1001").PollLevel(2).Build();
                 b.Struct<Word>("DT1002").PollLevel(2).Build();
@@ -98,9 +114,16 @@ public partial class ConnectView : UserControl {
 
                 await heartbeatSetter.WriteAsync((short)new Random().Next(short.MinValue, short.MaxValue));
 
+                if (outputContactReference.Value != null)
+                    await outputContactReference.WriteAsync(!outputContactReference.Value.Value);
+
+                if(testBoolReference.Value != null)
+                    await testBoolReference.WriteAsync(!testBoolReference.Value.Value);
+
             })
             .Build();
 
+            //connect to it
             await App.ViewModel.Plc.ConnectAsync();
 
             if (App.ViewModel.Plc.IsConnected) {

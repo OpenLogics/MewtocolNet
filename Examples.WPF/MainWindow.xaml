@@ -9,7 +9,7 @@
         MinWidth="500"
         MinHeight="400"
         Height="850"
-        Width="800"
+        Width="1200"
         Title="MewtocolNet WPF Demo">
     <Grid>
         <Grid.RowDefinitions>

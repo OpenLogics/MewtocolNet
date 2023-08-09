@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using static MewtocolNet.Mewtocol;
 
 namespace MewtocolNet
 {
@@ -210,21 +211,21 @@ namespace MewtocolNet
 
             internal List<RegisterCollection> collections = new List<RegisterCollection>();
 
-            public RegCollector AddCollection(RegisterCollection collection) {
+            public T AddCollection<T>(T collection) where T : RegisterCollection {
 
                 collections.Add(collection);
 
-                return this;
+                return collection;
 
             }
 
-            public RegCollector AddCollection<T>() where T : RegisterCollection {
+            public T AddCollection<T>() where T : RegisterCollection {
 
                 var instance = (RegisterCollection)Activator.CreateInstance(typeof(T));
 
                 collections.Add(instance);
 
-                return this;
+                return (T)instance;
 
             }
 
@@ -354,7 +355,7 @@ namespace MewtocolNet
             /// <summary>
             /// A builder for attaching register collections
             /// </summary>
-            public PostRegisterSetup<T> WithRegisterCollections(Action<RegCollector> collector) {
+            public PostInit<T> WithRegisterCollections(Action<RegCollector> collector) {
 
                 try {
 
@@ -365,9 +366,7 @@ namespace MewtocolNet
                         imew.WithRegisterCollections(res.collections);
                     }
 
-                    return new PostRegisterSetup<T> {
-                        postInit = this
-                    };
+                    return this;
 
                 } catch {
 
@@ -380,7 +379,7 @@ namespace MewtocolNet
             /// <summary>
             /// A builder for attaching register collections
             /// </summary>
-            public PostRegisterSetup<T> WithRegisters(Action<RBuild> builder) {
+            public PostInit<T> WithRegisters(Action<RBuild> builder) {
 
                 try {
 
@@ -391,7 +390,31 @@ namespace MewtocolNet
 
                     plc.AddRegisters(regBuilder.assembler.assembled.ToArray());
 
-                    return new PostRegisterSetup<T> {
+                    return this;
+
+                } catch {
+
+                    throw;
+
+                }
+
+            }
+
+            /// <summary>
+            /// Repeats the passed method each time the hearbeat is triggered,
+            /// use 
+            /// </summary>
+            /// <param name="heartBeatAsync"></param>
+            /// <returns></returns>
+            public EndInitSetup<T> WithHeartbeatTask(Func<Task> heartBeatAsync, bool executeInProg = false) {
+                try {
+
+                    var plc = (MewtocolInterface)(object)this.intf;
+
+                    plc.heartbeatCallbackTask = heartBeatAsync;
+                    plc.execHeartBeatCallbackTaskInProg = executeInProg;
+
+                    return new EndInitSetup<T> {
                         postInit = this,
                     };
 
@@ -406,50 +429,11 @@ namespace MewtocolNet
             /// <summary>
             /// Builds and returns the final plc interface
             /// </summary>
-            public T Build() => intf;
+            public T Build() => (T)(object)((MewtocolInterface)(object)intf).Build();
 
         }
 
         #endregion
-
-        public class PostRegisterSetup<T> {
-
-            internal PostInit<T> postInit;
-
-            /// <summary>
-            /// Repeats the passed method each time the hearbeat is triggered,
-            /// use 
-            /// </summary>
-            /// <param name="heartBeatAsync"></param>
-            /// <returns></returns>
-            public EndInitSetup<T> WithHeartbeatTask(Func<Task> heartBeatAsync, bool executeInProg = false) {
-
-                try {
-
-                    var plc = (MewtocolInterface)(object)postInit.intf;
-
-                    plc.heartbeatCallbackTask = heartBeatAsync;
-                    plc.execHeartBeatCallbackTaskInProg = executeInProg;
-
-                    return new EndInitSetup<T> {
-                        postInit = this.postInit,
-                        postRegSetupInit = this
-                    };
-
-                } catch {
-
-                    throw;
-
-                }
-
-            }
-
-            /// <summary>
-            /// Builds and returns the final plc interface
-            /// </summary>
-            public T Build() => postInit.intf;
-
-        }
 
         #region Interface building step 4
 
@@ -457,12 +441,10 @@ namespace MewtocolNet
 
             internal PostInit<T> postInit;
 
-            internal PostRegisterSetup<T> postRegSetupInit;
-
             /// <summary>
             /// Builds and returns the final plc interface
             /// </summary>
-            public T Build() => postInit.intf;
+            public T Build() => (T)(object)((MewtocolInterface)(object)postInit.intf).Build();
 
         }
 

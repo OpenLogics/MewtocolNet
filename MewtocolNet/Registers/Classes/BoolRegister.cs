@@ -1,18 +1,24 @@
 ﻿using System;
+using System.Collections;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace MewtocolNet.Registers {
 
     /// <summary>
     /// Defines a register containing a boolean
     /// </summary>
-    public class BoolRegister : Register {
+    public class BoolRegister : Register, IRegister<bool> {
 
         internal byte specialAddress;
+
         /// <summary>
         /// The registers memory adress if not a special register
         /// </summary>
         public byte SpecialAddress => specialAddress;
+
+        public bool? Value => (bool?)ValueObj;
 
         [Obsolete("Creating registers directly is not supported use IPlc.Register instead")]
         public BoolRegister() =>
@@ -74,14 +80,67 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public override uint GetRegisterAddressLen() => 1;
 
+        /// <inheritdoc/>
+        public async Task WriteAsync(bool value) {
+
+            var res = await WriteSingleBitAsync(value);
+
+            if (res) {
+
+                //find the underlying memory
+                var matchingReg = attachedInterface.memoryManager.GetAllRegisters()
+                .FirstOrDefault(x => x.IsSameAddressAndType(this));
+
+                if (matchingReg != null)
+                    matchingReg.underlyingMemory.SetUnderlyingBits(matchingReg, specialAddress, value);
+
+                AddSuccessWrite();
+                UpdateHoldingValue(value);
+
+            }
+
+        }
+
+        private async Task<bool> WriteSingleBitAsync(bool val) {
+
+            var rawAddr = $"{MemoryAddress}{SpecialAddress.ToString("X1")}".PadLeft(4, '0');
+
+            string addStr = $"{GetRegisterString()}{rawAddr}";
+            string cmd = $"%{attachedInterface.GetStationNumber()}#WCS{addStr}{(val ? "1" : "0")}";
+            var res = await attachedInterface.SendCommandInternalAsync(cmd);
+
+            return res.Success;
+
+        }
+
+        /// <inheritdoc/>
+        public async Task<bool> ReadAsync() {
+
+            var res = await attachedInterface.ReadAreaByteRangeAsync((int)MemoryAddress, (int)GetRegisterAddressLen() * 2);
+            if (res == null) throw new Exception($"Failed to read the register {this}");
+
+            var matchingReg = attachedInterface.memoryManager.GetAllRegisters()
+            .FirstOrDefault(x => x.IsSameAddressAndType(this));
+
+            if (matchingReg != null) {
+
+                matchingReg.underlyingMemory.SetUnderlyingBytes(matchingReg, res);
+
+            }
+
+            return (bool)SetValueFromBytes(res);
+
+        }
+
         internal override object SetValueFromBytes(byte[] bytes) {
 
             AddSuccessRead();
 
-            var parsed = PlcValueParser.Parse<bool>(this, bytes);
+            var bitArrVal = new BitArray(bytes)[SpecialAddress];
 
-            UpdateHoldingValue(parsed);
-            return parsed;
+            UpdateHoldingValue(bitArrVal);
+
+            return bitArrVal;
 
         }
 

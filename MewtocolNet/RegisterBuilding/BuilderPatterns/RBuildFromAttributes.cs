@@ -24,7 +24,7 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
         }
 
         //internal use only, adds a type definition (for use when building from attibute)
-        internal DynamicStp AddressFromAttribute(string dtAddr, string typeDef, RegisterCollection regCol, PropertyInfo prop, uint? bytesizeHint = null) {
+        internal DynamicStp AddressFromAttribute(string dtAddr, string typeDef, RegisterCollection regCol, PropertyInfo prop, RegisterAttribute propAttr, uint? bytesizeHint = null) {
 
             var stpData = AddressTools.ParseAddress(dtAddr);
 
@@ -32,6 +32,7 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
             stpData.buildSource = RegisterBuildSource.Attribute;
             stpData.regCollection = regCol;
             stpData.boundProperty = prop;
+            stpData.boundPropertyAttribute = propAttr;  
             stpData.byteSizeHint = bytesizeHint;
 
             return new DynamicStp {
@@ -58,9 +59,16 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
 
         internal class DynamicRegister : SBaseRBDyn { 
             
-            public void PollLevel (int level) {
+            public DynamicRegister PollLevel (int level) {
 
                 Data.pollLevel = level;
+                return this;
+
+            }
+
+            public void Finalize () {
+
+                builder.assembler.Assemble(Data);
 
             }
         

@@ -1,4 +1,5 @@
 ﻿using MewtocolNet.PublicEnums;
+using MewtocolNet.RegisterAttributes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,6 +39,11 @@ namespace MewtocolNet.RegisterBuilding {
         /// </param>
         internal static StepBase AsType(this StepBase b, Type type) {
 
+            //check for nullable props
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>)) {
+                type = Nullable.GetUnderlyingType(type);
+            }
+
             //for internal only, relay to AsType from string
             if (b.Data.buildSource == RegisterBuildSource.Attribute) {
 
@@ -63,7 +69,29 @@ namespace MewtocolNet.RegisterBuilding {
 
             }
 
-            b.Data.dotnetVarType = type;
+            bool isDDTDT = b.Data.regType == RegisterPrefix.DT || b.Data.regType == RegisterPrefix.DDT;
+
+            bool isDeclaredNormalRegisterAttribite = b.Data.boundPropertyAttribute != null && 
+            b.Data.boundPropertyAttribute.GetType().DeclaringType == typeof(RegisterAttribute);
+
+            if (b.Data.boundPropertyAttribute is BitRegisterAttribute && type != typeof(bool)) {
+
+                throw new NotSupportedException($"Only booleans are allowed as the target type for BitRegister attributes");
+            
+            } else if (isDeclaredNormalRegisterAttribite && isDDTDT && type == typeof(bool)) {
+
+                throw new NotSupportedException($"Single bit DT registers are only supported with the BitRegister attribute");
+
+            }
+
+            //special case type defintions for register that use an other underlying type
+            if (b.Data.regType == RegisterPrefix.DT && type == typeof(bool)) {
+                b.Data.dotnetVarType = typeof(Word);
+            } else if (b.Data.regType == RegisterPrefix.DDT && type == typeof(bool)) { 
+                b.Data.dotnetVarType = typeof(DWord);
+            } else {
+                b.Data.dotnetVarType = type;
+            }
 
             return b;
 

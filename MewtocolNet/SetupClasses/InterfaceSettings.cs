@@ -34,7 +34,7 @@ namespace MewtocolNet.SetupClasses {
         /// Defines how many WORD blocks the interface will send on a DT area write request before splitting up messages <br/>
         /// Higher numbers will result in a longer send and receive thread blocking time
         /// </summary>
-        public int MaxDataBlocksPerWrite { get; set; } = 8;
+        public int MaxDataBlocksPerWrite { get; set; } = 20;
 
         /// <summary>
         /// The send and receive timout for messages in milliseconds

@@ -1,4 +1,5 @@
-﻿using MewtocolNet;
+﻿using Examples.WPF.RegisterCollections;
+using MewtocolNet;
 using MewtocolNet.Events;
 using System;
 using System.Collections.Generic;
@@ -13,6 +14,8 @@ public class PlcDataViewViewModel : ViewModelBase {
     private ReconnectArgs plcCurrentReconnectArgs = null!;
 
     public IPlc Plc => App.ViewModel.Plc!;
+
+    public TestRegisterCollection RegCollection => App.ViewModel.TestRegCollection;
 
     public ReconnectArgs PlcCurrentReconnectArgs { 
         get => plcCurrentReconnectArgs; 

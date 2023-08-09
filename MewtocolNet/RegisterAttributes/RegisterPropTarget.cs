@@ -8,15 +8,14 @@ namespace MewtocolNet.RegisterAttributes {
         //propinfo of the bound property
         internal PropertyInfo BoundProperty;
 
-        //general number of bits or bytes to read back to the prop
-        internal int? LinkLength;
+        internal RegisterAttribute PropertyAttribute;
+
+        internal RegisterCollection ContainedCollection;
 
         public override string ToString() {
 
             var sb = new StringBuilder();
             sb.Append($"{BoundProperty}");
-            if (LinkLength != null) sb.Append($" -Len: {LinkLength}");
-
             return sb.ToString();
 
         }

@@ -139,11 +139,11 @@ namespace MewtocolNet {
         /// </summary>
         /// <param name="_onString"></param>
         /// <returns>A <see cref="T:byte[]"/> or null of failed</returns>
-        internal static byte[] ParseDTRawStringAsBytes(this string _onString) {
+        internal static byte[] ParseResponseStringAsBytes(this string _onString) {
 
             _onString = _onString.Replace("\r", "");
 
-            var res = new Regex(@"\%([0-9a-fA-F]{2})\$(?:RD|RP)(?<data>.*)(?<csum>..)").Match(_onString);
+            var res = new Regex(@"\%([0-9a-fA-F]{2})\$(?:RD|RP|RC)(?<data>.*)(?<csum>..)").Match(_onString);
             if (res.Success) {
 
                 string val = res.Groups["data"].Value;

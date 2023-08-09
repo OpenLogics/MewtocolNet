@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MewtocolNet.Helpers;
 using System.Reflection;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace MewtocolNet {
 
@@ -98,7 +99,7 @@ namespace MewtocolNet {
 
             var metaMarker = new byte[] { 0x4D, 0x65, 0x74, 0x41 };
 
-            var data = await ReadByteRangeNonBlocking(endAddress - 2 - (readBytes / 2), readBytes);
+            var data = await ReadAreaByteRangeAsync(endAddress - 2 - (readBytes / 2), readBytes);
 
             if (data != null && data.SearchBytePattern(metaMarker) == readBytes - 4) {
 
@@ -204,7 +205,7 @@ namespace MewtocolNet {
 
                 if (res.Success) {
 
-                    var bytes = res.Response.ParseDTRawStringAsBytes();
+                    var bytes = res.Response.ParseResponseStringAsBytes();
                     var foundEndPattern = bytes.SearchBytePattern(new byte[] { 0xF8, 0xFF, 0xFF });
 
                     for (int j = 0; j < bytes.Length; j += 2) {
@@ -243,7 +244,7 @@ namespace MewtocolNet {
         /// /// <param name="start">start address of the array</param>
         /// <param name="byteArr"></param>
         /// <returns></returns>
-        public async Task<bool> WriteByteRange(int start, byte[] byteArr) {
+        public async Task<bool> WriteAreaByteRange(int start, byte[] byteArr) {
 
             if (byteArr == null)
                 throw new ArgumentNullException(nameof(byteArr));
@@ -271,7 +272,7 @@ namespace MewtocolNet {
         /// <param name="byteCount">Number of bytes to get</param>
         /// <param name="onProgress">Gets invoked when the progress changes, contains the progress as a double from 0 - 1.0</param>
         /// <returns>A byte array of the requested DT area</returns>
-        public async Task<byte[]> ReadByteRangeNonBlocking(int start, int byteCount, Action<double> onProgress = null) {
+        public async Task<byte[]> ReadAreaByteRangeAsync(int start, int byteCount, RegisterPrefix areaPrefix = RegisterPrefix.DT, Action<double> onProgress = null) {
 
             //on odd bytes add one word
             var wordLength = byteCount / 2;
@@ -287,19 +288,41 @@ namespace MewtocolNet {
 
             List<byte> readBytes = new List<byte>();
 
+            int padLeftLen = 0;
+            string areaCodeStr = null;
+
+            switch (areaPrefix) {
+                case RegisterPrefix.X:
+                areaCodeStr = $"RCCX";
+                padLeftLen = 4;
+                break;
+                case RegisterPrefix.Y:
+                areaCodeStr = $"RCCY";
+                padLeftLen = 4;
+                break;
+                case RegisterPrefix.R:
+                areaCodeStr = $"RCCR";
+                padLeftLen = 4;
+                break;
+                case RegisterPrefix.DT:
+                case RegisterPrefix.DDT:
+                areaCodeStr = $"RDD";
+                padLeftLen = 5;
+                break;
+            }
+
             async Task ReadBlock(int wordStart, int wordEnd, Action<double> readProg) {
 
                 int blockSize = wordEnd - wordStart + 1;
-                string startStr = wordStart.ToString().PadLeft(5, '0');
-                string endStr = wordEnd.ToString().PadLeft(5, '0');
-
-                string requeststring = $"%{GetStationNumber()}#RDD{startStr}{endStr}";
+                string startStr = wordStart.ToString().PadLeft(padLeftLen, '0');
+                string endStr = wordEnd.ToString().PadLeft(padLeftLen, '0');
+                string requeststring = $"%{GetStationNumber()}#{areaCodeStr}{startStr}{endStr}";
 
                 var result = await SendCommandInternalAsync(requeststring, onReceiveProgress: readProg);
 
                 if (result.Success && !string.IsNullOrEmpty(result.Response)) {
 
-                    var bytes = result.Response.ParseDTRawStringAsBytes();
+                    var bytes = result.Response.ParseResponseStringAsBytes();
 
                     if (bytes != null)
                         readBytes.AddRange(bytes);

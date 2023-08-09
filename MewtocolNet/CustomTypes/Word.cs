@@ -53,10 +53,14 @@ namespace MewtocolNet {
         /// </summary>
         public bool this[int bitIndex] {
             get {
-                if (bitIndex > bitLength - 1)
+
+                if (bitIndex > bitLength - 1 && bitLength != 0)
                     throw new IndexOutOfRangeException($"The word bit index was out of range ({bitIndex}/{bitLength - 1})");
 
+                if (bitLength == 0) return false;
+
                 return (value & (1 << bitIndex)) != 0;
+            
             }
         }
 

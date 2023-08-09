@@ -87,7 +87,7 @@ namespace MewtocolNet.Registers {
 
             var encoded = PlcValueParser.EncodeArray(this, value);
             
-            var res = await attachedInterface.WriteByteRange((int)MemoryAddress, encoded);
+            var res = await attachedInterface.WriteAreaByteRange((int)MemoryAddress, encoded);
 
             if (res) {
 
@@ -116,7 +116,7 @@ namespace MewtocolNet.Registers {
 
             var encoded = PlcValueParser.EncodeArray(this, value);
 
-            var res = await attachedInterface.WriteByteRange((int)MemoryAddress, encoded);
+            var res = await attachedInterface.WriteAreaByteRange((int)MemoryAddress, encoded);
 
             if (res) {
 
@@ -144,7 +144,7 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         private async Task<object> ReadAsync() {
 
-            var res = await attachedInterface.ReadByteRangeNonBlocking((int)MemoryAddress, (int)GetRegisterAddressLen() * 2);
+            var res = await attachedInterface.ReadAreaByteRangeAsync((int)MemoryAddress, (int)GetRegisterAddressLen() * 2);
             if (res == null) throw new Exception();
 
             var matchingReg = attachedInterface.memoryManager.GetAllRegisters()

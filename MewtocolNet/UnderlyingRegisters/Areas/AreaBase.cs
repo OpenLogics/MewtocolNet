@@ -1,4 +1,6 @@
 ﻿using MewtocolNet.Registers;
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace MewtocolNet.UnderlyingRegisters {
 
-    public abstract class AreaBase {
+    public class AreaBase {
 
         private MewtocolInterface mewInterface;
 
@@ -66,7 +68,7 @@ namespace MewtocolNet.UnderlyingRegisters {
         internal async Task<bool> RequestByteReadAsync(ulong addStart, ulong addEnd) {
 
             var byteCount = (addEnd - addStart + 1) * 2;
-            var result = await mewInterface.ReadByteRangeNonBlocking((int)addStart, (int)byteCount);
+            var result = await mewInterface.ReadAreaByteRangeAsync((int)addStart, (int)byteCount, registerType);
 
             if (result != null) {
 
@@ -104,6 +106,18 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
+        public void SetUnderlyingBits(Register reg, int bitIndex, bool value) {
+
+            var underlyingBefore = GetUnderlyingBytes(reg);
+
+            var bitArr = new BitArray(underlyingBefore);
+
+            bitArr.CopyTo(underlyingBefore, 0);
+
+            SetUnderlyingBytes(underlyingBefore, reg.MemoryAddress);
+
+        }
+
         private void SetUnderlyingBytes(byte[] bytes, ulong addStart) {
 
             int copyOffset = (int)((addStart - addressStart) * 2);
@@ -117,11 +131,21 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        public override string ToString() => $"DT{AddressStart}-{AddressEnd}";
+        public override string ToString() {
 
-        public virtual string GetName() => $"{ToString()} ({managedRegisters.Count} Registers)";
+            switch (registerType) {
+                case RegisterPrefix.X:
+                case RegisterPrefix.Y:
+                case RegisterPrefix.R:
+                return $"W{registerType}{AddressStart}-{AddressEnd} ({managedRegisters.Count} Registers)";
+                case RegisterPrefix.DT:
+                case RegisterPrefix.DDT:
+                return $"DT{AddressStart}-{AddressEnd} ({managedRegisters.Count} Registers)";
+            }
 
-        public string GetHash() => GetHashCode().ToString();
+            return "";
+
+        }
 
     }
 

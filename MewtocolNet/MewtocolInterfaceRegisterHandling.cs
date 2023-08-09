@@ -242,57 +242,6 @@ namespace MewtocolNet {
 
         #endregion
 
-        #region Smart register polling methods
-
-        [Obsolete]
-        private async Task UpdateRCPRegisters() {
-
-            //build booleans
-            //var rcpList = RegistersUnderlying.Where(x => x.GetType() == typeof(BoolRegister))
-            //              .Select(x => (BoolRegister)x)
-            //              .ToArray();
-
-            ////one frame can only read 8 registers at a time
-            //int rcpFrameCount = (int)Math.Ceiling((double)rcpList.Length / 8);
-            //int rcpLastFrameRemainder = rcpList.Length <= 8 ? rcpList.Length : rcpList.Length % 8;
-
-            //for (int i = 0; i < rcpFrameCount; i++) {
-
-            //    int toReadRegistersCount = 8;
-
-            //    if (i == rcpFrameCount - 1) toReadRegistersCount = rcpLastFrameRemainder;
-
-            //    var rcpString = new StringBuilder($"%{GetStationNumber()}#RCP{toReadRegistersCount}");
-
-            //    for (int j = 0; j < toReadRegistersCount; j++) {
-
-            //        BoolRegister register = rcpList[i + j];
-            //        rcpString.Append(register.BuildMewtocolQuery());
-
-            //    }
-
-            //    string rcpRequest = rcpString.ToString();
-            //    var result = await SendCommandAsync(rcpRequest);
-            //    if (!result.Success) return;
-
-            //    var resultBitArray = result.Response.ParseRCMultiBit();
-
-            //    for (int k = 0; k < resultBitArray.Length; k++) {
-
-            //        var register = rcpList[i + k];
-
-            //        if ((bool)register.Value != resultBitArray[k]) {
-            //            register.SetValueFromPLC(resultBitArray[k]);
-            //        }
-
-            //    }
-
-            //}
-
-        }
-
-        #endregion
-
         #region Register Collection adding
 
         /// <summary>
@@ -331,9 +280,10 @@ namespace MewtocolNet {
 
                             //add builder item
                             regBuild
-                            .AddressFromAttribute(cAttribute.MewAddress, cAttribute.TypeDef, collection, prop, byteHint)
+                            .AddressFromAttribute(cAttribute.MewAddress, cAttribute.TypeDef, collection, prop, cAttribute, byteHint)
                             .AsType(dotnetType.IsEnum ? dotnetType.UnderlyingSystemType : dotnetType)
-                            .PollLevel(pollLevel);
+                            .PollLevel(pollLevel)
+                            .Finalize();
 
                         }
 
@@ -353,27 +303,7 @@ namespace MewtocolNet {
 
             }
 
-            var assembler = new RegisterAssembler(this);
-
-            AddRegisters(assembler.assembled.ToArray());
-
-        }
-
-        /// <summary>
-        /// Writes back the values changes of the underlying registers to the corrosponding property
-        /// </summary>
-        private void OnRegisterChangedUpdateProps(Register reg) {
-
-            var collection = reg.ContainedCollection;
-            if (collection == null) return;
-
-            var props = collection.GetType().GetProperties();
-
-            //set the specific bit array if needed
-            //prop.SetValue(collection, bitAr);
-            //collection.TriggerPropertyChanged(prop.Name);
-
-
+            AddRegisters(regBuild.assembler.assembled.ToArray());
 
         }
 
@@ -383,16 +313,7 @@ namespace MewtocolNet {
 
         internal void AddRegisters(params Register[] registers) {
 
-            InsertRegistersToMemoryStack(registers.ToList());
-
-        }
-
-        internal void InsertRegistersToMemoryStack(List<Register> registers) {
-
-            memoryManager.LinkAndMergeRegisters(registers);
-
-            //run a second iteration
-            //memoryManager.LinkAndMergeRegisters();
+            memoryManager.LinkAndMergeRegisters(registers.ToList());
 
         }
 

@@ -193,6 +193,14 @@ namespace MewtocolNet {
 
         }
 
+        internal MewtocolInterface Build () {
+
+            memoryManager.LinkAndMergeRegisters();
+
+            return this;
+
+        }
+
         private void MewtocolInterface_Connected(object sender, PlcConnectionArgs args) {
 
             IsConnected = true;
@@ -226,8 +234,6 @@ namespace MewtocolNet {
 
             }
 
-            OnRegisterChangedUpdateProps(asInternal);
-
         }
 
         /// <inheritdoc/>
@@ -245,7 +251,7 @@ namespace MewtocolNet {
             Logger.Log($"DIAG ERR: {PlcInfo.SelfDiagnosticError}", LogLevel.Verbose, this);
             Logger.Log($"CPU VER: {PlcInfo.CpuVersion}", LogLevel.Verbose, this);
 
-            if(alwaysGetMetadata) {
+            if(alwaysGetMetadata && PlcInfo.Metadata != null) {
 
                 Logger.LogVerbose($"METADATA: {PlcInfo.Metadata.MetaDataVersion}", this);
                 Logger.LogVerbose($"FP-WIN VERSION: {PlcInfo.Metadata.FPWinVersion}", this);

@@ -66,7 +66,7 @@ namespace MewtocolTests {
 
         }
 
-        [Fact(DisplayName = nameof(MewtocolHelpers.ParseDTRawStringAsBytes))]
+        [Fact(DisplayName = nameof(MewtocolHelpers.ParseResponseStringAsBytes))]
         public void ParseDTByteStringGeneration() {
 
             var testList = new List<byte[]>() {
@@ -77,7 +77,7 @@ namespace MewtocolTests {
 
             foreach (var item in testList) {
 
-                Assert.Equal(item, $"%01$RD{item.ToHexString()}".BCC_Mew().ParseDTRawStringAsBytes());
+                Assert.Equal(item, $"%01$RD{item.ToHexString()}".BCC_Mew().ParseResponseStringAsBytes());
 
             }
 

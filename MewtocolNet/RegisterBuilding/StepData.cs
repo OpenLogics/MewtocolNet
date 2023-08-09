@@ -36,6 +36,7 @@ namespace MewtocolNet.RegisterBuilding {
         //only for building from attributes
         internal RegisterCollection regCollection;
         internal PropertyInfo boundProperty;
+        internal RegisterAttribute boundPropertyAttribute;
 
         internal string typeDef;
 
