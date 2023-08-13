@@ -1,10 +1,12 @@
 ﻿using MewtocolNet.Events;
 using MewtocolNet.Helpers;
 using MewtocolNet.Logging;
+using MewtocolNet.RegisterBuilding.BuilderPatterns;
 using MewtocolNet.Registers;
 using MewtocolNet.UnderlyingRegisters;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -157,6 +159,9 @@ namespace MewtocolNet {
         public int BytesPerSecondDownstream => bytesPerSecondDownstream;
 
         /// <inheritdoc/>
+        public bool IsRunMode => PlcInfo.IsRunMode;
+
+        /// <inheritdoc/>
         public MewtocolVersion MewtocolVersion {
             get => mewtocolVersion;
             private protected set {
@@ -167,6 +172,9 @@ namespace MewtocolNet {
 
         /// <inheritdoc/>
         public string ConnectionInfo => GetConnectionInfo();
+
+        /// <inheritdoc/>
+        public RBuildAnon Register => new RBuildAnon(this);
 
         #endregion
 
@@ -190,6 +198,21 @@ namespace MewtocolNet {
             Connected += MewtocolInterface_Connected;
             Disconnected += MewtocolInterface_Disconnected;
             RegisterChanged += OnRegisterChanged;
+
+            PropertyChanged += (s, e) => {
+                if (e.PropertyName == nameof(PlcInfo)) {
+                    PlcInfo.PropertyChanged += (s1, e1) => {
+                        if (e1.PropertyName == nameof(PlcInfo.IsRunMode)) 
+                            OnPropChange(nameof(IsRunMode));
+                    };
+                }
+            };
+
+            memoryManager.MemoryLayoutChanged += () => {
+
+                OnPropChange(nameof(MemoryAreas));
+
+            };
 
         }
 
@@ -269,11 +292,20 @@ namespace MewtocolNet {
 
             if (callBack != null) {
 
-                await Task.Run(callBack);
+                await callBack();
 
                 Logger.Log($">> OnConnected run complete <<", LogLevel.Verbose, this);
 
-            } 
+                //run all register collection on online tasks
+                foreach (var col in registerCollections) {
+
+                    await col.OnInterfaceLinkedAndOnline(this);
+
+                }
+
+                Logger.Log($">> OnConnected register collections run complete <<", LogLevel.Verbose, this);
+
+            }
 
         }
 
@@ -281,7 +313,14 @@ namespace MewtocolNet {
         protected virtual Task ReconnectAsync(int conTimeout) => throw new NotImplementedException();
 
         /// <inheritdoc/>
-        public async Task AwaitFirstDataCycleAsync() => await firstPollTask;
+        public async Task AwaitFirstDataCycleAsync() {
+
+            if(firstPollTask != null && !firstPollTask.IsCompleted)
+                await firstPollTask;
+
+            await Task.CompletedTask;
+
+        }
 
         /// <inheritdoc/>
         public async Task DisconnectAsync() {
@@ -842,21 +881,7 @@ namespace MewtocolNet {
             isReconnectingStage = false;
             isConnectingStage = false;
 
-            if (!usePoller) {
-                firstPollTask.RunSynchronously();
-            }
-
             Connected?.Invoke(this, new PlcConnectionArgs());
-
-            PolledCycle += OnPollCycleDone;
-            void OnPollCycleDone() {
-
-                if(firstPollTask != null && !firstPollTask.IsCompleted)
-                    firstPollTask.RunSynchronously();
-                
-                PolledCycle -= OnPollCycleDone;
-
-            }
 
         }
 
@@ -982,7 +1007,11 @@ namespace MewtocolNet {
 
         #endregion
 
+        /// <inheritdoc/>
         public string Explain() => memoryManager.ExplainLayout();
+
+        /// <inheritdoc/>
+        public IReadOnlyList<IMemoryArea> MemoryAreas => memoryManager.GetAllMemoryAreas();
 
     }
 

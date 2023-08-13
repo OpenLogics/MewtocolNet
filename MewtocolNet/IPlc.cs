@@ -1,7 +1,9 @@
 ﻿using MewtocolNet.Events;
 using MewtocolNet.ProgramParsing;
 using MewtocolNet.RegisterBuilding;
+using MewtocolNet.RegisterBuilding.BuilderPatterns;
 using MewtocolNet.Registers;
+using MewtocolNet.UnderlyingRegisters;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -70,6 +72,11 @@ namespace MewtocolNet {
         int PollerCycleDurationMs { get; }
 
         /// <summary>
+        /// Shorthand indicator if the plc is in RUN mode
+        /// </summary>
+        bool IsRunMode { get; }
+
+        /// <summary>
         /// Currently queued message count
         /// </summary>
         int QueuedMessages { get; }
@@ -94,12 +101,14 @@ namespace MewtocolNet {
         /// </summary>
         int ConnectTimeout { get; set; }
 
-        IEnumerable<IRegister> Registers { get; }   
+        IEnumerable<IRegister> Registers { get; }
+
+        RBuildAnon Register { get; }
 
         /// <summary>
         /// Tries to establish a connection with the device asynchronously
         /// </summary>
-        /// <param name="onConnected">A callback for excecuting something right after the plc connected</param>
+        /// <param name="onConnected">A callback for excecuting something inside the plc connetion process</param>
         /// <returns></returns>
         Task ConnectAsync(Func<Task> onConnected = null);
 
@@ -186,6 +195,11 @@ namespace MewtocolNet {
         /// Explains the register internal layout at this moment in time
         /// </summary>
         string Explain();
+
+        /// <summary>
+        /// A readonly list of the underlying memory areas
+        /// </summary>
+        IReadOnlyList<IMemoryArea> MemoryAreas { get; }
 
     }
 

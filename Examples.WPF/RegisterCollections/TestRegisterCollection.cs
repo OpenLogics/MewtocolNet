@@ -19,6 +19,9 @@ public class TestRegisterCollection : RegisterCollection {
     [Register("R16B")]
     public bool TestR16B { get; set; }
 
+    [Register("R902")]
+    public bool Test { get; set; }
+
     [BitRegister("DT1000", 0), PollLevel(3)]
     public bool? TestDT100_Word_Duplicate_SingleBit { get; set; }
 

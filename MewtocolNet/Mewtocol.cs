@@ -379,12 +379,12 @@ namespace MewtocolNet
             /// <summary>
             /// A builder for attaching register collections
             /// </summary>
-            public PostInit<T> WithRegisters(Action<RBuild> builder) {
+            public PostInit<T> WithRegisters(Action<RBuildMulti> builder) {
 
                 try {
 
                     var plc = (MewtocolInterface)(object)intf;
-                    var regBuilder = new RBuild(plc);
+                    var regBuilder = new RBuildMulti(plc);
 
                     builder.Invoke(regBuilder);
 
@@ -406,7 +406,7 @@ namespace MewtocolNet
             /// </summary>
             /// <param name="heartBeatAsync"></param>
             /// <returns></returns>
-            public EndInitSetup<T> WithHeartbeatTask(Func<Task> heartBeatAsync, bool executeInProg = false) {
+            public EndInitSetup<T> WithHeartbeatTask(Func<IPlc,Task> heartBeatAsync, bool executeInProg = false) {
                 try {
 
                     var plc = (MewtocolInterface)(object)this.intf;
@@ -425,6 +425,14 @@ namespace MewtocolNet
                 }
 
             }
+
+            /// <summary>
+            /// Repeats the passed method each time the hearbeat is triggered,
+            /// use 
+            /// </summary>
+            /// <param name="heartBeatAsync"></param>
+            /// <returns></returns>
+            public EndInitSetup<T> WithHeartbeatTask(Func<Task> heartBeatAsync, bool executeInProg = false) => WithHeartbeatTask(heartBeatAsync, executeInProg);
 
             /// <summary>
             /// Builds and returns the final plc interface

@@ -25,12 +25,12 @@ namespace MewtocolNet.RegisterBuilding {
             (x) => TryBuildNumericBased(x),
 
         };
-
+        
         //bool registers
         private static ParseResult TryBuildBoolean(string plcAddrName) {
 
             //regex to find special register values
-            var patternBool = new Regex(@"(?<prefix>X|Y|R)(?<area>[0-9]{0,3})(?<special>(?:[0-9]|[A-F]){1})?");
+            var patternBool = new Regex(@"(?<prefix>X|Y|R)(?<area>[0-9]{0,3})(?<special>(?:[0-9]|[A-F]){1})");
 
             var match = patternBool.Match(plcAddrName);
 

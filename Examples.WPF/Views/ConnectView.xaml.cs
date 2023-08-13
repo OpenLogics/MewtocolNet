@@ -2,6 +2,7 @@
 using Examples.WPF.ViewModels;
 using MewtocolNet;
 using MewtocolNet.ComCassette;
+using MewtocolNet.Logging;
 using MewtocolNet.Registers;
 using System;
 using System.Collections.Generic;
@@ -106,25 +107,44 @@ public partial class ConnectView : UserControl {
                 b.Struct<float>("DDT1016").PollLevel(2).Build();
                 b.Struct<TimeSpan>("DDT1018").PollLevel(2).Build();
 
-                b.String("DT1024", 32).PollLevel(3).Build();
-                b.String("DT1042", 5).PollLevel(4).Build();
+                b.Struct<DateAndTime>("DDT1020").PollLevel(2).Build();
+                b.Struct<DateAndTime>("DDT1022").PollLevel(2).Build();
+
+                b.String("DT1028", 32).PollLevel(3).Build();
+                b.String("DT1046", 5).PollLevel(4).Build();
+
+                b.Struct<Word>("DT1000").AsArray(5).PollLevel(1).Build();
 
             })
-            .WithHeartbeatTask(async () => {
+            .WithHeartbeatTask(async (plc) => {
 
-                await heartbeatSetter.WriteAsync((short)new Random().Next(short.MinValue, short.MaxValue));
+                var randShort = (short)new Random().Next(short.MinValue, short.MaxValue);
 
-                if (outputContactReference.Value != null)
-                    await outputContactReference.WriteAsync(!outputContactReference.Value.Value);
+                //write direct
+                //await heartbeatSetter.WriteAsync(randShort);
+                //or by anonymous
+                await plc.Register.Struct<short>("DT1000").WriteAsync(randShort);
 
-                if(testBoolReference.Value != null)
+                //write a register without a reference
+                bool randBool = new Random().Next(0, 2) == 1;
+                await plc.Register.Bool("Y4").WriteAsync(randBool);
+
+                if (testBoolReference.Value != null)
                     await testBoolReference.WriteAsync(!testBoolReference.Value.Value);
+
+                await plc.Register.Struct<DateAndTime>("DDT1022").WriteAsync(DateAndTime.FromDateTime(DateTime.UtcNow));
 
             })
             .Build();
 
             //connect to it
-            await App.ViewModel.Plc.ConnectAsync();
+            await App.ViewModel.Plc.ConnectAsync(async () => {
+
+                await App.ViewModel.Plc.RestartProgramAsync();
+
+            });
+
+            await App.ViewModel.Plc.AwaitFirstDataCycleAsync();
 
             if (App.ViewModel.Plc.IsConnected) {
 

@@ -2,17 +2,21 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace MewtocolNet.UnderlyingRegisters {
 
-    public class AreaBase {
+    internal class AreaBase : IMemoryArea {
 
         private MewtocolInterface mewInterface;
+        private int pollLevel;
 
         internal RegisterPrefix registerType;
+
         internal ulong addressStart;
         internal ulong addressEnd;
 
@@ -23,12 +27,25 @@ namespace MewtocolNet.UnderlyingRegisters {
         /// </summary>
         internal List<LinkedRegisterGroup> managedRegisters = new List<LinkedRegisterGroup>();
 
+        public event PropertyChangedEventHandler PropertyChanged;
+
         public ulong AddressStart => addressStart;
         public ulong AddressEnd => addressEnd;
 
-        internal AreaBase(MewtocolInterface mewIf) {
+        //interface
+
+        public string AddressRange => GetAddressRangeString();
+
+        public IReadOnlyList<Word> UnderlyingWords => GetUnderlyingWords();
+
+        public string UnderlyingWordsString => string.Join(" ", GetUnderlyingWords());
+
+        public int PollLevel => pollLevel;
+
+        internal AreaBase(MewtocolInterface mewIf, int pollLvl) {
 
             mewInterface = mewIf;
+            pollLevel = pollLvl;
 
         }
 
@@ -49,6 +66,9 @@ namespace MewtocolNet.UnderlyingRegisters {
             addressStart = addFrom;
             addressEnd = addTo;
 
+            OnPropChange(nameof(AddressRange));
+            OnPropChange(nameof(UnderlyingWords));
+
         }
 
         public void UpdateAreaRegisterValues() {
@@ -60,6 +80,9 @@ namespace MewtocolNet.UnderlyingRegisters {
 
                 var bytes = this.GetUnderlyingBytes(regStart, addLen);
                 register.SetValueFromBytes(bytes);
+
+                OnPropChange(nameof(UnderlyingWords));
+                OnPropChange(nameof(UnderlyingWordsString));
 
             }
 
@@ -112,6 +135,8 @@ namespace MewtocolNet.UnderlyingRegisters {
 
             var bitArr = new BitArray(underlyingBefore);
 
+            bitArr[bitIndex] = value;   
+
             bitArr.CopyTo(underlyingBefore, 0);
 
             SetUnderlyingBytes(underlyingBefore, reg.MemoryAddress);
@@ -131,19 +156,42 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        public override string ToString() {
+        private List<Word> GetUnderlyingWords () {
+
+            var bytes = GetUnderlyingBytes((uint)AddressStart, (int)(addressEnd - AddressStart) + 1);
+            var words = new List<Word>();
+
+            for (int i = 0; i < bytes.Length / 2; i += 2) {
+
+                words.Add(new Word(new byte[] { bytes[i], bytes[i + 1] }));
+
+            }
+
+            return words;
+        
+        }
+
+        private string GetAddressRangeString() {
 
             switch (registerType) {
                 case RegisterPrefix.X:
                 case RegisterPrefix.Y:
                 case RegisterPrefix.R:
-                return $"W{registerType}{AddressStart}-{AddressEnd} ({managedRegisters.Count} Registers)";
+                return $"W{registerType}{AddressStart}-{AddressEnd}";
                 case RegisterPrefix.DT:
                 case RegisterPrefix.DDT:
-                return $"DT{AddressStart}-{AddressEnd} ({managedRegisters.Count} Registers)";
+                return $"DT{AddressStart}-{AddressEnd}";
             }
 
             return "";
+
+        }
+
+        public override string ToString() => $"{GetAddressRangeString()} ({managedRegisters.Count} Registers)";
+
+        private protected void OnPropChange([CallerMemberName] string propertyName = null) {
+
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
         }
 

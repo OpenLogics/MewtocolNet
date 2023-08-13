@@ -82,8 +82,11 @@ namespace MewtocolNet {
 
                     typeCode = (int)t;
                     discontinued = t.IsDiscontinued();
+                    
+                    #if Debug
                     exrt = t.IsEXRTPLC();
                     tested = t.WasTestedLive();
+                    #endif
 
                 }
 

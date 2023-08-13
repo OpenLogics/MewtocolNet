@@ -49,6 +49,21 @@
                          Fill="Lime"
                          IsEnabled="{Binding Plc.IsConnected}"/>
 
+                <Run>
+                    <Run.Style>
+                        <Style TargetType="Run">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Plc.IsRunMode, Mode=OneWay}" Value="True">
+                                    <Setter Property="Text" Value="RUN MODE"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Plc.IsRunMode, Mode=OneWay}" Value="False">
+                                    <Setter Property="Text" Value="NO RUN MODE"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Run.Style>
+                </Run>
+
                 <TextBlock.Style>
                     <Style TargetType="TextBlock">
                         <Style.Triggers>
@@ -156,10 +171,13 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="auto"/>
                 <RowDefinition/>
+                <RowDefinition Height="auto"/>
+                <RowDefinition/>
             </Grid.RowDefinitions>
             
             <GridSplitter Grid.Column="1"
                           Grid.Row="1"
+                          Grid.RowSpan="3"
                           VerticalAlignment="Stretch"
                           HorizontalAlignment="Stretch"
                           Background="Gray" 
@@ -179,6 +197,7 @@
                        Margin="10"/>
 
             <DataGrid Grid.Row="1"
+                      Grid.RowSpan="3"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
                       ItemsSource="{Binding Plc.Registers, Mode=OneWay}">
@@ -219,20 +238,57 @@
                     <DataGridTemplateColumn Width="15">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <Border Background="{Binding MemoryAreaHash, Mode=OneWay, Converter={StaticResource hashColor}}"/>
+                                <Border Background="{Binding MemoryArea, Mode=OneWay, Converter={StaticResource hashColor}}"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                 </DataGrid.Columns>
             </DataGrid>
 
-            <TextBlock Text="Property Bindings"
+            <TextBlock Text="Memory Areas"
                        Grid.Column="2"
                        FontSize="18"
                        Margin="10"/>
 
             <Border Grid.Column="2"
                     Grid.Row="1"
+                    VerticalAlignment="Stretch"
+                    HorizontalAlignment="Stretch"
+                    BorderBrush="LightBlue"
+                    BorderThickness="1.5">
+
+                <DataGrid IsReadOnly="True"
+                          AutoGenerateColumns="False"
+                          ItemsSource="{Binding Plc.MemoryAreas, Mode=OneWay}">
+
+                    <DataGrid.Columns>
+                        
+                        <DataGridTextColumn Header="Address Range" Binding="{Binding AddressRange, Mode=OneWay}"/>
+
+                        <DataGridTemplateColumn Width="15">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Background="{Binding Converter={StaticResource hashColor}}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTextColumn Header="Words" Binding="{Binding UnderlyingWordsString, Mode=OneWay}"/>
+
+                    </DataGrid.Columns>
+
+                </DataGrid>
+
+            </Border>
+
+            <TextBlock Text="Property Bindings"
+                       Grid.Column="2"
+                       Grid.Row="2"
+                       FontSize="18"
+                       Margin="10"/>
+
+            <Border Grid.Column="2"
+                    Grid.Row="3"
                     VerticalAlignment="Stretch"
                     HorizontalAlignment="Stretch"
                     BorderBrush="LightBlue"

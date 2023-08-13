@@ -18,10 +18,11 @@ namespace MewtocolNet {
     public abstract partial class MewtocolInterface {
 
         private bool heartbeatNeedsRun = false;
+        private bool heartbeatTimerRunning = false;
 
         internal Task heartbeatTask = Task.CompletedTask;
 
-        internal Func<Task> heartbeatCallbackTask;
+        internal Func<IPlc, Task> heartbeatCallbackTask;
         internal bool execHeartBeatCallbackTaskInProg = false;
 
         internal Task pollCycleTask;
@@ -73,6 +74,7 @@ namespace MewtocolNet {
 
                 heartBeatTimer.Elapsed -= PollTimerTick;
                 heartBeatTimer.Dispose();
+                heartbeatTimerRunning = false;
 
             }
             
@@ -82,12 +84,15 @@ namespace MewtocolNet {
 
             if (!IsConnected) return;
 
-            heartBeatTimer = new System.Timers.Timer();
-            heartBeatTimer.Interval = 3000;
-            heartBeatTimer.Elapsed += PollTimerTick;
-            heartBeatTimer.Start();
-
-            if (!usePoller) return;
+            if(!heartbeatTimerRunning) {
+                heartBeatTimer = new System.Timers.Timer();
+                heartBeatTimer.Interval = 3000;
+                heartBeatTimer.Elapsed += PollTimerTick;
+                heartBeatTimer.Start();
+                heartbeatTimerRunning = true;
+            }
+            
+            if (!usePoller || PollerActive) return;
 
             bool hasCyclic = memoryManager.HasCyclicPollableRegisters();
             bool hasFirstCycle = memoryManager.HasSingleCyclePollableRegisters();
@@ -154,7 +159,7 @@ namespace MewtocolNet {
             }
 
             if(heartbeatCallbackTask != null && (plcInfo.IsRunMode || execHeartBeatCallbackTaskInProg)) 
-                await heartbeatCallbackTask();
+                await heartbeatCallbackTask(this);
 
             Logger.LogVerbose("End heartbeat", this);
 
@@ -235,6 +240,12 @@ namespace MewtocolNet {
 
             sw.Stop();
 
+            if (firstPollTask != null && !firstPollTask.IsCompleted) {
+                firstPollTask.RunSynchronously();
+                firstPollTask = null;
+                Logger.Log("poll cycle first done");
+            }
+
             pollerFirstCycleCompleted = true;
             PollerCycleDurationMs = (int)sw.ElapsedMilliseconds;
 
@@ -295,11 +306,6 @@ namespace MewtocolNet {
                     registerCollections.Add(collection);
                     collection.OnInterfaceLinked(this);
                 }
-
-                Connected += (s,e) => {
-                    if (collection != null)
-                        collection.OnInterfaceLinkedAndOnline(this);
-                };
 
             }
 

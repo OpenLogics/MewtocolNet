@@ -1,6 +1,7 @@
 ﻿using MewtocolNet.Registers;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 namespace MewtocolNet.RegisterAttributes {
 
@@ -57,7 +58,7 @@ namespace MewtocolNet.RegisterAttributes {
         /// and the plc connection is established
         /// </summary>
         /// <param name="plc">The parent interface</param>
-        public virtual void OnInterfaceLinkedAndOnline(MewtocolInterface plc) { }
+        public virtual Task OnInterfaceLinkedAndOnline(MewtocolInterface plc) => Task.CompletedTask;
 
     }
 

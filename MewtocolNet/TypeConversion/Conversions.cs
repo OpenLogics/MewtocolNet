@@ -127,6 +127,15 @@ namespace MewtocolNet.TypeConversion {
 
                 },
             },
+
+            //default Datetime DDT conversion
+            new PlcTypeConversion<DateAndTime>(RegisterPrefix.DDT) {
+                HoldingRegisterType = typeof(StructRegister<DateAndTime>),
+                PlcVarType = PlcVarType.DATE_AND_TIME,
+                FromRaw = (reg, bytes) => DateAndTime.FromBytes(bytes),
+                ToRaw = (reg, value) => value.ToByteArray(),
+            },
+
             //default string DT Range conversion Example bytes: (04 00 03 00 XX XX XX) 
             //first 4 bytes are reserved size (2 bytes) and used size (2 bytes)
             //the remaining bytes are the ascii bytes for the string

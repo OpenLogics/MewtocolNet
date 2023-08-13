@@ -67,6 +67,9 @@ namespace MewtocolNet.Registers {
         public RegisterPrefix RegisterType { get; internal set; }
 
         /// <inheritdoc/>
+        public IMemoryArea MemoryArea => underlyingMemory;
+
+        /// <inheritdoc/>
         public string Name => name;
 
         /// <inheritdoc/>

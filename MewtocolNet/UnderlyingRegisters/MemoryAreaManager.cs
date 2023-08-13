@@ -221,7 +221,7 @@ namespace MewtocolNet.UnderlyingRegisters {
             //create a new area
             if (targetArea == null) {
 
-                targetArea = new AreaBase(mewInterface) {
+                targetArea = new AreaBase(mewInterface, pollLevelFound.level) {
                     addressStart = regInsAddStart,
                     addressEnd = regInsAddEnd,
                     registerType = insertReg.RegisterType,
@@ -452,6 +452,20 @@ namespace MewtocolNet.UnderlyingRegisters {
             }
 
             return registers.OrderBy(x => x.MemoryAddress).ThenByDescending(x => x.GetRegisterString());
+
+        }
+
+        internal IReadOnlyList<IMemoryArea> GetAllMemoryAreas() {
+
+            List<IMemoryArea> areas = new List<IMemoryArea>();
+
+            foreach (var lvl in pollLevels) {
+
+                areas.AddRange(lvl.GetAllAreas());
+
+            }
+
+            return areas;
 
         }
 

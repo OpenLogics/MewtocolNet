@@ -1,16 +1,18 @@
 ﻿using MewtocolNet.Registers;
+using System.Collections.Generic;
+using System.ComponentModel;
 
 namespace MewtocolNet.UnderlyingRegisters {
 
-    internal interface IMemoryArea {
+    public interface IMemoryArea : INotifyPropertyChanged {
 
-        string GetName();
+        string AddressRange { get; }
 
-        byte[] GetUnderlyingBytes(Register reg);
+        IReadOnlyList<Word> UnderlyingWords { get; }    
 
-        void SetUnderlyingBytes(Register reg, byte[] bytes);
+        string UnderlyingWordsString { get; }   
 
-        void UpdateAreaRegisterValues();
+        int PollLevel { get; }  
 
     }
 

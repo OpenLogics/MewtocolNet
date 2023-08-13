@@ -34,9 +34,12 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
 
         //bool constructor
 
-        public StructStp<bool> Bool(string fpAddr, string name = null) {
+        internal StructStp<bool> Bool(string fpAddr, string name = null) {
 
             var data = AddressTools.ParseAddress(fpAddr, name);
+
+            if (!data.regType.IsBoolean())
+                throw new NotSupportedException($"The address '{fpAddr}' was no boolean FP address");
 
             data.dotnetVarType = typeof(bool);
 
@@ -48,9 +51,12 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
 
         //struct constructor 
 
-        public StructStp<T> Struct<T>(string fpAddr, string name = null) where T : struct {
+        internal StructStp<T> Struct<T>(string fpAddr, string name = null) where T : struct {
 
             var data = AddressTools.ParseAddress(fpAddr, name);
+
+            if (data.regType.IsBoolean())
+                throw new NotSupportedException($"The address '{fpAddr}' was no DT address");
 
             data.dotnetVarType = typeof(T);
 
@@ -62,9 +68,12 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
 
         //string constructor
 
-        public StringStp<string> String(string fpAddr, int sizeHint, string name = null) {
+        internal StringStp<string> String(string fpAddr, int sizeHint, string name = null) {
 
             var data = AddressTools.ParseAddress(fpAddr, name);
+
+            if (data.regType.IsBoolean())
+                throw new NotSupportedException($"The address '{fpAddr}' was no string address");
 
             data.dotnetVarType = typeof(string);
             data.byteSizeHint = (uint)sizeHint;
@@ -82,6 +91,8 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
         //structs can lead to arrays
         public class StructStp<T> : ArrayStp<T> where T : struct {
 
+            internal StructStp() {}
+
             internal StructStp(StepData data) {
 
                 this.Data = data;
@@ -89,29 +100,12 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
 
             }
 
-            public void Build() => builder.Assemble(this);
-
-            public void Build(out IRegister<T> reference) => reference = (IRegister<T>)builder.Assemble(this);
-
-            public StructStpOut<T> PollLevel(int level) {
-
-                Data.pollLevel = level;
-                return new StructStpOut<T>().Map(this);
-
-            }
-
-        }
-
-        public class StructStpOut<T> : SBaseRB where T : struct {
-
-            public void Build() => builder.Assemble(this);
-
-            public void Build(out IRegister<T> reference) => reference = (IRegister<T>)builder.Assemble(this);
-
         }
 
         //strings can lead to arrays
         public class StringStp<T> : ArrayStp<T> where T : class {
+
+            internal StringStp() { }
 
             internal StringStp(StepData data) {
 
@@ -119,25 +113,6 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
                 this.Map(StepBaseTyper.AsType(this, typeof(T)));
 
             }
-
-            public void Build() => builder.Assemble(this);
-
-            public void Build(out IStringRegister reference) => reference = (IStringRegister)builder.Assemble(this);
-
-            public StringOutStp PollLevel(int level) {
-
-                Data.pollLevel = level;
-                return new StringOutStp().Map(this);
-
-            }
-
-        }
-
-        public class StringOutStp : SBaseRB {
-
-            public void Build() => builder.Assemble(this);
-
-            public void Build(out IStringRegister reference) => reference = (IStringRegister)builder.Assemble(this);
 
         }
 
@@ -199,66 +174,21 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
 
         //1D array
 
-        public class TypedArr1D<T> : TypedArr1DOut<T> {
+        public class TypedArr1D<T> : TypedArr1DOut<T> { }
 
-            public TypedArr1DOut<T> PollLevel(int level) {
-
-                Data.pollLevel = level;
-                return new TypedArr1DOut<T>().Map(this);
-
-            }
-
-        }
-
-        public class TypedArr1DOut<T> : SBaseRB {
-
-            public IArrayRegister<T> Build() => (IArrayRegister<T>)builder.Assemble(this);
-
-            public void Build(out IArrayRegister<T> reference) => reference = (IArrayRegister<T>)builder.Assemble(this);
-
-        }
+        public class TypedArr1DOut<T> : SBaseRB { }
 
         //2D array
 
-        public class TypedArr2D<T> : TypedArr2DOut<T> {
+        public class TypedArr2D<T> : TypedArr2DOut<T> { }
 
-            public TypedArr2DOut<T> PollLevel(int level) {
-
-                Data.pollLevel = level;
-                return new TypedArr2DOut<T>().Map(this);
-
-            }
-
-        }
-
-        public class TypedArr2DOut<T> : SBaseRB {
-
-            public IArrayRegister2D<T> Build() => (IArrayRegister2D<T>)builder.Assemble(this);
-
-            public void Build(out IArrayRegister2D<T> reference) => reference = (IArrayRegister2D<T>)builder.Assemble(this);
-
-        }
+        public class TypedArr2DOut<T> : SBaseRB { }
 
         //3D array
 
-        public class TypedArr3D<T> : SBaseRB {
+        public class TypedArr3D<T> : SBaseRB { }
 
-            public TypedArr3DOut<T> PollLevel(int level) {
-
-                Data.pollLevel = level;
-                return new TypedArr3DOut<T>().Map(this);
-
-            }
-
-        }
-
-        public class TypedArr3DOut<T> : SBaseRB {
-
-            public IArrayRegister3D<T> Build() => (IArrayRegister3D<T>)builder.Assemble(this);
-
-            public void Build(out IArrayRegister3D<T> reference) => reference = (IArrayRegister3D<T>)builder.Assemble(this);
-
-        }
+        public class TypedArr3DOut<T> : SBaseRB { }
 
         #endregion
 
