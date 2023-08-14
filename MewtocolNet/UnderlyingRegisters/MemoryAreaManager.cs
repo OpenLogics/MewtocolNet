@@ -313,8 +313,6 @@ namespace MewtocolNet.UnderlyingRegisters {
                 //update registers in poll level
                 foreach (var area in pollLevel.GetAllAreas().ToArray()) {
 
-                    Logger.LogVerbose($"Polling: {area}", this.mewInterface);
-
                     //set the whole memory area at once
                     await area.RequestByteReadAsync(area.AddressStart, area.AddressEnd);
 
