@@ -214,25 +214,25 @@ namespace MewtocolNet {
                 }
 
                 pollerFirstCycle = false;
-                
+
             }
 
         }
 
         private async Task OnMultiFrameCycle() {
 
-            //await the timed task before starting a new poller cycle
-            if (heartbeatNeedsRun) {
-
-                await HeartbeatTickTask();
-                
-                heartbeatNeedsRun = false;
-            
-            }
-
             var sw = Stopwatch.StartNew();
 
             await memoryManager.PollAllAreasAsync(async () => {
+
+                //await the timed task before starting a new poller cycle
+                if (heartbeatNeedsRun || pollerFirstCycle) {
+
+                    await HeartbeatTickTask();
+
+                    heartbeatNeedsRun = false;
+
+                }
 
                 await RunOneOpenQueuedTask();
 

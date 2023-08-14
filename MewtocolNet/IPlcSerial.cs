@@ -48,7 +48,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Tries to establish a connection with the device asynchronously
         /// </summary>
-        Task ConnectAsync(Func<Task> callBack, Action onTryingConfig);
+        Task<ConnectResult> ConnectAsync(Func<Task> callBack, Action onTryingConfig);
 
     }
 

@@ -105,12 +105,12 @@ namespace MewtocolNet {
 
         }
 
-        public override async Task ConnectAsync(Func<Task> callBack = null) => await ConnectAsyncPriv(callBack);
+        public override async Task<ConnectResult> ConnectAsync(Func<Task> callBack = null) => await ConnectAsyncPriv(callBack);
 
-        public async Task ConnectAsync(Func<Task> callBack = null, Action onTryingConfig = null) => await ConnectAsyncPriv(callBack, onTryingConfig);
+        public async Task<ConnectResult> ConnectAsync(Func<Task> callBack = null, Action onTryingConfig = null) => await ConnectAsyncPriv(callBack, onTryingConfig);
 
         /// <inheritdoc/>
-        private async Task ConnectAsyncPriv(Func<Task> callBack, Action onTryingConfig = null) {
+        private async Task<ConnectResult> ConnectAsyncPriv(Func<Task> callBack, Action onTryingConfig = null) {
 
             var portnames = SerialPort.GetPortNames();
             if (!portnames.Any(x => x == PortName))
@@ -149,6 +149,7 @@ namespace MewtocolNet {
                     IsConnected = true;
                     await base.ConnectAsync(callBack);
                     OnConnected(gotInfo);
+                    return ConnectResult.Connected;
 
                 } else {
 
@@ -168,6 +169,8 @@ namespace MewtocolNet {
             }
 
             tryingSerialConfig -= OnTryConfig;
+
+            return ConnectResult.MewtocolError;
 
         }
 

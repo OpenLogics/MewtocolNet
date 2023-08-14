@@ -37,6 +37,11 @@ namespace MewtocolNet.Registers {
         string Name { get; }
 
         /// <summary>
+        /// Names of the bound properties, comma seperated
+        /// </summary>
+        string BoundPropertyNamesString { get; }
+
+        /// <summary>
         /// The poll level this register is attached to
         /// </summary>
         int PollLevel { get; }  

@@ -42,6 +42,11 @@ namespace MewtocolNet {
         event RegisterChangedEventHandler RegisterChanged;
 
         /// <summary>
+        /// Plc mode was changed
+        /// </summary>
+        event PlcModeChangedEventHandler ModeChanged;
+
+        /// <summary>
         /// The current connection state of the interface
         /// </summary>
         bool IsConnected { get; }
@@ -110,7 +115,7 @@ namespace MewtocolNet {
         /// </summary>
         /// <param name="onConnected">A callback for excecuting something inside the plc connetion process</param>
         /// <returns></returns>
-        Task ConnectAsync(Func<Task> onConnected = null);
+        Task<ConnectResult> ConnectAsync(Func<Task> onConnected = null);
 
         /// <summary>
         /// Disconnects the device from its current plc connection 

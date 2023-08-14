@@ -15,6 +15,8 @@ namespace MewtocolNet.Registers {
     /// </summary>
     public class StringRegister : Register, IStringRegister {
 
+        internal int sizeWarning = 0;
+
         internal int reservedStringLength;
         internal uint byteLength;
 
@@ -119,15 +121,6 @@ namespace MewtocolNet.Registers {
         }
 
         internal override object SetValueFromBytes (byte[] bytes) {
-
-            //if string correct the sizing of the byte hint was wrong
-            var reservedSize = BitConverter.ToInt16(bytes, 0);
-
-            if (reservedStringLength != reservedSize && attachedInterface.PlcInfo.IsRunMode && !attachedInterface.isConnectingStage)
-                throw new NotSupportedException(
-                    $"The STRING register at {GetMewName()} is not correctly sized, " +
-                    $"the size should be STRING[{reservedSize}] instead of STRING[{reservedStringLength}]"
-                );
 
             AddSuccessRead();
 

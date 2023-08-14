@@ -73,6 +73,9 @@ namespace MewtocolNet.Registers {
         public string Name => name;
 
         /// <inheritdoc/>
+        public string BoundPropertyNamesString => string.Join(", ", boundProperties.Select(x => $"{x.ContainedCollection.GetType().Name}.{x.BoundProperty.Name}"));
+
+        /// <inheritdoc/>
         public string PLCAddressName => GetMewName();
 
         /// <inheritdoc/>
@@ -263,12 +266,19 @@ namespace MewtocolNet.Registers {
 
         internal virtual object SetValueFromBytes(byte[] bytes) => throw new NotImplementedException();
 
-        internal void WithBoundProperty(RegisterPropTarget propInfo) => boundProperties.Add(propInfo);
+        internal void WithBoundProperty(RegisterPropTarget propInfo) {
+
+            boundProperties.Add(propInfo);
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BoundPropertyNamesString)));
+        
+        }
 
         internal void WithBoundProperties(IEnumerable<RegisterPropTarget> propInfos) {
 
             foreach (var item in propInfos.ToArray())
                 boundProperties.Add(item);
+
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BoundPropertyNamesString)));
 
         }
 

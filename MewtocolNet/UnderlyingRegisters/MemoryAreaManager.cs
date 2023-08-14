@@ -1,4 +1,5 @@
-﻿using MewtocolNet.Registers;
+﻿using MewtocolNet.Logging;
+using MewtocolNet.Registers;
 using MewtocolNet.SetupClasses;
 using System;
 using System.Collections.Generic;
@@ -310,10 +311,12 @@ namespace MewtocolNet.UnderlyingRegisters {
                 }
 
                 //update registers in poll level
-                foreach (var dtArea in pollLevel.GetAllAreas().ToArray()) {
+                foreach (var area in pollLevel.GetAllAreas().ToArray()) {
+
+                    Logger.LogVerbose($"Polling: {area}", this.mewInterface);
 
                     //set the whole memory area at once
-                    await dtArea.RequestByteReadAsync(dtArea.AddressStart, dtArea.AddressEnd);
+                    await area.RequestByteReadAsync(area.AddressStart, area.AddressEnd);
 
                     await inbetweenCallback();
 

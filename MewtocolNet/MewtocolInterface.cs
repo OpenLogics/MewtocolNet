@@ -43,6 +43,9 @@ namespace MewtocolNet {
         /// <inheritdoc/>
         public event PropertyChangedEventHandler PropertyChanged;
 
+        /// <inheritdoc/>
+        public event PlcModeChangedEventHandler ModeChanged;
+
         #endregion
 
         #region Private fields
@@ -85,6 +88,7 @@ namespace MewtocolNet {
 
         internal protected System.Timers.Timer cyclicGenericUpdateCounter;
         internal event Action PolledCycle;
+
         internal volatile bool pollerTaskStopped = true;
         internal volatile bool pollerFirstCycle;
         internal MemoryAreaManager memoryManager;
@@ -184,7 +188,7 @@ namespace MewtocolNet {
         public int ConnectTimeout { get; set; } = 3000;
 
         #endregion
-
+        
         #region Methods
 
         private protected MewtocolInterface() {
@@ -211,6 +215,7 @@ namespace MewtocolNet {
             memoryManager.MemoryLayoutChanged += () => {
 
                 OnPropChange(nameof(MemoryAreas));
+                OnPropChange(nameof(Registers));
 
             };
 
@@ -260,7 +265,7 @@ namespace MewtocolNet {
         }
 
         /// <inheritdoc/>
-        public virtual async Task ConnectAsync(Func<Task> callBack = null) {
+        public virtual async Task<ConnectResult> ConnectAsync(Func<Task> callBack = null) {
 
             isConnectingStage = false;
 
@@ -296,16 +301,18 @@ namespace MewtocolNet {
 
                 Logger.Log($">> OnConnected run complete <<", LogLevel.Verbose, this);
 
-                //run all register collection on online tasks
-                foreach (var col in registerCollections) {
+            }
 
-                    await col.OnInterfaceLinkedAndOnline(this);
+            //run all register collection on online tasks
+            foreach (var col in registerCollections) {
 
-                }
-
-                Logger.Log($">> OnConnected register collections run complete <<", LogLevel.Verbose, this);
+                await col.OnInterfaceLinkedAndOnline(this);
 
             }
+
+            Logger.Log($">> OnConnected register collections run complete <<", LogLevel.Verbose, this);
+
+            return ConnectResult.Unknown;
 
         }
 
@@ -315,7 +322,7 @@ namespace MewtocolNet {
         /// <inheritdoc/>
         public async Task AwaitFirstDataCycleAsync() {
 
-            if(firstPollTask != null && !firstPollTask.IsCompleted)
+            if(firstPollTask != null && !firstPollTask.IsCompleted && IsConnected)
                 await firstPollTask;
 
             await Task.CompletedTask;
@@ -430,6 +437,7 @@ namespace MewtocolNet {
             if (regularSendTask != null && !regularSendTask.IsCompleted) {
 
                 //queue self
+                Logger.LogCritical($"Queued {_msg}...", this);
                 return await EnqueueMessage(_msg, onReceiveProgress);
 
             }
@@ -509,6 +517,8 @@ namespace MewtocolNet {
                 await t;
 
             }
+
+            await Task.CompletedTask;
 
         }
 
@@ -1002,6 +1012,17 @@ namespace MewtocolNet {
         private protected void OnPropChange([CallerMemberName] string propertyName = null) {
 
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+        }
+
+        internal void InvokeModeChanged(OPMode before, OPMode now) {
+
+            ModeChanged?.Invoke(this, new PlcModeArgs {
+                ProgToRun = !before.HasFlag(OPMode.RunMode) && now.HasFlag(OPMode.RunMode),
+                RunToProg = before.HasFlag(OPMode.RunMode) && !now.HasFlag(OPMode.RunMode),
+                LastMode = before,
+                NowMode = now,
+            });
 
         }
 

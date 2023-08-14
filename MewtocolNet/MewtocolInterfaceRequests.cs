@@ -49,7 +49,7 @@ namespace MewtocolNet {
             PLCInfo plcInf;
 
             //dont overwrite, use first
-            if (!PLCInfo.TryFromRT(resRT.Response, out plcInf)) {
+            if (!PLCInfo.TryFromRT(resRT.Response, this, out plcInf)) {
 
                 throw new Exception("The RT message could not be parsed");
 

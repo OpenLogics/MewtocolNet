@@ -69,7 +69,7 @@ namespace MewtocolNet {
         }
 
         /// <inheritdoc/>
-        public override async Task ConnectAsync(Func<Task> callBack = null) => await ConnectAsyncPriv(callBack);
+        public override async Task<ConnectResult> ConnectAsync(Func<Task> callBack = null) => await ConnectAsyncPriv(callBack);
 
         private void BuildTcpClient () {
 
@@ -107,7 +107,7 @@ namespace MewtocolNet {
 
         }
 
-        private async Task ConnectAsyncPriv(Func<Task> callBack = null) {
+        private async Task<ConnectResult> ConnectAsyncPriv(Func<Task> callBack = null) {
 
             try {
 
@@ -118,6 +118,13 @@ namespace MewtocolNet {
 
                 BuildTcpClient();
 
+                var ep = (IPEndPoint)client.Client.LocalEndPoint;
+                if(ep != null) {
+                    Logger.Log($"Connecting from: {ep.Address.MapToIPv4()}:{ep.Port} to {GetConnectionInfo()}", LogLevel.Info, this);
+                } else {
+                    Logger.Log($"Connecting to {GetConnectionInfo()}", LogLevel.Info, this);
+                }
+
                 var result = client.BeginConnect(ipAddr, Port, null, null);
                 var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(ConnectTimeout));
 
@@ -125,16 +132,11 @@ namespace MewtocolNet {
 
                     Logger.Log("The PLC connection timed out", LogLevel.Error, this);
                     OnMajorSocketExceptionWhileConnecting();
-                    return;
+                    return ConnectResult.Timeout;
 
                 }
 
                 Logger.LogVerbose("TCP/IP Client connected", this);
-
-                if (HostEndpoint == null) {
-                    var ep = (IPEndPoint)client.Client.LocalEndPoint;
-                    Logger.Log($"Connecting [AUTO] from: {ep.Address.MapToIPv4()}:{ep.Port} to {GetConnectionInfo()}", LogLevel.Info, this);
-                }
 
                 //get the stream
                 stream = client.GetStream();
@@ -150,6 +152,7 @@ namespace MewtocolNet {
                     IsConnected = true;
                     await base.ConnectAsync(callBack);
                     OnConnected(plcinf);
+                    return ConnectResult.Connected;
 
                 } else {
 
@@ -166,6 +169,8 @@ namespace MewtocolNet {
                 isConnectingStage = false;
 
             }
+
+            return ConnectResult.MewtocolError;
 
         }
 

@@ -13,6 +13,8 @@ namespace MewtocolNet {
     /// </summary>
     public class PLCInfo : INotifyPropertyChanged {
 
+        private MewtocolInterface plc;
+
         private PlcType typeCode;
         private string typeName;
         private OPMode operationMode;
@@ -55,10 +57,17 @@ namespace MewtocolNet {
         public OPMode OperationMode { 
             get => operationMode; 
             internal set {
+
+                var lastModeFlags = operationMode;
+
                 operationMode = value;
                 OnPropChange();
                 OnPropChange(nameof(IsRunMode));
                 OnPropChange(nameof(OperationModeTags));
+
+                if (plc != null && plc.IsConnected && !plc.isConnectingStage && lastModeFlags != OPMode.None)
+                    plc.InvokeModeChanged(lastModeFlags, value);
+
             }
         }
 
@@ -117,6 +126,12 @@ namespace MewtocolNet {
 
         public event PropertyChangedEventHandler PropertyChanged;
 
+        internal PLCInfo (MewtocolInterface onInterface) {
+
+            plc = onInterface;
+
+        }
+
         internal bool TryExtendFromEXRT(string msg) {
 
             var regexEXRT = new Regex(@"\%EE\$EX00RT00(?<icnt>..)(?<mc>..)..(?<cap>..)(?<op>..)..(?<flg>..)(?<sdiag>....)(?<ver>..)(?<hwif>..)(?<nprog>.)(?<csumpz>...)(?<psize>...).*", RegexOptions.IgnoreCase);
@@ -158,7 +173,7 @@ namespace MewtocolNet {
 
         }
 
-        internal static bool TryFromRT(string msg, out PLCInfo inf) {
+        internal static bool TryFromRT(string msg, MewtocolInterface onInterface, out PLCInfo inf) {
 
             var regexRT = new Regex(@"\%EE\$RT(?<cputype>..)(?<cpuver>..)(?<cap>..)(?<op>..)..(?<flg>..)(?<sdiag>....).*", RegexOptions.IgnoreCase);
             var match = regexRT.Match(msg);
@@ -191,7 +206,7 @@ namespace MewtocolNet {
 
                 }
 
-                inf = new PLCInfo {
+                inf = new PLCInfo (onInterface) {
                     TypeCode = typeCodeFull,
                     CpuVersion = match.Groups["cpuver"].Value.Insert(1, "."),
                     ProgramCapacity = definedProgCapacity,
@@ -211,7 +226,7 @@ namespace MewtocolNet {
         /// <summary>
         /// Plc info when its not connected 
         /// </summary>
-        public static PLCInfo None => new PLCInfo() {
+        public static PLCInfo None => new PLCInfo(null) {
 
             SelfDiagnosticError = "",
             CpuVersion = "",
