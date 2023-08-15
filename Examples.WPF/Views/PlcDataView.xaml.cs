@@ -54,6 +54,24 @@ public partial class PlcDataView : UserControl {
 
     }
 
+    private async void ClickedAddQueueTest(object sender, RoutedEventArgs e) {
+
+        var tasks = new List<Task<short>>();
+
+        for (int i = 0; i < 100; i++) {
+
+            var t = viewModel.Plc.Register.Struct<short>("DT1000").ReadAsync();
+
+            tasks.Add(t);
+
+        }
+
+        var list = await Task.WhenAll(tasks);
+
+        Console.WriteLine();
+
+    }
+
     private async void ClickedToggleRunMode(object sender, RoutedEventArgs e) {
 
         await viewModel.Plc.ToggleOperationModeAsync();

@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using MewtocolNet.Helpers;
 
 namespace MewtocolNet {
 
@@ -174,7 +175,7 @@ namespace MewtocolNet {
 
         }
 
-        protected override async Task ReconnectAsync (int conTimeout) {
+        protected override async Task ReconnectAsync (int conTimeout, CancellationToken cancellationToken) {
 
             try {
 
@@ -188,10 +189,15 @@ namespace MewtocolNet {
 
                 BuildTcpClient();
 
-                var result = client.BeginConnect(ipAddr, Port, null, null);
-                var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(ConnectTimeout));
+                var conTask = client.ConnectAsync(ipAddr, Port);
 
-                if (!success || !client.Connected) {
+                if (await Task.WhenAny(conTask, Task.Delay(ConnectTimeout), cancellationToken.WhenCanceled()) != conTask) {
+
+                    return;
+
+                }
+
+                if (!client.Connected) {
 
                     Logger.Log("The PLC connection timed out", LogLevel.Error, this);
                     OnMajorSocketExceptionWhileConnecting();
@@ -215,6 +221,8 @@ namespace MewtocolNet {
                 //null ongoing tasks
                 regularSendTask = null;
                 reconnectTask = Task.CompletedTask;
+
+                if (cancellationToken.IsCancellationRequested) return;
 
                 if (await SendCommandInternalAsync($"%{GetStationNumber()}#RT") != null) {
 

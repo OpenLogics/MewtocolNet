@@ -20,6 +20,8 @@ namespace MewtocolNet {
         private bool heartbeatNeedsRun = false;
         private bool heartbeatTimerRunning = false;
 
+        private protected Task firstPollTask;
+
         internal Task heartbeatTask = Task.CompletedTask;
 
         internal Func<IPlc, Task> heartbeatCallbackTask;
@@ -234,16 +236,16 @@ namespace MewtocolNet {
 
                 }
 
-                await RunOneOpenQueuedTask();
-
             });
 
             sw.Stop();
 
             if (firstPollTask != null && !firstPollTask.IsCompleted) {
+
                 firstPollTask.RunSynchronously();
                 firstPollTask = null;
                 Logger.Log("poll cycle first done");
+            
             }
 
             pollerFirstCycleCompleted = true;
@@ -413,7 +415,6 @@ namespace MewtocolNet {
 
                 var reg = internals[i];
                 reg.ClearValue();
-                //reg.TriggerNotifyChange();
 
             }
 

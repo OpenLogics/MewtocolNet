@@ -52,6 +52,18 @@ namespace MewtocolNet.UnderlyingRegisters {
             mewInterface = mewIf;
             Setup(wrSize, dtSize);
 
+            mewInterface.Connected += (s, e) => {
+
+                pollIteration = 0;
+
+            };
+
+            mewInterface.Reconnected += (s, e) => {
+
+                pollIteration = 0;
+
+            };
+
         }
 
         // Later on pass memory area sizes here
@@ -63,11 +75,7 @@ namespace MewtocolNet.UnderlyingRegisters {
 
         }
 
-        internal async Task OnPlcConnected () {
-
-            await Task.CompletedTask;
-
-        }
+        internal async Task OnPlcConnected () => await Task.CompletedTask;
 
         internal void LinkAndMergeRegisters(List<Register> registers = null) {
 

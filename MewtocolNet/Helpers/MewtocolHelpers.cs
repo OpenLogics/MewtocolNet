@@ -10,6 +10,8 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace MewtocolNet {
 
@@ -17,6 +19,16 @@ namespace MewtocolNet {
     /// Contains helper methods
     /// </summary>
     public static class MewtocolHelpers {
+
+        #region Async extensions
+
+        internal static Task WhenCanceled(this CancellationToken cancellationToken) {
+            var tcs = new TaskCompletionSource<bool>();
+            cancellationToken.Register(s => ((TaskCompletionSource<bool>)s).SetResult(true), tcs);
+            return tcs.Task;
+        }
+
+        #endregion
 
         #region Byte and string operation helpers
 
@@ -143,7 +155,7 @@ namespace MewtocolNet {
 
             _onString = _onString.Replace("\r", "");
 
-            var res = new Regex(@"\%([0-9a-fA-F]{2})\$(?:RD|RP|RC)(?<data>.*)(?<csum>..)").Match(_onString);
+            var res = new Regex(@"(?:\%|\<)([0-9a-fA-F]{2})\$(?:RD|RP|RC)(?<data>.*)(?<csum>..)").Match(_onString);
             if (res.Success) {
 
                 string val = res.Groups["data"].Value;

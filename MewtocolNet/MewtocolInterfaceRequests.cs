@@ -33,7 +33,7 @@ namespace MewtocolNet {
 
             MewtocolFrameResponse resRT = await SendCommandInternalAsync("%EE#RT");
 
-            if (!resRT.Success || tSource.Token.IsCancellationRequested) return null;
+            if (!resRT.Success || tSourceMessageCancel.Token.IsCancellationRequested) return null;
 
             MewtocolFrameResponse? resEXRT = null;
 
@@ -316,7 +316,7 @@ namespace MewtocolNet {
                 int blockSize = wordEnd - wordStart + 1;
                 string startStr = wordStart.ToString().PadLeft(padLeftLen, '0');
                 string endStr = wordEnd.ToString().PadLeft(padLeftLen, '0');
-                string requeststring = $"%{GetStationNumber()}#{areaCodeStr}{startStr}{endStr}";
+                string requeststring = $"<{GetStationNumber()}#{areaCodeStr}{startStr}{endStr}";
 
                 var result = await SendCommandInternalAsync(requeststring, onReceiveProgress: readProg);
 

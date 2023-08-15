@@ -25,6 +25,8 @@
                           Click="ClickedConnect"/>
                 <MenuItem Header="Set Random DT1000" IsEnabled="{Binding Plc.IsConnected}"
                           Click="ClickedSetRandom"/>
+                <MenuItem Header="Queue test" IsEnabled="{Binding Plc.IsConnected}"
+                          Click="ClickedAddQueueTest"/>
                 <MenuItem Header="Toggle OP mode" IsEnabled="{Binding Plc.IsConnected}"
                           Click="ClickedToggleRunMode"/>
             </MenuItem>

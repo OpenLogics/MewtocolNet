@@ -78,6 +78,10 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
 
         public class MultTypedArr1D<T> : TypedArr1D<T> {
 
+            public void Build() => builder.Assemble(this);
+
+            public void Build(out IArrayRegister<T> reference) => reference = (IArrayRegister<T>)builder.Assemble(this);
+
             public MultTypedArr1DOut<T> PollLevel(int level) {
 
                 Data.pollLevel = level;
@@ -89,7 +93,7 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
 
         public class MultTypedArr1DOut<T> : TypedArr1DOut<T> {
 
-            public IArrayRegister<T> Build() => (IArrayRegister<T>)builder.Assemble(this);
+            public void Build() => builder.Assemble(this);
 
             public void Build(out IArrayRegister<T> reference) => reference = (IArrayRegister<T>)builder.Assemble(this);
 
@@ -98,6 +102,10 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
         //2D array
 
         public class MultTypedArr2D<T> : TypedArr2D<T> {
+
+            public void Build() => builder.Assemble(this);
+
+            public void Build(out IArrayRegister2D<T> reference) => reference = (IArrayRegister2D<T>)builder.Assemble(this);
 
             public MultTypedArr2DOut<T> PollLevel(int level) {
 
@@ -110,7 +118,7 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
 
         public class MultTypedArr2DOut<T> : TypedArr2DOut<T> {
 
-            public IArrayRegister2D<T> Build() => (IArrayRegister2D<T>)builder.Assemble(this);
+            public void Build() => builder.Assemble(this);
 
             public void Build(out IArrayRegister2D<T> reference) => reference = (IArrayRegister2D<T>)builder.Assemble(this);
 
@@ -119,6 +127,10 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
         //3D array
 
         public class MultTypedArr3D<T> : TypedArr3D<T> {
+
+            public void Build() => builder.Assemble(this);
+
+            public void Build(out IArrayRegister3D<T> reference) => reference = (IArrayRegister3D<T>)builder.Assemble(this);
 
             public MultTypedArr3DOut<T> PollLevel(int level) {
 
@@ -131,7 +143,7 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
 
         public class MultTypedArr3DOut<T> : TypedArr3DOut<T> {
 
-            public IArrayRegister3D<T> Build() => (IArrayRegister3D<T>)builder.Assemble(this);
+            public void Build() => builder.Assemble(this);
 
             public void Build(out IArrayRegister3D<T> reference) => reference = (IArrayRegister3D<T>)builder.Assemble(this);
 

@@ -15,6 +15,8 @@ namespace MewtocolNet.Events {
 
         public event PropertyChangedEventHandler PropertyChanged;
 
+        public event Action Reconnected;
+
         public int ReconnectTry { get; internal set; }  
 
         public int MaxAttempts { get; internal set; }
@@ -25,6 +27,16 @@ namespace MewtocolNet.Events {
             get => retryCountDownRemaining; 
             private set {
                 retryCountDownRemaining = value;
+                OnPropChange();
+            }
+        }
+
+        private bool isReconnected;
+
+        public bool IsReconnected {
+            get { return isReconnected; }
+            set {
+                isReconnected = value;
                 OnPropChange();
             }
         }
@@ -62,7 +74,9 @@ namespace MewtocolNet.Events {
 
         internal void ConnectionSuccess () {
 
+            IsReconnected = true;
             StopTimer();
+            Reconnected?.Invoke();
 
         }
 

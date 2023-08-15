@@ -401,11 +401,21 @@ namespace MewtocolNet
             }
 
             /// <summary>
-            /// Repeats the passed method each time the hearbeat is triggered,
-            /// use 
+            /// Adds a task to each reconnect cycle that is run before each individual try
             /// </summary>
-            /// <param name="heartBeatAsync"></param>
-            /// <returns></returns>
+            public PostInit<T> WithReconnectTask(Func<int, Task> callback) {
+
+                var plc = (MewtocolInterface)(object)intf;
+
+                plc.onBeforeReconnectTryTask = callback;
+
+                return this;
+
+            }
+
+            /// <summary>
+            /// Adds a task to each heartbeat cycle that is run before each individual cycle request
+            /// </summary>
             public EndInitSetup<T> WithHeartbeatTask(Func<IPlc,Task> heartBeatAsync, bool executeInProg = false) {
                 try {
 

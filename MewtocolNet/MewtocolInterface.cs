@@ -50,8 +50,12 @@ namespace MewtocolNet {
 
         #region Private fields
 
+        //thread locker for messages
+        private SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1, 1);
+
         //cancellation token for the messages
-        internal CancellationTokenSource tSource = new CancellationTokenSource();
+        internal CancellationTokenSource tSourceMessageCancel = new CancellationTokenSource();
+        internal CancellationTokenSource tSourceReconnecting;
 
         private protected Stream stream;
 
@@ -71,16 +75,11 @@ namespace MewtocolNet {
         private protected Stopwatch speedStopwatchUpstr;
         private protected Stopwatch speedStopwatchDownstr;
 
-        protected Task firstPollTask;
-        protected Task reconnectTask;
-        protected Task<MewtocolFrameResponse> regularSendTask;
-        protected Queue<Task<MewtocolFrameResponse>> userInputSendTasks = new Queue<Task<MewtocolFrameResponse>>();
-
+        private protected Task reconnectTask;
+        private protected Task<MewtocolFrameResponse> regularSendTask;
 
         private protected bool wasInitialStatusReceived;
         private protected MewtocolVersion mewtocolVersion;
-
-        private protected List<string> lastMsgs = new List<string>();
 
         #endregion
 
@@ -95,7 +94,7 @@ namespace MewtocolNet {
 
         //configuration
 
-        private protected bool isMessageLocked;
+        private volatile protected bool isMessageLocked;
         private volatile bool isReceiving;
         private volatile bool isSending;
 
@@ -107,15 +106,17 @@ namespace MewtocolNet {
         internal bool usePoller = false;
         internal bool alwaysGetMetadata = true;
 
+        internal Func<int, Task> onBeforeReconnectTryTask;
+
         #endregion
 
         #region Public Read Only Properties / Fields
 
         /// <inheritdoc/>
-        public bool Disposed { get; private set; }
+        public int QueuedMessages => semaphoreSlim.CurrentCount;
 
         /// <inheritdoc/>
-        public int QueuedMessages => userInputSendTasks.Count;
+        public bool Disposed { get; private set; }
 
         /// <inheritdoc/>
         public bool IsConnected {
@@ -204,7 +205,7 @@ namespace MewtocolNet {
             RegisterChanged += OnRegisterChanged;
 
             PropertyChanged += (s, e) => {
-                if (e.PropertyName == nameof(PlcInfo)) {
+                if (e.PropertyName == nameof(PlcInfo) && PlcInfo != null) {
                     PlcInfo.PropertyChanged += (s1, e1) => {
                         if (e1.PropertyName == nameof(PlcInfo.IsRunMode)) 
                             OnPropChange(nameof(IsRunMode));
@@ -317,7 +318,7 @@ namespace MewtocolNet {
         }
 
         /// <inheritdoc/>
-        protected virtual Task ReconnectAsync(int conTimeout) => throw new NotImplementedException();
+        protected virtual Task ReconnectAsync(int conTimeout, CancellationToken cancellationToken) => throw new NotImplementedException();
 
         /// <inheritdoc/>
         public async Task AwaitFirstDataCycleAsync() {
@@ -347,7 +348,7 @@ namespace MewtocolNet {
 
             if (IsConnected) {
 
-                tSource.Cancel();
+                tSourceMessageCancel.Cancel();
                 isMessageLocked = false;
 
                 Logger.Log("The PLC connection was closed manually", LogLevel.Error, this);
@@ -372,9 +373,20 @@ namespace MewtocolNet {
         /// <inheritdoc/>
         public virtual string GetConnectionInfo() => throw new NotImplementedException();
 
+        #region Reconnecting
+
+        /// <inheritdoc/>
+        public void WithReconnectTask(Func<int, Task> callback) {
+
+            onBeforeReconnectTryTask = callback;
+
+        }
+
         internal void StartReconnectTask() {
 
             if (reconnectTask == null) {
+
+                tSourceReconnecting = new CancellationTokenSource();
 
                 reconnectTask = Task.Run(async () => {
 
@@ -389,7 +401,12 @@ namespace MewtocolNet {
 
                         }
 
-                        while (!IsConnected && tryReconnectAttempts > 0 && retryCount < tryReconnectAttempts + 1) {
+                        while (!IsConnected && tryReconnectAttempts > 0 && retryCount < tryReconnectAttempts + 1 && !tSourceReconnecting.Token.IsCancellationRequested) {
+
+                            if (tSourceReconnecting.Token.IsCancellationRequested) break;
+
+                            if(onBeforeReconnectTryTask != null)
+                                await onBeforeReconnectTryTask(retryCount);
 
                             Logger.Log($"Reconnecting {retryCount}/{tryReconnectAttempts} ...", this);
 
@@ -399,12 +416,14 @@ namespace MewtocolNet {
                             //stop the heartbeat timer for the time of retries
                             StopHeartBeat();
 
-                            var eArgs = new ReconnectArgs(retryCount, tryReconnectAttempts, TimeSpan.FromMilliseconds(tryReconnectDelayMs));
+                            var eArgs = new ReconnectArgs(retryCount, tryReconnectAttempts, TimeSpan.FromMilliseconds(tryReconnectDelayMs + ConnectTimeout));
                             ReconnectTryStarted?.Invoke(this, eArgs);
 
                             Reconnected += (s, e) => eArgs.ConnectionSuccess();
 
-                            await ReconnectAsync(tryReconnectDelayMs);
+                            await ReconnectAsync(tryReconnectDelayMs, tSourceReconnecting.Token);
+
+                            if (tSourceReconnecting.Token.IsCancellationRequested) break;
 
                             if (IsConnected) return;
 
@@ -431,30 +450,39 @@ namespace MewtocolNet {
 
         }
 
+        /// <inheritdoc/>
+        public void StopReconnecting () {
+
+            if (tSourceReconnecting != null && !tSourceReconnecting.Token.IsCancellationRequested)
+                tSourceReconnecting.Cancel();
+
+        }
+
+        #endregion
+
+        #region Message sending and queuing
+
         //internally used send task
         internal async Task<MewtocolFrameResponse> SendCommandInternalAsync(string _msg, Action<double> onReceiveProgress = null) {
 
-            if (regularSendTask != null && !regularSendTask.IsCompleted) {
-
-                //queue self
-                Logger.LogCritical($"Queued {_msg}...", this);
-                return await EnqueueMessage(_msg, onReceiveProgress);
-
-            }
-
-            if (tSource.Token.IsCancellationRequested) return MewtocolFrameResponse.Canceled;
+            if (tSourceMessageCancel.Token.IsCancellationRequested) return MewtocolFrameResponse.Canceled;
 
             if (!IsConnected && !isConnectingStage && !isReconnectingStage)
                 throw new NotSupportedException("The device must be connected to send a message");
 
+            //thread lock the current cycle
+            await semaphoreSlim.WaitAsync();
+
             isMessageLocked = true;
 
-            //send request
-            regularSendTask = SendTwoDirectionalFrameAsync(_msg, onReceiveProgress);
+            MewtocolFrameResponse responseData;
 
             try {
 
-                var timeoutAwaiter = await Task.WhenAny(regularSendTask, Task.Delay(sendReceiveTimeoutMs, tSource.Token));
+                //send request
+                regularSendTask = SendTwoDirectionalFrameAsync(_msg, onReceiveProgress);
+
+                var timeoutAwaiter = await Task.WhenAny(regularSendTask, Task.Delay(sendReceiveTimeoutMs, tSourceMessageCancel.Token));
 
                 if (timeoutAwaiter != regularSendTask) {
 
@@ -466,74 +494,37 @@ namespace MewtocolNet {
 
                 }
 
+                //canceled
+                if (regularSendTask.IsCanceled) {
+
+                    isMessageLocked = false;
+                    regularSendTask = null;
+
+                    return MewtocolFrameResponse.Canceled;
+
+                }
+
+                responseData = regularSendTask.Result;
+
+                tcpMessagesSentThisCycle++;
+
             } catch (OperationCanceledException) {
 
                 return MewtocolFrameResponse.Canceled;
 
-            }
+            } finally {
 
-            //canceled
-            if (regularSendTask.IsCanceled) {
+                //unlock
+                semaphoreSlim.Release();
 
-                isMessageLocked = false;
-                regularSendTask = null;
-
-                return MewtocolFrameResponse.Canceled;
+                OnPropChange(nameof(QueuedMessages));
 
             }
-
-            MewtocolFrameResponse responseData = regularSendTask.Result;
-
-            tcpMessagesSentThisCycle++;
 
             isMessageLocked = false;
             regularSendTask = null;
 
-            //run the remaining tasks if no poller is used
-            if(!PollerActive && !tSource.Token.IsCancellationRequested) {
-
-                while(userInputSendTasks.Count > 1) {
-
-                    if (PollerActive || tSource.Token.IsCancellationRequested) break;
-
-                    await RunOneOpenQueuedTask();
-
-                }
-
-            }
-
             return responseData;
-
-        }
-
-        protected async Task RunOneOpenQueuedTask() {
-
-            if (userInputSendTasks != null && userInputSendTasks.Count > 0) {
-
-                var t = userInputSendTasks.Dequeue();
-
-                t.Start();
-
-                await t;
-
-            }
-
-            await Task.CompletedTask;
-
-        }
-
-        protected async Task<MewtocolFrameResponse> EnqueueMessage(string _msg, Action<double> onReceiveProgress = null) {
-
-            var t = new Task<MewtocolFrameResponse>(() => SendCommandInternalAsync(_msg, onReceiveProgress).Result);
-            userInputSendTasks.Enqueue(t);
-
-            OnPropChange(nameof(QueuedMessages));
-
-            await t;
-
-            OnPropChange(nameof(QueuedMessages));
-
-            return t.Result;
 
         }
 
@@ -549,11 +540,11 @@ namespace MewtocolNet {
 
                 IsSending = true;
 
-                if (tSource.Token.IsCancellationRequested) return MewtocolFrameResponse.Canceled;
+                if (tSourceMessageCancel.Token.IsCancellationRequested) return MewtocolFrameResponse.Canceled;
 
                 //write inital command
                 byte[] writeBuffer = Encoding.UTF8.GetBytes(frame);
-                await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length, tSource.Token);
+                await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length, tSourceMessageCancel.Token);
 
                 IsSending = false;
 
@@ -586,11 +577,11 @@ namespace MewtocolNet {
 
                 IsSending = true;
 
-                if (tSource.Token.IsCancellationRequested) return MewtocolFrameResponse.Canceled;
+                if (tSourceMessageCancel.Token.IsCancellationRequested) return MewtocolFrameResponse.Canceled;
 
                 //write inital command
                 byte[] writeBuffer = Encoding.UTF8.GetBytes(frame);
-                await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length, tSource.Token);
+                await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length, tSourceMessageCancel.Token);
 
                 IsSending = false;
 
@@ -649,7 +640,10 @@ namespace MewtocolNet {
 
                         }
 
-                        if (j > 0) split[j] = split[j].Replace($"%{GetStationNumber()}", "");
+                        if (j > 0) 
+                            split[j] = split[j]
+                            .Replace($"%{GetStationNumber()}", "")
+                            .Replace($"<{GetStationNumber()}", "");
 
                     }
 
@@ -694,9 +688,9 @@ namespace MewtocolNet {
                     byte[] buffer = new byte[RecBufferSize];
                     IsReceiving = true;
 
-                    if (tSource.Token.IsCancellationRequested) break;
+                    if (tSourceMessageCancel.Token.IsCancellationRequested) break;
 
-                    int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, tSource.Token);
+                    int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, tSourceMessageCancel.Token);
                     IsReceiving = false;
 
                     CalcDownstreamSpeed(bytesRead);
@@ -707,17 +701,22 @@ namespace MewtocolNet {
                     var commandRes = ParseBufferFrame(received);
                     needsRead = commandRes == CommandState.LineFeed || commandRes == CommandState.RequestedNextFrame;
 
-                    OnInMsgPart(Encoding.UTF8.GetString(received));
+                    var tempMsgStr = Encoding.UTF8.GetString(received);
+
+                    OnInMsgPart(tempMsgStr);
 
                     //add complete response to collector without empty bytes
                     totalResponse.AddRange(received.Where(x => x != (byte)0x0));
 
                     if (commandRes == CommandState.RequestedNextFrame) {
 
+                        string cmdPrefix = tempMsgStr.StartsWith("<") ? "<" : "%";
+
                         //request next frame
-                        var writeBuffer = Encoding.UTF8.GetBytes($"%{GetStationNumber()}**&\r");
+                        var writeBuffer = Encoding.UTF8.GetBytes($"{cmdPrefix}{GetStationNumber()}**&\r");
+
                         IsSending = true;
-                        await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length, tSource.Token);
+                        await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length, tSourceMessageCancel.Token);
                         IsSending = false;
                         Logger.Log($">> Requested next frame", LogLevel.Critical, this);
                         wasMultiFramedResponse = true;
@@ -783,7 +782,7 @@ namespace MewtocolNet {
         private protected int CheckForErrorMsg(string msg) {
 
             //error catching
-            Regex errorcheck = new Regex(@"\%..\!([0-9]{2})", RegexOptions.IgnoreCase);
+            Regex errorcheck = new Regex(@"...\!([0-9]{2})", RegexOptions.IgnoreCase);
             Match m = errorcheck.Match(msg);
 
             if (m.Success) {
@@ -801,7 +800,6 @@ namespace MewtocolNet {
             
             Logger.Log($"[---------CMD START--------]", LogLevel.Critical, this);
             var formatted = $"S -> : {outMsg.Replace("\r", "(CR)")}";
-            AddToLastMsgs(formatted);
             Logger.Log(formatted, LogLevel.Critical, this);
 
         }
@@ -809,7 +807,6 @@ namespace MewtocolNet {
         private protected void OnInMsgPart(string inPart) {
 
             var formatted = $"<< IN PART: {inPart.Replace("\r", "(CR)")}";
-            AddToLastMsgs(formatted);
             Logger.Log(formatted, LogLevel.Critical, this);
 
         }
@@ -817,7 +814,6 @@ namespace MewtocolNet {
         private protected void OnInMsg(string inMsg) {
 
             var formatted = $"R <- : {inMsg.Replace("\r", "(CR)")}";
-            AddToLastMsgs(formatted);
             Logger.Log(formatted, LogLevel.Critical, this);
             OnEndMsg();
 
@@ -829,20 +825,11 @@ namespace MewtocolNet {
 
         }
 
-        private protected void AddToLastMsgs (string msgTxt) {
-
-            lastMsgs.Add(msgTxt);
-            if(lastMsgs.Count >= 51) {
-                lastMsgs.RemoveAt(0);
-            }
-
-        }
-
         private protected void OnMajorSocketExceptionWhileConnecting() {
 
             if (IsConnected) {
 
-                tSource.Cancel();
+                tSourceMessageCancel.Cancel();
                 isMessageLocked = false;
 
                 Logger.Log("The PLC connection timed out", LogLevel.Error, this);
@@ -854,7 +841,7 @@ namespace MewtocolNet {
 
         private protected void OnSocketExceptionWhileConnected() {
 
-            tSource.Cancel();
+            tSourceMessageCancel.Cancel();
 
             bytesPerSecondDownstream = 0;
             bytesPerSecondUpstream = 0;
@@ -873,6 +860,8 @@ namespace MewtocolNet {
             OnDisconnect();
 
         }
+
+        #endregion
 
         private protected virtual void OnConnected(PLCInfo plcinf) {
 
@@ -911,7 +900,7 @@ namespace MewtocolNet {
             //GetAllRegisters().Cast<Register>().ToList().ForEach(x => x.OnPlcDisconnected());
 
             //generate a new cancellation token source
-            tSource = new CancellationTokenSource();
+            tSourceMessageCancel = new CancellationTokenSource();
 
             IsConnected = true;
             isReconnectingStage = false;
@@ -948,7 +937,7 @@ namespace MewtocolNet {
             GetAllRegisters().Cast<Register>().ToList().ForEach(x => x.OnPlcDisconnected());
 
             //generate a new cancellation token source
-            tSource = new CancellationTokenSource();
+            tSourceMessageCancel = new CancellationTokenSource();
 
         }
 

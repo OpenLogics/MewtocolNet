@@ -129,12 +129,14 @@ namespace MewtocolNet {
         void Disconnect();
 
         /// <summary>
-        /// Sends a command to the PLC then awaits results<br/>
-        /// The checksum and BCC are appended automatically
+        /// Stops a running reconnect task
         /// </summary>
-        /// <param name="_msg">MEWTOCOL Formatted request string ex: %01#RT</param>
-        /// <returns>Returns the result</returns>
-        //Task<MewtocolFrameResponse> SendCommandAsync(string _msg, Action<double> onReceiveProgress = null);
+        void StopReconnecting();
+
+        /// <summary>
+        /// Adds a task to each reconnect cycle that is run before each individual try
+        /// </summary>
+        void WithReconnectTask(Func<int, Task> callback);
 
         /// <summary>
         /// Changes the PLCs operation mode to the given one

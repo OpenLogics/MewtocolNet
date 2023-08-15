@@ -70,8 +70,8 @@ public partial class ConnectView : UserControl {
                 setting.TryReconnectDelayMs = 2000;
                 setting.SendReceiveTimeoutMs = 1000;
                 setting.HeartbeatIntervalMs = 3000;
-                setting.MaxDataBlocksPerWrite = 20;
-                setting.MaxOptimizationDistance = 10;
+                setting.MaxDataBlocksPerWrite = 128;
+                setting.MaxOptimizationDistance = 20;
 
             })
             .WithCustomPollLevels(lvl => {
