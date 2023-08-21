@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+	<IsPublishable>false</IsPublishable>
+	<IsPackable>false</IsPackable>
     <OutputType>Exe</OutputType>
     <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -8,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MewtocolNet\MewtocolNet.csproj" />
+	  <ProjectReference Include="..\..\MewtocolNet\MewtocolNet.csproj" />
   </ItemGroup>
 
 </Project>
