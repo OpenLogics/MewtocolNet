@@ -74,6 +74,8 @@ To see a full list of examples [click here](/Examples).
 Connecting to a PLC is as simple as 
 
 ```C#
+using MewtocolNet;
+
 using (var plc = Mewtocol.Ethernet("192.168.178.55").Build()) {
 
     await plc.ConnectAsync();
@@ -93,6 +95,9 @@ using (var plc = Mewtocol.Ethernet("192.168.178.55").Build()) {
 - Create a new class that inherits from `RegisterCollection`
 
 ```C#
+using MewtocolNet;
+using MewtocolNet.RegisterAttributes;
+
 public class TestRegisters : RegisterCollection {
 
     //corresponds to a R100 boolean register in the PLC
@@ -119,7 +124,6 @@ public class TestRegisters : RegisterCollection {
 - attach an automatic poller by chaining `.WithPoller()` after the register attachment
 
 ```C#
-
 TestRegisters registers = null;
 
 //setting up a new PLC serial interface and tell it to use the register collection
