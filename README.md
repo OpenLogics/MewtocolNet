@@ -3,7 +3,7 @@
 [![GitHub tag](https://img.shields.io/github/v/tag/WOmed/MewtocolNet?label=Package%20Version)](https://github.com/WOmed/MewtocolNet/pkgs/nuget/Mewtocol.NET)
 [![gencov](../badges/Builds/TestResults/badge_combined_master.svg)](https://htmlpreview.github.io/?https://github.com/WOmed/MewtocolNet/blob/badges/Builds/TestResults/summary_master.html)
 ![GitHub](https://img.shields.io/github/license/WOmed/MewtocolNet?label=License)
-![Status](https://img.shields.io/badge/Status-In%20dev-orange)
+![Status](https://img.shields.io/badge/Status-Stable-orange)
 
 # MewtocolNet
 An easy to use Mewtocol protocol library to interface with Panasonic PLCs over TCP/Serial.
