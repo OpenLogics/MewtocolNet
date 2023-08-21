@@ -137,7 +137,7 @@ jobs:
             dotnet-version: '6.0.x'
         
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore ./MewtocolNet/MewtocolNet.csproj
       
       - name: Build as ${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}
         run: dotnet build "MewtocolNet" --no-incremental
