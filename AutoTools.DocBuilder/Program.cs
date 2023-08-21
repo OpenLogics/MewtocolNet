@@ -24,7 +24,9 @@ if (args.Length == 0) {
 
 } else {
 
-    filePath = args[0];
+    var userPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+    filePath = args[0].Replace("~/", $"{userPath}/");
 
 }
 
