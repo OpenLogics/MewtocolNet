@@ -1,7 +1,6 @@
 ﻿using MewtocolNet.DataLists;
 
-namespace MewtocolNet
-{
+namespace MewtocolNet {
 
     public struct MewtocolFrameResponse {
 

@@ -12,8 +12,7 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using static MewtocolNet.Mewtocol;
 
-namespace MewtocolNet
-{
+namespace MewtocolNet {
 
     /// <summary>
     /// Builder helper for mewtocol interfaces
