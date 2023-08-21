@@ -65,12 +65,21 @@ namespace MewtocolNet {
             }
 
             if (isConnectingStage) {
+                
                 //set the intial obj
                 PlcInfo = plcInf;
+
+                //check if the plc supports the extended command header (<)
+                var res = await SendCommandInternalAsync($"<{GetStationNumber()}#RDD0000000001");
+                supportsExtendedMessageHeader = res.Success;
+                messageHeader = res.Success ? "<" : "%";
+
             } else {
+
                 //update the obj with RT dynamic values only
                 PlcInfo.SelfDiagnosticError = plcInf.SelfDiagnosticError;
                 PlcInfo.OperationMode = plcInf.OperationMode;
+
             }
 
             return PlcInfo;
@@ -257,7 +266,7 @@ namespace MewtocolNet {
             string startStr = start.ToString().PadLeft(5, '0');
             string endStr = (start + wordLength - 1).ToString().PadLeft(5, '0');
 
-            string requeststring = $"%{GetStationNumber()}#WDD{startStr}{endStr}{byteString}";
+            string requeststring = $"{messageHeader}{GetStationNumber()}#WDD{startStr}{endStr}{byteString}";
             var result = await SendCommandInternalAsync(requeststring);
 
             return result.Success;
@@ -270,6 +279,7 @@ namespace MewtocolNet {
         /// </summary>
         /// <param name="start">Start adress</param>
         /// <param name="byteCount">Number of bytes to get</param>
+        /// <param name="areaPrefix">The memory area to read</param>
         /// <param name="onProgress">Gets invoked when the progress changes, contains the progress as a double from 0 - 1.0</param>
         /// <returns>A byte array of the requested DT area</returns>
         public async Task<byte[]> ReadAreaByteRangeAsync(int start, int byteCount, RegisterPrefix areaPrefix = RegisterPrefix.DT, Action<double> onProgress = null) {
@@ -316,7 +326,7 @@ namespace MewtocolNet {
                 int blockSize = wordEnd - wordStart + 1;
                 string startStr = wordStart.ToString().PadLeft(padLeftLen, '0');
                 string endStr = wordEnd.ToString().PadLeft(padLeftLen, '0');
-                string requeststring = $"<{GetStationNumber()}#{areaCodeStr}{startStr}{endStr}";
+                string requeststring = $"{messageHeader}{GetStationNumber()}#{areaCodeStr}{startStr}{endStr}";
 
                 var result = await SendCommandInternalAsync(requeststring, onReceiveProgress: readProg);
 

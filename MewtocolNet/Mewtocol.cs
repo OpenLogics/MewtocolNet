@@ -445,6 +445,30 @@ namespace MewtocolNet
             public EndInitSetup<T> WithHeartbeatTask(Func<Task> heartBeatAsync, bool executeInProg = false) => WithHeartbeatTask(heartBeatAsync, executeInProg);
 
             /// <summary>
+            /// Disables all heartbeat tasks
+            /// </summary>
+            /// <returns></returns>
+            public EndInitSetup<T> DisableHeartBeat() {
+                
+                try {
+
+                    var plc = (MewtocolInterface)(object)this.intf;
+
+                    plc.disableHeartbeat = true;
+
+                    return new EndInitSetup<T> {
+                        postInit = this,
+                    };
+
+                } catch {
+
+                    throw;
+
+                }
+
+            }
+
+            /// <summary>
             /// Builds and returns the final plc interface
             /// </summary>
             public T Build() => (T)(object)((MewtocolInterface)(object)intf).Build();

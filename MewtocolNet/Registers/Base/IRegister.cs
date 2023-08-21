@@ -81,8 +81,6 @@ namespace MewtocolNet.Registers {
         /// </summary>
         uint MemoryAddress { get; }
 
-        string MemoryAreaHash { get; }
-
         /// <summary>
         /// Gets the value of the register as the plc representation string
         /// </summary>

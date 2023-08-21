@@ -101,8 +101,6 @@ namespace MewtocolNet.Registers {
 
         public string MemoryAreaInfo => underlyingMemory.ToString();
 
-        public string MemoryAreaHash => underlyingMemory.GetHashCode().ToString();
-
         internal Register() { }
 
         internal virtual void OnPlcConnected () {

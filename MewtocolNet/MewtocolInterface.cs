@@ -79,6 +79,8 @@ namespace MewtocolNet {
         private protected Task<MewtocolFrameResponse> regularSendTask;
 
         private protected bool wasInitialStatusReceived;
+        private protected bool supportsExtendedMessageHeader;
+        private protected string messageHeader = "%";
         private protected MewtocolVersion mewtocolVersion;
 
         #endregion

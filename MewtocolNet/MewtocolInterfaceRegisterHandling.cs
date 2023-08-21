@@ -24,6 +24,7 @@ namespace MewtocolNet {
 
         internal Task heartbeatTask = Task.CompletedTask;
 
+        internal bool disableHeartbeat = false;
         internal Func<IPlc, Task> heartbeatCallbackTask;
         internal bool execHeartBeatCallbackTaskInProg = false;
 
@@ -145,6 +146,13 @@ namespace MewtocolNet {
         }
 
         private async Task HeartbeatTickTask () {
+
+            if (disableHeartbeat) {
+
+                await Task.CompletedTask;
+                return;
+
+            }
 
             if (regularSendTask != null && !regularSendTask.IsCompleted) await regularSendTask;
 
