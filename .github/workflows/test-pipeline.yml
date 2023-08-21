@@ -50,8 +50,10 @@ jobs:
             git checkout ${{ steps.extract_branch.outputs.branch }}
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
-            git add "./AutoTools.DocBuilder/Docs/plctypes.md" -f
-            git commit -m "(AUTO_DOC) add documentation for branch ${{ steps.extract_branch.outputs.branch }}"
+            git add "./AutoTools.DocBuilder/Docs/plctypes.md" -f &&
+            git commit -m "(AUTO_DOC) add documentation for branch ${{ steps.extract_branch.outputs.branch }}" &&
+            git reset --soft HEAD~2 &&
+            git commit --edit -m"$(git log --skip=1 --max-count=1 --format=%B)"
 
       - name: 'Push docs commit'
         uses: ad-m/github-push-action@master
