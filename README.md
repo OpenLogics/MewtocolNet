@@ -20,15 +20,28 @@ An easy to use Mewtocol protocol library to interface with Panasonic PLCs over T
 
 # Features
 
-> Features that are not checked still need implementation
+## Fully implemented
 
-- [x] Read out stats from your PLC
+- [x] TCP/IP and Serial Port support
+- [x] Get type and hardware information of PLCs
+- [x] Get PLC program metadata such as program version and IDs
 - [x] Read and write registers in real time
-- [x] Dynamic register type casting from properties
-- [x] Change run / prog modes
-- [x] Write / read byte blocks in a whole chain
+- [x] Basic data types / structures support
+- [x] Fast readback cycles due to a MemoryManager that optimizes TCP / Serial frames by combining areas
+- [x] Fully customizable heartbeats and polling levels (tell the interface when you need register updates)
+- [x] Easy to use builder patterns for interface and register generation 
+- [x] Register type casting from property attributes
+- [x] Change RUN / PROG modes
+- [x] Delete Programs
+- [x] Write / read low level byte blocks to areas
+- [x] Scanning for network devices and change network settings (WDConfigurator features)
+
+# Planned
+
 - [ ] Upload / Download programs to the PLC
 - [ ] Reading / writing PLC system registers
+- [ ] Advanced data structures like SDTs and SDT Arrays
+- [ ] Custom open source program compiler for PLC cpus
 
 # Support
 
