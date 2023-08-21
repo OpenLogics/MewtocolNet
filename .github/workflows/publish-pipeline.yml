@@ -2,8 +2,18 @@ name: Publish pipeline
 
 on:
   workflow_dispatch:
-  release:
-    types: [published]
+    inputs:
+      build_pre_release:
+        description: 'Mark as pre-release'
+        required: true
+        default: false
+        type: boolean
+      version_tag:
+        description: 'The version number formatted as X.X.X'
+        default: '0.1.0'
+        required: true
+        type: string
+
 
 permissions: write-all      
 jobs:
@@ -20,16 +30,106 @@ jobs:
     runs-on: [self-hosted, linux, x64, womed-local-linux]
     steps:
       - uses: actions/checkout@v3
-      
-      - name: Parse version tag
+ 
+      - name: 'RenameVersionTag'
+        shell: bash
         run: |
-            VERSION=${{ github.ref_name }}
-            echo "VERSION=${VERSION:1}" >> $GITHUB_ENV
+            PRE_REL_STR='-pre'
+            EMPTY_STR=
+            if ${{ github.event.inputs.build_pre_release }}
+            then
+                echo "prerelease_append=$PRE_REL_STR" >> $GITHUB_ENV
+            else
+                echo "prerelease_append=$EMPTY_STR" >> $GITHUB_ENV
+            fi
 
-      - name: Set .csproj version to ${{ env.VERSION }}
+      - name: Set .csproj version to ${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}
         run: |
-            sed -i 's/<Version>[0-9].[0-9].[0-9]<\/Version>/<Version>${{ env.VERSION }}<\/Version>/g' MewtocolNet/MewtocolNet.csproj
+            sed -i 's/<Version>[0-9].[0-9].[0-9]<\/Version>/<Version>${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}<\/Version>/g' MewtocolNet/MewtocolNet.csproj
             less MewtocolNet/MewtocolNet.csproj
+      
+      - name: 'Bump version and push tag v${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}'
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          tag_prefix: v
+          custom_tag: ${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 'Build Changelog'
+        uses: mikepenz/release-changelog-builder-action@v3
+        id: github_release_log
+        with:
+          commitMode: true
+          configurationJson: |
+            {
+                "template": "#{{CHANGELOG}}\n\n<details>\n<summary>Uncategorized</summary>\n\n#{{UNCATEGORIZED}}\n</details>",
+                "pr_template": "- #{{TITLE}} #{{MERGE_SHA}}",
+                "trim_values" : true,
+                "ignore_labels": [ "ignore" ],
+                "categories": [
+                    {
+                        "title": "## 🚀 Added Features",
+                        "labels": ["feature", "features", "add", "added", "implemented", "impl", "new"]
+                    },
+                    {
+                        "title": "## 🔃 Changed Features",
+                        "labels": ["change", "changed"]
+                    },
+                    {
+                        "title": "## ❌ Removed Features",
+                        "labels": ["remove", "removed"]
+                    },
+                    {
+                        "title": "## 🪲 Fixes",
+                        "labels": ["fix", "fixed", "fixes"]
+                    },
+                    {
+                        "title": "## 📖 Documentation",
+                        "labels": ["doc", "docs", "documentation"]
+                    },
+                    {
+                        "title": "## 🧪 Tests",
+                        "labels": ["test", "tests", "unittests"]
+                    },
+                    {
+                        "title": "## 📦 Dependencies",
+                        "labels": ["dependencies", "package", "nuget"]
+                    },
+                    {
+                        "title": "## 🏠 Householding",
+                        "labels": ["upgraded", "upgrade", "update", "clear", "delete", "deleted", "version"]
+                    },
+                    {
+                        "title": "## 🌎 Localization",
+                        "labels": ["lang", "language", "localization", "locale", "translation", "translations"]
+                    },
+                    {
+                        "title": "## 💬 Other",
+                        "labels": ["other"]
+                    }
+                ],
+                "duplicate_filter": {
+                    "pattern": ".*",
+                    "on_property": "title",
+                    "method": "match"
+                },
+                "transformers": [
+                    {
+                        "pattern": "^.*?\\s*\\(?(\\w+)\\)? (.*)",
+                        "target": "- $1 $2"
+                    }
+                ],
+                "label_extractor": [
+                    {
+                        "pattern": "^.*?\\s*\\(?(\\w{3,})\\)? (.*)",
+                        "target": "$1",
+                        "flags": "gis"
+                    }
+                ]
+            }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v2
@@ -39,42 +139,40 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
       
-      - name: Build as ${{ env.VERSION }}
+      - name: Build as ${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}
         run: dotnet build "MewtocolNet" --no-incremental
       
-      - name: Pack as ${{ env.VERSION }}
+      - name: Pack as ${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}
         run: dotnet pack "MewtocolNet"
 
-      - name: Publish as ${{ env.VERSION }}
+      - name: Publish as ${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}
         run: | 
             cd '${{ github.workspace }}/Builds'
             ls -l
-            dotnet nuget push "*.nupkg" --skip-duplicate --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/WOmed/index.json"  
+            dotnet nuget push "*.nupkg" --skip-duplicate --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"  
         
+      - name: 'Create Release v${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}'
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}
+          release_name: v${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}
+          body: | 
+              ## Changelog
+              ${{ steps.github_release_log.outputs.changelog }}
+
+              **Total commits:** ${{ steps.github_release_log.outputs.commits }}
+          draft: false
+          prerelease: ${{ github.event.inputs.build_pre_release }}
+
       - name: 'Upload package to latest release'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          upload_url: "${{ github.event.release.upload_url }}"
-          asset_path: ${{ github.workspace }}/Builds/Mewtocol.NET.${{ env.VERSION }}.nupkg
-          asset_name: Mewtocol.NET.${{ env.VERSION }}.nupkg
+          upload_url: "${{ steps.create_release.outputs.upload_url }}"
+          asset_path: ${{ github.workspace }}/Builds/Mewtocol.NET.${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}.nupkg
+          asset_name: Mewtocol.NET.${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}.nupkg
           asset_content_type: application/zip
-    
-      - name: Load cached test results
-        uses: actions/cache/restore@v3
-        with:
-          key: coverage-data
-          path: |
-            ${{ github.workspace }}/MewtocolTests/TestResults
-
-      - name: 'Upload coverage xml to latest release'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: "${{ github.event.release.upload_url }}"
-          asset_path: '${{ github.workspace }}/MewtocolTests/TestResults/coverage.opencover.xml'
-          asset_name: coverage.opencover.xml
-          asset_content_type: application/xml
-          
