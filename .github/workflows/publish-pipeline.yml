@@ -140,10 +140,10 @@ jobs:
         run: dotnet restore ./MewtocolNet/MewtocolNet.csproj
       
       - name: Build as ${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}
-        run: dotnet build "MewtocolNet" --no-incremental
+        run: dotnet build "MewtocolNet" --no-incremental -c:Release
       
       - name: Pack as ${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}
-        run: dotnet pack "MewtocolNet"
+        run: dotnet pack "MewtocolNet" -c:Release
 
       - name: Publish as ${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}
         run: | 
