@@ -50,7 +50,7 @@ jobs:
             git fetch
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
-            git checkout --orphan ${{ steps.extract_branch.outputs.branch }}_docs
+            git checkout --orphan ${{ steps.extract_branch.outputs.branch }}_auto_docs
             git rm -rf .
             cp ~/plctypes.md ./plctypes.md &&
             git add "./plctypes.md" -f &&
@@ -61,7 +61,7 @@ jobs:
         continue-on-error: true
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ steps.extract_branch.outputs.branch }}
+          branch: ${{ steps.extract_branch.outputs.branch }}_auto_docs
 
       - name: Report Generator
         uses: danielpalme/ReportGenerator-GitHub-Action@5.1.22
