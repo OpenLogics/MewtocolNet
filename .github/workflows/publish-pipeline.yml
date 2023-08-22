@@ -27,10 +27,9 @@ jobs:
   publish-package:
     name: 'Build and publish package'
     needs: test-pipeline
-    runs-on: [self-hosted, linux, x64, womed-local-linux]
+    runs-on: [self-hosted, linux, ARM64]
     steps:
       - uses: actions/checkout@v3
- 
       - name: 'RenameVersionTag'
         shell: bash
         run: |
