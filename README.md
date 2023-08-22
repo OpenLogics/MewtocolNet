@@ -1,8 +1,8 @@
-[![Publish pipeline](https://github.com/WOmed/MewtocolNet/actions/workflows/publish-pipeline.yml/badge.svg)](https://github.com/WOmed/MewtocolNet/actions/workflows/publish-pipeline.yml)
-[![Test pipeline](https://github.com/WOmed/MewtocolNet/actions/workflows/test-pipeline.yml/badge.svg)](https://github.com/WOmed/MewtocolNet/actions/workflows/test-pipeline.yml)
-[![GitHub tag](https://img.shields.io/github/v/tag/WOmed/MewtocolNet?label=Package%20Version)](https://github.com/WOmed/MewtocolNet/pkgs/nuget/Mewtocol.NET)
-[![gencov](../badges/Builds/TestResults/badge_combined_master.svg)](https://htmlpreview.github.io/?https://github.com/WOmed/MewtocolNet/blob/badges/Builds/TestResults/summary_master.html)
-![GitHub](https://img.shields.io/github/license/WOmed/MewtocolNet?label=License)
+[![Publish pipeline](https://github.com/OpenLogics/MewtocolNet/actions/workflows/publish-pipeline.yml/badge.svg)](https://github.com/OpenLogics/MewtocolNet/actions/workflows/publish-pipeline.yml)
+[![Test pipeline](https://github.com/OpenLogics/MewtocolNet/actions/workflows/test-pipeline.yml/badge.svg)](https://github.com/OpenLogics/MewtocolNet/actions/workflows/test-pipeline.yml)
+[![GitHub tag](https://img.shields.io/github/v/tag/OpenLogics/MewtocolNet?label=Package%20Version)](https://github.com/OpenLogics/MewtocolNet/pkgs/nuget/Mewtocol.NET)
+[![gencov](../badges/Builds/TestResults/badge_combined_master.svg)](https://htmlpreview.github.io/?https://github.com/OpenLogics/MewtocolNet/blob/badges/Builds/TestResults/summary_master.html)
+![GitHub](https://img.shields.io/github/license/OpenLogics/MewtocolNet?label=License)
 ![Status](https://img.shields.io/badge/Status-Stable-orange)
 
 # MewtocolNet
@@ -90,7 +90,7 @@ using (var plc = Mewtocol.Ethernet("192.168.178.55").Build()) {
 
 ## Reading data registers / contacts
 
-[Detailed instructions](https://github.com/WOmed/MewtocolNet/wiki/Attribute-handled-reading)
+[Detailed instructions](../wiki/Attribute-handled-reading)
 
 - Create a new class that inherits from `RegisterCollection`
 
