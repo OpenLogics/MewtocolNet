@@ -20,7 +20,7 @@ jobs:
   #Run unit tests on the test PLCs
   run-unit-tests:
     name: 'Run tests and documentation'
-    runs-on: [self-hosted, linux, x64, womed-local-linux]
+    runs-on: [self-hosted, linux, ARM64]
     steps:
       - uses: actions/checkout@v3
 
