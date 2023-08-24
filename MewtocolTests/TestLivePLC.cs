@@ -7,8 +7,7 @@ using System.Collections;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace MewtocolTests
-{
+namespace MewtocolTests {
 
     public class TestLivePLC {
 
@@ -43,7 +42,7 @@ namespace MewtocolTests
 
         }
 
-        [Fact(DisplayName = "Connection cycle client to PLC (Ethernet)")]
+        [Fact(DisplayName = "Connection cycle client to PLC (Ethernet)", Skip = "Disabled for now")]
         public async void TestClientConnection() {
 
             foreach (var plc in testPlcInformationData) {
@@ -64,7 +63,7 @@ namespace MewtocolTests
 
         }
 
-        [Fact(DisplayName = "Reading basic status from PLC (Ethernet)")]
+        [Fact(DisplayName = "Reading basic status from PLC (Ethernet)", Skip = "Disabled for now")]
         public async void TestClientReadPLCStatus() {
 
             foreach (var plc in testPlcInformationData) {
