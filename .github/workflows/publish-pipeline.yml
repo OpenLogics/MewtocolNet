@@ -148,7 +148,8 @@ jobs:
         run: | 
             cd '${{ github.workspace }}/Builds/MewtocolNet'
             ls -l
-            dotnet nuget push "*.nupkg" --skip-duplicate --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"  
+            dotnet nuget push "*.nupkg" --skip-duplicate --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+            dotnet nuget push "*.nupkg" --skip-duplicate --api-key ${{ secrets.NUGET_TOKEN }} --source "https://api.nuget.org/v3/index.json"
         
       - name: 'Create Release v${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}'
         id: create_release
