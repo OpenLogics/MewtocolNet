@@ -16,7 +16,7 @@ namespace MewtocolNet.Logging {
         /// <summary>
         /// Defines the default output logger targets
         /// </summary>
-        public static LoggerTargets DefaultTargets { get; set; } = LoggerTargets.None;
+        public static LoggerTargets DefaultTargets { get; set; } = LoggerTargets.Console;
 
         internal static Action<DateTime, LogLevel, string> LogInvoked;
 
@@ -26,7 +26,7 @@ namespace MewtocolNet.Logging {
 
             OnNewLogMessage((d, l, m) => {
 
-                if(isConsoleApplication || DefaultTargets.HasFlag(LoggerTargets.Console)) {
+                if(isConsoleApplication && DefaultTargets.HasFlag(LoggerTargets.Console)) {
 
                     switch (l) {
                         case LogLevel.Error:

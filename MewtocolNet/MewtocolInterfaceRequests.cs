@@ -31,7 +31,7 @@ namespace MewtocolNet {
         /// <returns>A PLCInfo class</returns>
         public async Task<PLCInfo> GetInfoAsync(bool detailed = true) {
 
-            MewtocolFrameResponse resRT = await SendCommandInternalAsync("%EE#RT");
+            MewtocolFrameResponse resRT = await SendCommandInternalAsync($"%{GetStationNumber()}#RT");
 
             if (!resRT.Success || tSourceMessageCancel.Token.IsCancellationRequested) return null;
 
@@ -39,7 +39,7 @@ namespace MewtocolNet {
 
             if (isConnectingStage && detailed) {
 
-                resEXRT = await SendCommandInternalAsync("%EE#EX00RT00");
+                resEXRT = await SendCommandInternalAsync($"%{GetStationNumber()}#EX00RT00");
 
             }
 

@@ -160,9 +160,11 @@ namespace MewtocolNet {
                     this.TypeCode = (PlcType)tempTypeCode;
                 
                 }
-                
+
+                var cpuVerStr = match.Groups["ver"].Value;
+
                 //overwrite the other vals that are also contained in EXRT
-                this.CpuVersion = match.Groups["ver"].Value.Insert(1, ".");
+                this.CpuVersion = string.Join(".", cpuVerStr.Select(x => byte.Parse($"{x}", NumberStyles.HexNumber).ToString()));
                 this.HardwareInformation = (HWInformation)byte.Parse(match.Groups["hwif"].Value, NumberStyles.HexNumber);
 
                 return true;
@@ -206,9 +208,12 @@ namespace MewtocolNet {
 
                 }
 
+                var cpuVerStr = match.Groups["cpuver"].Value;
+                var cpuVer = string.Join(".", cpuVerStr.Select(x => byte.Parse($"{x}").ToString("X1")));
+
                 inf = new PLCInfo (onInterface) {
                     TypeCode = typeCodeFull,
-                    CpuVersion = match.Groups["cpuver"].Value.Insert(1, "."),
+                    CpuVersion = cpuVer,
                     ProgramCapacity = definedProgCapacity,
                     SelfDiagnosticError = match.Groups["sdiag"].Value,
                     OperationMode = (OPMode)byte.Parse(match.Groups["op"].Value, NumberStyles.HexNumber),

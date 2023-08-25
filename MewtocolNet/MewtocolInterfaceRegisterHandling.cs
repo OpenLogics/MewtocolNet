@@ -327,63 +327,27 @@ namespace MewtocolNet {
 
         #region Register Adding
 
+        /// <inheritdoc/>>
+        public void BuildRegisters (Action<RBuildMulti> builder) {
+
+            var regBuilder = new RBuildMulti(this);
+
+            builder.Invoke(regBuilder);
+
+            this.AddRegisters(regBuilder.assembler.assembled.ToArray());
+
+        }
+
+        /// <inheritdoc/>>
+        public void ClearAllRegisters () {
+
+            memoryManager.ClearAllRegisters();
+
+        }
+
         internal void AddRegisters(params Register[] registers) {
 
             memoryManager.LinkAndMergeRegisters(registers.ToList());
-
-        }
-
-        private bool CheckDuplicateRegister(Register instance, out Register foundDupe) {
-
-            foundDupe = RegistersInternal.FirstOrDefault(x => x.CompareIsDuplicate(instance));
-
-            return RegistersInternal.Contains(instance) || foundDupe != null;
-
-        }
-
-        private bool CheckDuplicateRegister(Register instance) {
-
-            var foundDupe = RegistersInternal.FirstOrDefault(x => x.CompareIsDuplicate(instance));
-
-            return RegistersInternal.Contains(instance) || foundDupe != null;
-
-        }
-
-        private bool CheckDuplicateNameRegister(Register instance) {
-
-            return RegistersInternal.Any(x => x.CompareIsNameDuplicate(instance));
-
-        }
-
-        private bool CheckOverlappingRegister(Register instance, out Register regB) {
-
-            //ignore bool registers, they have their own address spectrum
-            regB = null;
-            if (instance is BoolRegister) return false;
-
-            uint addressFrom = instance.MemoryAddress;
-            uint addressTo = addressFrom + instance.GetRegisterAddressLen();
-
-            var foundOverlapping = RegistersInternal.FirstOrDefault(x => {
-
-                //ignore bool registers, they have their own address spectrum
-                if (x is BoolRegister) return false;
-
-                uint addressF = x.MemoryAddress;
-                uint addressT = addressF + x.GetRegisterAddressLen();
-
-                bool matchingBaseAddress = addressFrom < addressT && addressF < addressTo;
-
-                return matchingBaseAddress;
-
-            });
-
-            if (foundOverlapping != null) {
-                regB = foundOverlapping;
-                return true;
-            }
-
-            return false;
 
         }
 

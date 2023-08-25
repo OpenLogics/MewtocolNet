@@ -465,7 +465,7 @@ namespace MewtocolNet {
         #region Message sending and queuing
 
         //internally used send task
-        internal async Task<MewtocolFrameResponse> SendCommandInternalAsync(string _msg, Action<double> onReceiveProgress = null) {
+        internal async Task<MewtocolFrameResponse> SendCommandInternalAsync(string _msg, Action<double> onReceiveProgress = null, int? overrideTimeout = null) {
 
             if (tSourceMessageCancel.Token.IsCancellationRequested) return MewtocolFrameResponse.Canceled;
 
@@ -484,7 +484,7 @@ namespace MewtocolNet {
                 //send request
                 regularSendTask = SendTwoDirectionalFrameAsync(_msg, onReceiveProgress);
 
-                var timeoutAwaiter = await Task.WhenAny(regularSendTask, Task.Delay(sendReceiveTimeoutMs, tSourceMessageCancel.Token));
+                var timeoutAwaiter = await Task.WhenAny(regularSendTask, Task.Delay(overrideTimeout ?? sendReceiveTimeoutMs, tSourceMessageCancel.Token));
 
                 if (timeoutAwaiter != regularSendTask) {
 
@@ -527,43 +527,6 @@ namespace MewtocolNet {
             regularSendTask = null;
 
             return responseData;
-
-        }
-
-        private protected async Task<MewtocolFrameResponse> SendOneDirectionalFrameAsync (string frame) {
-
-            try {
-
-                if (stream == null) return MewtocolFrameResponse.NotIntialized;
-
-                frame = $"{frame.BCC_Mew()}\r";
-
-                SetUpstreamStopWatchStart();
-
-                IsSending = true;
-
-                if (tSourceMessageCancel.Token.IsCancellationRequested) return MewtocolFrameResponse.Canceled;
-
-                //write inital command
-                byte[] writeBuffer = Encoding.UTF8.GetBytes(frame);
-                await stream.WriteAsync(writeBuffer, 0, writeBuffer.Length, tSourceMessageCancel.Token);
-
-                IsSending = false;
-
-                //calc upstream speed
-                CalcUpstreamSpeed(writeBuffer.Length);
-
-                OnOutMsg(frame);
-                OnEndMsg();
-
-            } catch (Exception ex) {
-
-                IsSending = false;
-                return new MewtocolFrameResponse(400, ex.Message.ToString());
-
-            }
-
-            return MewtocolFrameResponse.EmptySuccess;
 
         }
 
@@ -898,8 +861,6 @@ namespace MewtocolNet {
 
             ClearRegisterVals();
             KillPoller();
-
-            //GetAllRegisters().Cast<Register>().ToList().ForEach(x => x.OnPlcDisconnected());
 
             //generate a new cancellation token source
             tSourceMessageCancel = new CancellationTokenSource();

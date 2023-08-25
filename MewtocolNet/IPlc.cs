@@ -199,6 +199,17 @@ namespace MewtocolNet {
         IEnumerable<IRegister> GetAllRegisters();
 
         /// <summary>
+        /// Builds and adds registers to the device
+        /// </summary>
+        /// <param name="builder"></param>
+        void BuildRegisters(Action<RBuildMulti> builder);
+
+        /// <summary>
+        /// Clears all registers atached to the interface
+        /// </summary>
+        void ClearAllRegisters();
+
+        /// <summary>
         /// Explains the register internal layout at this moment in time
         /// </summary>
         string Explain();

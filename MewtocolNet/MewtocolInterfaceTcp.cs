@@ -72,7 +72,7 @@ namespace MewtocolNet {
         /// <inheritdoc/>
         public override async Task<ConnectResult> ConnectAsync(Func<Task> callBack = null) => await ConnectAsyncPriv(callBack);
 
-        private void BuildTcpClient () {
+        protected internal void BuildTcpClient () {
 
             if (HostEndpoint != null) {
 
@@ -87,9 +87,6 @@ namespace MewtocolNet {
 
                 client = new TcpClient(HostEndpoint) {
                     ReceiveBufferSize = RecBufferSize,
-                    NoDelay = false,
-                    ReceiveTimeout = sendReceiveTimeoutMs,
-                    SendTimeout = sendReceiveTimeoutMs,
                 };
 
                 var ep = (IPEndPoint)client.Client.LocalEndPoint;
@@ -99,9 +96,6 @@ namespace MewtocolNet {
 
                 client = new TcpClient() {
                     ReceiveBufferSize = RecBufferSize,
-                    NoDelay = false,
-                    ReceiveTimeout = sendReceiveTimeoutMs,
-                    SendTimeout = sendReceiveTimeoutMs,
                 };
 
             }
