@@ -22,6 +22,13 @@ jobs:
     name: 'Run tests and documentation'
     runs-on: self-hosted
     steps:
+
+      - name: 'Setup dotnet'
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: |
+            6.0.x
+            7.0.x
     
       - name: 'Checkout'
         uses: actions/checkout@v3
@@ -30,13 +37,6 @@ jobs:
         shell: bash
         run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
         id: extract_branch
-
-      #- name: 'Setup dotnet'
-      #  uses: actions/setup-dotnet@v2
-      #  with:
-      #    dotnet-version: |
-      #      6.0.x
-      #      7.0.x
 
       - name: 'Run tests'
         run: dotnet test "./MewtocolTests" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=../Builds/TestResults/coverage.opencover.xml
