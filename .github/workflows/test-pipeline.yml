@@ -22,7 +22,12 @@ jobs:
     name: 'Run tests and documentation'
     runs-on: self-hosted
     steps:
-      - uses: AutoModality/action-clean@v1
+
+      - name: 'Clean workspace'
+        run: |
+            rm -rf ${{ github.workspace }}/*
+    
+      - name: 'Checkout'
       - uses: actions/checkout@v3
 
       - name: 'Extract branch name'
