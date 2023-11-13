@@ -106,7 +106,7 @@ namespace MewtocolNet {
         internal int tryReconnectDelayMs = 1000;
 
         internal bool usePoller = false;
-        internal bool alwaysGetMetadata = true;
+        internal bool alwaysGetMetadata = false;
 
         internal Func<int, Task> onBeforeReconnectTryTask;
 

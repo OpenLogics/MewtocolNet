@@ -23,15 +23,17 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
 
             public async Task WriteAsync(T value) {
 
-                var reg = (IRegister<T>)builder.Assemble(this);
-                await reg.WriteAsync(value);
+                var reg = builder.Assemble(this);
+                reg.isAnonymous = true;
+                await ((IRegister<T>)reg).WriteAsync(value);
 
             }
 
             public async Task<T> ReadAsync() {
 
-                var reg = (IRegister<T>)builder.Assemble(this);
-                return await reg.ReadAsync();
+                var reg = builder.Assemble(this);
+                reg.isAnonymous = true;
+                return await ((IRegister<T>)reg).ReadAsync();
 
             }
 
@@ -41,15 +43,17 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
 
             public async Task WriteAsync(string value) {
 
-                var reg = (IStringRegister)builder.Assemble(this);
-                await reg.WriteAsync(value);
+                var reg = builder.Assemble(this);
+                reg.isAnonymous = true;
+                await ((IStringRegister)reg).WriteAsync(value);
 
             }
 
             public async Task<string> ReadAsync() {
 
-                var reg = (IStringRegister)builder.Assemble(this);
-                return await reg.ReadAsync();
+                var reg = builder.Assemble(this);
+                reg.isAnonymous = true;
+                return await ((IStringRegister)reg).ReadAsync();
 
             }
 
@@ -71,15 +75,19 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
 
             public async Task WriteAsync(T[] value) {
 
-                var reg = (IArrayRegister<T>)builder.Assemble(this);
-                await reg.WriteAsync(value);
+                var reg = builder.Assemble(this);
+                reg.isAnonymous = true;
+                var tReg = (IArrayRegister<T>)reg;
+                await tReg.WriteAsync(value);
 
             }
 
             public async Task<T[]> ReadAsync() {
 
-                var reg = (IArrayRegister<T>)builder.Assemble(this);
-                return await reg.ReadAsync();
+                var reg = builder.Assemble(this);
+                reg.isAnonymous = true;
+                var tReg = (IArrayRegister<T>)reg;
+                return await tReg.ReadAsync();
 
             }
 
@@ -91,15 +99,17 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
 
             public async Task WriteAsync(T[,] value) {
 
-                var reg = (IArrayRegister2D<T>)builder.Assemble(this);
-                await reg.WriteAsync(value);
+                var reg = builder.Assemble(this);
+                reg.isAnonymous = true;
+                await ((IArrayRegister2D<T>)reg).WriteAsync(value);
 
             }
 
             public async Task<T[,]> ReadAsync() {
 
-                var reg = (IArrayRegister2D<T>)builder.Assemble(this);
-                return await reg.ReadAsync();
+                var reg = builder.Assemble(this);
+                reg.isAnonymous = true;
+                return await ((IArrayRegister2D<T>)reg).ReadAsync();
 
             }
 
@@ -111,15 +121,17 @@ namespace MewtocolNet.RegisterBuilding.BuilderPatterns {
 
             public async Task WriteAsync(T[,,] value) {
 
-                var reg = (IArrayRegister3D<T>)builder.Assemble(this);
-                await reg.WriteAsync(value);
+                var reg = builder.Assemble(this);
+                reg.isAnonymous = true;
+                await ((IArrayRegister3D<T>)reg).WriteAsync(value);
 
             }
 
             public async Task<T[,,]> ReadAsync() {
 
-                var reg = (IArrayRegister3D<T>)builder.Assemble(this);
-                return await reg.ReadAsync();
+                var reg = builder.Assemble(this);
+                reg.isAnonymous = true;
+                return await ((IArrayRegister3D<T>)reg).ReadAsync();
 
             }
 

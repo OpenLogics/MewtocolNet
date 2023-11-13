@@ -35,6 +35,11 @@ namespace MewtocolNet {
         StopBits SerialStopBits { get; }
 
         /// <summary>
+        /// Is RTS (Request to send) enabled?
+        /// </summary>
+        bool RtsEnabled { get; }
+
+        /// <summary>
         /// Sets up the connection settings for the device
         /// </summary>
         /// <param name="_portName">Port name of COM port</param>
@@ -42,8 +47,9 @@ namespace MewtocolNet {
         /// <param name="_dataBits">The serial connection data bits</param>
         /// <param name="_parity">The serial connection parity</param>
         /// <param name="_stopBits">The serial connection stop bits</param>
+        /// <param name="_rtsEnable">Is RTS (Request to send) enabled?</param>
         /// <param name="_station">The station number of the PLC</param>
-        void ConfigureConnection(string _portName, int _baudRate = 19200, int _dataBits = 8, Parity _parity = Parity.Odd, StopBits _stopBits = StopBits.One, int _station = 1);
+        void ConfigureConnection(string _portName, int _baudRate = 19200, int _dataBits = 8, Parity _parity = Parity.Odd, StopBits _stopBits = StopBits.One, bool _rtsEnable = true, int _station = 1);
 
         /// <summary>
         /// Tries to establish a connection with the device asynchronously

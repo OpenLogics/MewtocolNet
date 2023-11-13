@@ -59,7 +59,7 @@ namespace MewtocolNet.SetupClasses {
         /// <summary>
         /// Sets wether or not the interface should always retrieve metadata on connection start
         /// </summary>
-        public bool AlwaysGetMetadata { get; set; } = true; 
+        public bool AlwaysGetMetadata { get; set; } = false; 
 
     }
 

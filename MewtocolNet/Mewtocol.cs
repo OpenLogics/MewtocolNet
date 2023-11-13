@@ -128,12 +128,13 @@ namespace MewtocolNet {
         /// <param name="dataBits">DataBits of the plc toolport</param>
         /// <param name="parity">Parity rate of the plc toolport</param>
         /// <param name="stopBits">Stop bits of the plc toolport</param>
+        /// <param name="rtsEnabled">Is RTS (Request to send) enabled?</param>
         /// <param name="station">Plc station number 0xEE for direct communication</param>
         /// <returns></returns>
-        public static PostInit<IPlcSerial> Serial(string portName, BaudRate baudRate = BaudRate._19200, DataBits dataBits = DataBits.Eight, Parity parity = Parity.Odd, StopBits stopBits = StopBits.One, int station = 0xEE) {
+        public static PostInit<IPlcSerial> Serial(string portName, BaudRate baudRate = BaudRate._19200, DataBits dataBits = DataBits.Eight, Parity parity = Parity.Odd, StopBits stopBits = StopBits.One, bool rtsEnabled = true, int station = 0xEE) {
 
             var instance = new MewtocolInterfaceSerial();
-            instance.ConfigureConnection(portName, (int)baudRate, (int)dataBits, parity, stopBits, station);
+            instance.ConfigureConnection(portName, (int)baudRate, (int)dataBits, parity, stopBits, rtsEnabled, station);
             return new PostInit<IPlcSerial> {
                 intf = instance
             };
@@ -144,12 +145,13 @@ namespace MewtocolNet {
         /// Builds a serial mewtocol interface that finds the correct settings for the given port name automatically
         /// </summary>
         /// <param name="portName"></param>
+        /// <param name="rtsEnabled">Is RTS (Request to send) enabled?</param>
         /// <param name="station">Plc station number 0xEE for direct communication</param>
         /// <returns></returns>
-        public static PostInit<IPlcSerial> SerialAuto(string portName, int station = 0xEE) {
+        public static PostInit<IPlcSerial> SerialAuto(string portName, bool rtsEnabled = true, int station = 0xEE) {
 
             var instance = new MewtocolInterfaceSerial();
-            instance.ConfigureConnection(portName, station);
+            instance.ConfigureConnection(portName, station, rtsEnable: rtsEnabled);
             instance.ConfigureConnectionAuto();
             return new PostInit<IPlcSerial> {
                 intf = instance

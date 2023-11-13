@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace MewtocolNet {
 
+    /// <inheritdoc/>
     public sealed class MewtocolInterfaceSerial : MewtocolInterface, IPlcSerial {
 
         private bool autoSerial;
@@ -31,6 +32,9 @@ namespace MewtocolNet {
 
         /// <inheritdoc/>
         public StopBits SerialStopBits { get; private set; }
+
+        /// <inheritdoc/>
+        public bool RtsEnabled { get; private set; }
 
         //Serial
         internal SerialPort serialClient;
@@ -76,7 +80,7 @@ namespace MewtocolNet {
         }
 
         /// <inheritdoc/>
-        public void ConfigureConnection(string _portName, int _baudRate = 19200, int _dataBits = 8, Parity _parity = Parity.Odd, StopBits _stopBits = StopBits.One, int _station = 0xEE) {
+        public void ConfigureConnection(string _portName, int _baudRate = 19200, int _dataBits = 8, Parity _parity = Parity.Odd, StopBits _stopBits = StopBits.One, bool rtsEnable = true, int _station = 0xEE) {
 
             if (IsConnected)
                 throw new NotSupportedException("Can't change the connection settings while the PLC is connected");
@@ -87,6 +91,7 @@ namespace MewtocolNet {
             SerialParity = _parity;
             SerialStopBits = _stopBits;
             stationNumber = _station;
+            RtsEnabled = rtsEnable;
 
             if (stationNumber != 0xEE && stationNumber > 99)
                 throw new NotSupportedException("Station number can't be greater than 99");
@@ -231,7 +236,8 @@ namespace MewtocolNet {
                     Parity = par,
                     StopBits = sbits,
                     ReadTimeout = 100,
-                    Handshake = Handshake.None
+                    Handshake = Handshake.None,
+                    RtsEnable = RtsEnabled,
                 };
 
                 PortName = port;

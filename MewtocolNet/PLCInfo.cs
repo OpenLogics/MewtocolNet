@@ -134,7 +134,7 @@ namespace MewtocolNet {
 
         internal bool TryExtendFromEXRT(string msg) {
 
-            var regexEXRT = new Regex(@"\%EE\$EX00RT00(?<icnt>..)(?<mc>..)..(?<cap>..)(?<op>..)..(?<flg>..)(?<sdiag>....)(?<ver>..)(?<hwif>..)(?<nprog>.)(?<csumpz>...)(?<psize>...).*", RegexOptions.IgnoreCase);
+            var regexEXRT = new Regex(@"\%..\$EX00RT00(?<icnt>..)(?<mc>..)..(?<cap>..)(?<op>..)..(?<flg>..)(?<sdiag>....)(?<ver>..)(?<hwif>..)(?<nprog>.)(?<csumpz>...)(?<psize>...).*", RegexOptions.IgnoreCase);
             var match = regexEXRT.Match(msg);
             if (match.Success) {
 
@@ -177,7 +177,7 @@ namespace MewtocolNet {
 
         internal static bool TryFromRT(string msg, MewtocolInterface onInterface, out PLCInfo inf) {
 
-            var regexRT = new Regex(@"\%EE\$RT(?<cputype>..)(?<cpuver>..)(?<cap>..)(?<op>..)..(?<flg>..)(?<sdiag>....).*", RegexOptions.IgnoreCase);
+            var regexRT = new Regex(@"\%..\$RT(?<cputype>..)(?<cpuver>..)(?<cap>..)(?<op>..)..(?<flg>..)(?<sdiag>....).*", RegexOptions.IgnoreCase);
             var match = regexRT.Match(msg);
             if (match.Success) {
 

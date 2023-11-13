@@ -14,6 +14,7 @@ internal class Program {
 
         //the library provides a logging tool, comment this out if needed
         Logger.LogLevel = LogLevel.Critical;
+        Logger.OnNewLogMessage((t, l, m) => { Console.WriteLine(m); });
 
         //create a new interface to the plc using ethernet / tcp ip
         //the using keyword is optional, if you want to use your PLC instance
