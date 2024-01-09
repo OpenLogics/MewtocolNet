@@ -9,9 +9,10 @@
 An easy to use Mewtocol protocol library to interface with Panasonic PLCs over TCP/Serial.
 
 > ⚠️ This library is not an official panasonic product nor does panasonic provide financial support or limitations in any form. 
-> This software was written by WOLF Medizintechnik GmbH (@WOmed/dev).
 
 # PLC Support
+
+> ⚠️ FP7 is currently not supported
 
 ## For a full list check [this table](../master_auto_docs/plctypes.md)
 
