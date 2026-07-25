@@ -27,7 +27,7 @@ jobs:
   publish-package:
     name: 'Build and publish package'
     needs: test-pipeline
-    runs-on: [self-hosted, linux, ARM64]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: 'RenameVersionTag'
