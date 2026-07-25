@@ -144,13 +144,23 @@ jobs:
       - name: Pack as ${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}
         run: dotnet pack "MewtocolNet" -c:Release
 
-      - name: Publish as ${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}
-        run: | 
+      - name: Publish to GitHub Packages as ${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}
+        run: |
             cd '${{ github.workspace }}/Builds/MewtocolNet'
             ls -l
             dotnet nuget push "*.nupkg" --skip-duplicate --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-            dotnet nuget push "*.nupkg" --skip-duplicate --api-key ${{ secrets.NUGET_TOKEN }} --source "https://api.nuget.org/v3/index.json"
-        
+
+      - name: NuGet login (OIDC trusted publishing)
+        uses: NuGet/login@v1
+        id: nuget_login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Publish to NuGet.org as ${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}
+        run: |
+            cd '${{ github.workspace }}/Builds/MewtocolNet'
+            dotnet nuget push "*.nupkg" --skip-duplicate --api-key ${{ steps.nuget_login.outputs.NUGET_API_KEY }} --source "https://api.nuget.org/v3/index.json"
+
       - name: 'Create Release v${{ github.event.inputs.version_tag }}${{ env.prerelease_append }}'
         id: create_release
         uses: actions/create-release@v1
