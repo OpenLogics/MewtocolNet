@@ -116,7 +116,9 @@ namespace MewtocolNet.Registers {
         /// <inheritdoc/>
         public async Task<bool> ReadAsync() {
 
-            var res = await attachedInterface.ReadAreaByteRangeAsync((int)MemoryAddress, (int)GetRegisterAddressLen() * 2);
+            //pass the register type, otherwise this falls back to the DT area default and
+            //reads a data register instead of the X/Y/R bit area
+            var res = await attachedInterface.ReadAreaByteRangeAsync((int)MemoryAddress, (int)GetRegisterAddressLen() * 2, RegisterType);
             if (res == null) throw new Exception($"Failed to read the register {this}");
 
             var matchingReg = attachedInterface.memoryManager.GetAllRegisters()
