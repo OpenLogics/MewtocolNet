@@ -20,7 +20,7 @@ jobs:
   #Run unit tests on the test PLCs
   run-unit-tests:
     name: 'Run tests and documentation'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
 
       - name: 'Setup dotnet'
@@ -39,7 +39,7 @@ jobs:
         id: extract_branch
 
       - name: 'Run tests'
-        run: dotnet test "./MewtocolTests" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=../Builds/TestResults/coverage.opencover.xml
+        run: dotnet test "./MewtocolTests" --filter "FullyQualifiedName!~TestLivePLC" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=../Builds/TestResults/coverage.opencover.xml
     
       - name: 'Run docbuilder'
         continue-on-error: true
